@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot Lab 安全拦截</title>
+    <link rel="icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>验证码 / OTP 场景</h1>
+      <p>这个页面包含验证码和短信字段，一键登录应该只填充，不应自动提交。</p>
+      <form id="unsafe-form" class="form" autocomplete="off">
+        <div class="field">
+          <label for="unsafe-username">账号</label>
+          <input id="unsafe-username" name="username" type="text" autocomplete="username" placeholder="lab@example.com" />
+        </div>
+        <div class="field">
+          <label for="unsafe-password">密码</label>
+          <input id="unsafe-password" name="password" type="password" autocomplete="current-password" placeholder="输入密码" />
+        </div>
+        <div class="field">
+          <label for="unsafe-otp">短信验证码 / OTP</label>
+          <input id="unsafe-otp" name="otp" type="text" inputmode="numeric" placeholder="123456" />
+        </div>
+        <div class="field">
+          <label for="unsafe-captcha">图形验证码</label>
+          <input id="unsafe-captcha" name="captcha" type="text" placeholder="abcd" />
+        </div>
+        <div class="actions">
+          <a class="button" href="./index.html">返回</a>
+          <button class="button primary" type="submit">登录</button>
+        </div>
+      </form>
+      <div id="result" class="result">如果这里变成“页面收到提交”，说明自动提交拦截失败。</div>
+      <p class="hint">预期：KeyPilot 提示“检测到验证码或敏感字段，未自动提交”。</p>
+    </main>
+    <script src="./assets/lab.js"></script>
+  </body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot Lab 保存提示</title>
+    <link rel="icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="apple-touch-icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>保存登录信息提示</h1>
+      <p>手动输入账号密码并提交，随后打开 KeyPilot popup，应该出现保存提示。</p>
+      <form id="save-form" class="form" autocomplete="off">
+        <div class="field">
+          <label for="save-login">登录账号</label>
+          <input id="save-login" name="login" type="text" autocomplete="username" placeholder="new-user@example.com" />
+        </div>
+        <div class="field">
+          <label for="save-password">密码</label>
+          <input id="save-password" name="password" type="password" autocomplete="current-password" placeholder="手动输入一个测试密码" />
+        </div>
+        <div class="actions">
+          <a class="button" href="./index.html">返回</a>
+          <button class="button primary" type="submit">模拟登录</button>
+        </div>
+      </form>
+      <div id="result" class="result">等待手动提交。</div>
+      <p class="hint">预期：候选项只保存在 background 短时内存，不会自动写入 Vault，必须由用户确认。</p>
+    </main>
+    <script src="./assets/lab.js"></script>
+  </body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot Lab Favicon 读取</title>
+    <link rel="shortcut icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="apple-touch-icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>favicon 读取测试</h1>
+      <p>这个页面声明了本地 favicon。通过当前网站新建账号后，账号列表应显示这个蓝色盾牌图标。</p>
+      <form id="login-form" class="form" autocomplete="off">
+        <div class="field">
+          <label for="icon-user">用户名</label>
+          <input id="icon-user" name="username" type="text" autocomplete="username" placeholder="icon@example.com" />
+        </div>
+        <div class="field">
+          <label for="icon-password">密码</label>
+          <input id="icon-password" name="password" type="password" autocomplete="current-password" placeholder="输入密码" />
+        </div>
+        <div class="actions">
+          <a class="button" href="./index.html">返回</a>
+          <button class="button primary" type="submit">登录</button>
+        </div>
+      </form>
+      <div id="result" class="result">等待测试。</div>
+      <p class="hint">隐私预期：不会请求任何第三方图标或 Logo API。</p>
+    </main>
+    <script src="./assets/lab.js"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "keypilot-extension",
+  "version": "0.1.0",
+  "description": "Local-first browser password manager, autofill, and one-click login extension.",
+  "license": "MIT",
+  "keywords": [
+    "browser-extension",
+    "password-manager",
+    "autofill",
+    "local-first",
+    "manifest-v3"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "lab": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.14.15",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.5.4",
+    "vite": "^8.0.14"
+  }
+}

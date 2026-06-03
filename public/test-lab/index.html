@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot 测试实验室</title>
+    <link rel="icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="apple-touch-icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <img src="./assets/keypilot-lab-icon.svg" alt="" />
+          <div>
+            <h1>KeyPilot 测试实验室</h1>
+            <p>用于验证自动填充、一键登录、保存提示和 favicon 解析。</p>
+          </div>
+        </div>
+        <code>127.0.0.1:4173/test-lab</code>
+      </header>
+
+      <section class="grid" aria-label="测试场景">
+        <a class="card" href="./simple-login.html">
+          <span class="tag">自动填充</span>
+          <strong>普通登录页</strong>
+          <p>一个用户名 + 密码 + 登录按钮的标准表单，用来测试浏览并填写和一键登录。</p>
+        </a>
+        <a class="card" href="./stepped-login.html">
+          <span class="tag">分步登录</span>
+          <strong>先用户名后密码</strong>
+          <p>先输入用户名，再动态显示密码框，用来测试分步填充和后续自动补填密码。</p>
+        </a>
+        <a class="card" href="./unsafe-login.html">
+          <span class="tag">安全拦截</span>
+          <strong>验证码 / OTP 场景</strong>
+          <p>包含验证码和短信字段。KeyPilot 应该填充账号密码，但不能自动点击提交。</p>
+        </a>
+        <a class="card" href="./save-capture.html">
+          <span class="tag">自动保存</span>
+          <strong>保存登录信息提示</strong>
+          <p>手动输入账号密码并提交后，打开插件应出现保存到 Vault 的提示。</p>
+        </a>
+        <a class="card" href="./favicon-test.html">
+          <span class="tag">图标</span>
+          <strong>favicon 读取</strong>
+          <p>页面提供本地 favicon 链接，保存账号后列表应优先显示这个站点图标。</p>
+        </a>
+        <a class="card" href="./root-favicon-fallback.html">
+          <span class="tag">回退</span>
+          <strong>无 icon 链接页面</strong>
+          <p>页面不声明 icon，用来验证 KeyPilot 会尝试网站根路径 /favicon.ico 并安静回退。</p>
+        </a>
+      </section>
+    </main>
+  </body>
+</html>

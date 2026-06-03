@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot Lab Root Favicon 回退</title>
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>无 icon 链接页面</h1>
+      <p>这个页面故意不声明 favicon。KeyPilot 会尝试当前站点根路径 /favicon.ico，失败后使用本地默认图标。</p>
+      <form id="login-form" class="form" autocomplete="off">
+        <div class="field">
+          <label for="fallback-user">账号</label>
+          <input id="fallback-user" name="username" type="text" autocomplete="username" placeholder="fallback@example.com" />
+        </div>
+        <div class="field">
+          <label for="fallback-password">密码</label>
+          <input id="fallback-password" name="password" type="password" autocomplete="current-password" placeholder="输入密码" />
+        </div>
+        <div class="actions">
+          <a class="button" href="./index.html">返回</a>
+          <button class="button primary" type="submit">登录</button>
+        </div>
+      </form>
+      <div id="result" class="result">等待测试。</div>
+      <p class="hint">预期：favicon 失败不会影响账号列表展示，会显示域名首字母默认图标。</p>
+    </main>
+    <script src="./assets/lab.js"></script>
+  </body>
+</html>

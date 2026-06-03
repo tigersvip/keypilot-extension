@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot Lab 分步登录</title>
+    <link rel="icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>分步登录页</h1>
+      <p>测试先填用户名、点击下一步、再等待密码框出现的场景。</p>
+      <form id="stepped-form" class="form" autocomplete="off">
+        <section id="username-step" class="form">
+          <div class="field">
+            <label for="step-username">用户名</label>
+            <input id="step-username" name="username" type="text" autocomplete="username" placeholder="lab@example.com" />
+          </div>
+          <div class="actions">
+            <a class="button" href="./index.html">返回</a>
+            <button id="next-button" class="button primary" type="button">下一步</button>
+          </div>
+        </section>
+        <section id="password-step" class="form hidden">
+          <div class="field">
+            <label for="step-password">密码</label>
+            <input id="step-password" name="password" type="password" autocomplete="current-password" placeholder="输入密码" />
+          </div>
+          <div class="actions">
+            <a class="button" href="./index.html">返回</a>
+            <button class="button primary" type="submit">登录</button>
+          </div>
+        </section>
+      </form>
+      <div id="result" class="result">等待分步填充。</div>
+      <p class="hint">预期：一键登录会先填用户名并点下一步，密码框出现后自动填密码。</p>
+    </main>
+    <script src="./assets/lab.js"></script>
+  </body>
+</html>

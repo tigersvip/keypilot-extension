@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeyPilot Lab 普通登录</title>
+    <link rel="icon" href="./assets/keypilot-lab-icon.svg" />
+    <link rel="stylesheet" href="./assets/lab.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>普通登录页</h1>
+      <p>测试标准表单识别。推荐在 Vault 新建账号，网址填当前页面地址，用户名填 `lab@example.com`。</p>
+      <form id="login-form" class="form" autocomplete="off">
+        <div class="field">
+          <label for="login-email">邮箱 / 用户名</label>
+          <input id="login-email" name="username" type="email" autocomplete="username" placeholder="lab@example.com" />
+        </div>
+        <div class="field">
+          <label for="login-password">密码</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="输入密码" />
+        </div>
+        <div class="actions">
+          <a class="button" href="./index.html">返回</a>
+          <button class="button primary" type="submit">登录</button>
+        </div>
+      </form>
+      <div id="result" class="result">等待 KeyPilot 填充。</div>
+      <p class="hint">预期：浏览并填写只填入字段；一键登录在开启自动提交时会触发登录按钮。</p>
+    </main>
+    <script src="./assets/lab.js"></script>
+  </body>
+</html>
