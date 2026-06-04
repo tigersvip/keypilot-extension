@@ -1,0 +1,53 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF2FF"/><stop offset="0.55" stop-color="#F8FAFC"/><stop offset="1" stop-color="#FFF7ED"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="26" flood-color="#0F172A" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      text { font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif; }
+      .title { fill:#0F172A; font-size:34px; font-weight:850; }
+      .head { fill:#334155; font-size:18px; font-weight:820; }
+      .muted { fill:#64748B; font-size:16px; }
+      .badge { fill:#2563EB; font-size:14px; font-weight:850; }
+    </style>
+  </defs>
+  <rect width="1200" height="720" rx="32" fill="url(#bg)"/>
+  <rect x="86" y="82" width="468" height="556" rx="28" fill="white" filter="url(#shadow)"/>
+  <text x="130" y="146" class="title">批量导入</text>
+  <text x="130" y="184" class="muted">导入账号、Excel 身份资料和 KeyPilot 文件。</text>
+  <rect x="130" y="230" width="380" height="70" rx="18" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="164" y="258" class="head">RoboForm CSV</text>
+  <text x="164" y="282" class="muted">账号密码导入、预览、重复检测</text>
+  <rect x="130" y="322" width="380" height="70" rx="18" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="164" y="350" class="head">Chrome / Edge CSV</text>
+  <text x="164" y="374" class="muted">浏览器密码迁移</text>
+  <rect x="130" y="414" width="380" height="70" rx="18" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="164" y="442" class="head">Excel 身份资料</text>
+  <text x="164" y="466" class="muted">车险、贷款、公司、联系资料</text>
+  <rect x="130" y="528" width="156" height="52" rx="15" fill="#2563EB"/>
+  <text x="178" y="561" fill="white" font-size="18" font-weight="850">导入</text>
+  <rect x="646" y="82" width="468" height="556" rx="28" fill="white" filter="url(#shadow)"/>
+  <text x="690" y="146" class="title">选择导出</text>
+  <text x="690" y="184" class="muted">只导出勾选内容，风险提示更清晰。</text>
+  <rect x="690" y="230" width="380" height="56" rx="16" fill="#F8FAFC" stroke="#DCE6F3"/>
+  <text x="724" y="266" fill="#94A3B8" font-size="18">搜索账号、网站、文件夹</text>
+  <rect x="690" y="318" width="380" height="70" rx="18" fill="#EFF6FF" stroke="#BFDBFE"/>
+  <rect x="716" y="342" width="22" height="22" rx="6" fill="#2563EB"/>
+  <path d="M722 353l5 5 10-12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="758" y="348" class="head">Affise</text>
+  <text x="758" y="372" class="muted">leon@example.com · affise.com</text>
+  <rect x="690" y="400" width="380" height="70" rx="18" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <rect x="716" y="424" width="22" height="22" rx="6" fill="white" stroke="#CBD5E1"/>
+  <text x="758" y="430" class="head">GitHub</text>
+  <text x="758" y="454" class="muted">dev@example.com · github.com</text>
+  <rect x="690" y="492" width="182" height="52" rx="15" fill="#2563EB"/>
+  <text x="740" y="525" fill="white" font-size="18" font-weight="850">导出 CSV</text>
+  <rect x="888" y="492" width="182" height="52" rx="15" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="930" y="525" fill="#334155" font-size="18" font-weight="850">导出 .kpfill</text>
+  <text x="690" y="592" fill="#DC2626" font-size="15" font-weight="800">CSV 可能包含明文密码，请谨慎保存。</text>
+  <path d="M554 360h92" stroke="#94A3B8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M626 338l22 22-22 22" stroke="#94A3B8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

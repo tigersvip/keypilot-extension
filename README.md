@@ -1,21 +1,23 @@
 <p align="center">
-  <img src="public/icons/icon128.png" width="86" height="86" alt="KeyPilot logo" />
+  <img src="public/icons/icon128.png" width="88" height="88" alt="KeyPilot logo" />
 </p>
 
-<h1 align="center">KeyPilot / 钥航</h1>
+<h1 align="center">钥航 KeyPilot</h1>
 
 <p align="center">
-  Local-first password manager, autofill, identity form filling, and one-click login extension for Chromium browsers.
+  本地优先的浏览器密码管理、自动填表、身份资料填写和一键登录插件。
 </p>
 
 <p align="center">
-  <a href="#english">English</a>
-  ·
-  <a href="#简体中文">简体中文</a>
-  ·
-  <a href="https://github.com/tigersvip/keypilot-extension/releases">Releases</a>
-  ·
-  <a href="SECURITY.md">Security</a>
+  <a href="#简体中文">
+    <img alt="中文" src="https://img.shields.io/badge/%E4%B8%AD%E6%96%87-%E9%BB%98%E8%AE%A4%E9%98%85%E8%AF%BB-2563EB?style=for-the-badge" />
+  </a>
+  <a href="#english">
+    <img alt="English" src="https://img.shields.io/badge/English-Read%20English-111827?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/tigersvip/keypilot-extension/releases">
+    <img alt="Releases" src="https://img.shields.io/badge/Releases-Download-16A34A?style=for-the-badge" />
+  </a>
 </p>
 
 <p align="center">
@@ -34,149 +36,10 @@
 </p>
 
 <p align="center">
-  <img src="keypilot-lab-preview.png" alt="KeyPilot test lab preview" width="860" />
+  <img src="docs/readme/vault-overview.svg" alt="KeyPilot Vault overview" width="920" />
 </p>
 
-> Beta preview: KeyPilot is not independently security audited yet. Test carefully before storing important credentials.
-
----
-
-## English
-
-KeyPilot is a local-first browser extension for password management, autofill, identity/profile form filling, password generation, and one-click login. It is designed for Chrome, Edge, and other Chromium-based browsers.
-
-The product principle is simple: credentials, generated passwords, and structured form-fill profiles stay on the user's machine inside an encrypted local Vault. KeyPilot does not depend on cloud sync, does not call third-party logo APIs, and should not send saved domains or private form data to external services.
-
-### Highlights
-
-| Area | What KeyPilot does |
-| --- | --- |
-| Encrypted Vault | Stores credentials and profiles locally using a master-password-protected Vault. |
-| One-click login | Opens a site, fills username and password, and attempts a safe submit when possible. |
-| Inline autofill | Shows a lightweight KeyPilot menu next to login and form fields. |
-| Password generator | Supports length, uppercase, lowercase, numbers, symbols, excluded characters, and required characters. |
-| Credential import/export | Imports RoboForm, Chrome, Edge, and generic CSV; exports selected credentials to RoboForm CSV. |
-| Identity profiles | Imports Excel, CSV, and `.kpfill` profiles for structured form filling. |
-| Local favicon | Reads site icons from the page or `/favicon.ico`; never uses Google Favicon or Clearbit Logo APIs. |
-| High security mode | Disables unlocked Vault/session key caching for stricter local security. |
-
-### Why local-first
-
-- No remote account is required.
-- Saved credentials are not uploaded by the extension.
-- Vault data stored in `chrome.storage.local` is encrypted.
-- The master password is not persisted.
-- Favicon handling avoids third-party logo services.
-- Sensitive exports are explicit and user-controlled.
-
-### Install
-
-#### Option 1: Load unpacked extension
-
-```bash
-npm install
-npm run build
-```
-
-Then open:
-
-- Chrome: `chrome://extensions/`
-- Edge: `edge://extensions/`
-
-Enable Developer mode, choose **Load unpacked**, and select the generated `dist/` folder.
-
-#### Option 2: Release package
-
-Download from [Releases](https://github.com/tigersvip/keypilot-extension/releases):
-
-- `keypilot-extension-v1.1.zip`: recommended for local testing. Extract it and load the extracted folder.
-- `keypilot-extension-v1.1.crx`: packaged CRX build. Some browsers may block direct installation of external CRX files.
-
-### Development
-
-```bash
-npm install
-npm run build
-npm run lab
-```
-
-If PowerShell blocks `npm.ps1`, use:
-
-```bash
-npm.cmd install
-npm.cmd run build
-npm.cmd run lab
-```
-
-The local test lab runs at:
-
-```text
-http://127.0.0.1:4173/test-lab/
-```
-
-### Project structure
-
-```text
-.
-├── public/                 # manifest, icons, and local test pages
-├── src/
-│   ├── background/         # Manifest V3 service worker
-│   ├── content/            # form detection, inline menu, autofill
-│   ├── options/            # standalone settings page
-│   ├── popup/              # browser toolbar popup
-│   ├── shared/             # crypto, Vault, import/export, matching
-│   └── vault/              # full Vault management page
-├── popup.html
-├── options.html
-├── vault.html
-└── vite.config.ts
-```
-
-### Tech stack
-
-- Manifest V3
-- React 18
-- TypeScript
-- Vite
-- Web Crypto API
-- Chrome Extension APIs
-
-### Security model
-
-KeyPilot handles sensitive user data. The current model is:
-
-- PBKDF2 + SHA-256 for key derivation.
-- AES-GCM for Vault encryption.
-- Encrypted Vault data is stored in browser extension storage.
-- Plain Vault data only exists in an unlocked runtime session.
-- High security mode can disable unlocked session caching.
-- Exported CSV and `.kpfill` files may contain plaintext sensitive data and should be handled carefully.
-
-Read [SECURITY.md](SECURITY.md) before reporting vulnerabilities.
-
-### Current limitations
-
-- Beta preview, not security-audited.
-- Website login flows vary widely; one-click login compatibility still needs more rules and testing.
-- No cloud sync, team sharing, passkey support, production TOTP management, or breach monitoring yet.
-- Firefox support has not started.
-
-### Roadmap
-
-- Larger site-rule library and auto-login repair flows.
-- TOTP management and safer OTP field detection.
-- Passkey / WebAuthn research.
-- More granular export permissions and encrypted sharing.
-- Automated tests and browser compatibility matrix.
-- Chrome Web Store release assets and privacy documentation.
-
-### Contributing
-
-Issues, compatibility cases, site rules, documentation improvements, and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
-
-### License
-
-MIT License. See [LICENSE](LICENSE).
+> Beta Preview：KeyPilot 尚未经过第三方安全审计。正式保存重要账号前，请先在测试环境验证并自行评估安全风险。
 
 ---
 
@@ -185,6 +48,20 @@ MIT License. See [LICENSE](LICENSE).
 钥航 KeyPilot 是一个本地优先的浏览器密码管理、自动填表、身份资料填写和一键登录插件，适用于 Chrome、Edge 以及其他 Chromium 内核浏览器。
 
 它的核心目标很明确：账号、密码、生成密码和结构化填表资料只保存在本机加密 Vault 中，不依赖云端同步，不调用第三方 Logo / Favicon 服务，不把用户保存的网站域名或资料发送给外部服务。
+
+### 界面预览
+
+| Vault 管理页 | 网页内快捷填充 |
+| --- | --- |
+| <img src="docs/readme/vault-overview.svg" alt="Vault 管理页" width="560" /> | <img src="docs/readme/popup-autofill.svg" alt="网页内快捷填充" width="560" /> |
+
+| 身份资料填表 | 导入与导出 |
+| --- | --- |
+| <img src="docs/readme/identity-fill.svg" alt="身份资料填表" width="560" /> | <img src="docs/readme/import-export.svg" alt="导入与导出" width="560" /> |
+
+| 安全中心与设置 | 测试实验室 |
+| --- | --- |
+| <img src="docs/readme/security-settings.svg" alt="安全中心与设置" width="560" /> | <img src="keypilot-lab-preview.png" alt="测试实验室" width="560" /> |
 
 ### 功能亮点
 
@@ -312,6 +189,159 @@ KeyPilot 会处理敏感数据，目前安全模型如下：
 ### 贡献
 
 欢迎提交 issue、兼容性案例、站点规则、文档改进和 pull request。请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+### License
+
+MIT License. See [LICENSE](LICENSE).
+
+---
+
+## English
+
+KeyPilot is a local-first browser extension for password management, autofill, identity/profile form filling, password generation, and one-click login. It is designed for Chrome, Edge, and other Chromium-based browsers.
+
+The product principle is simple: credentials, generated passwords, and structured form-fill profiles stay on the user's machine inside an encrypted local Vault. KeyPilot does not depend on cloud sync, does not call third-party logo APIs, and should not send saved domains or private form data to external services.
+
+### Preview
+
+| Vault management | Inline autofill |
+| --- | --- |
+| <img src="docs/readme/vault-overview.svg" alt="Vault management" width="560" /> | <img src="docs/readme/popup-autofill.svg" alt="Inline autofill" width="560" /> |
+
+| Identity form filling | Import and export |
+| --- | --- |
+| <img src="docs/readme/identity-fill.svg" alt="Identity form filling" width="560" /> | <img src="docs/readme/import-export.svg" alt="Import and export" width="560" /> |
+
+| Security and settings | Test lab |
+| --- | --- |
+| <img src="docs/readme/security-settings.svg" alt="Security and settings" width="560" /> | <img src="keypilot-lab-preview.png" alt="Test lab" width="560" /> |
+
+### Highlights
+
+| Area | What KeyPilot does |
+| --- | --- |
+| Encrypted Vault | Stores credentials and profiles locally using a master-password-protected Vault. |
+| One-click login | Opens a site, fills username and password, and attempts a safe submit when possible. |
+| Inline autofill | Shows a lightweight KeyPilot menu next to login and form fields. |
+| Password generator | Supports length, uppercase, lowercase, numbers, symbols, excluded characters, and required characters. |
+| Credential import/export | Imports RoboForm, Chrome, Edge, and generic CSV; exports selected credentials to RoboForm CSV. |
+| Identity profiles | Imports Excel, CSV, and `.kpfill` profiles for structured form filling. |
+| Local favicon | Reads site icons from the page or `/favicon.ico`; never uses Google Favicon or Clearbit Logo APIs. |
+| High security mode | Disables unlocked Vault/session key caching for stricter local security. |
+
+### Why local-first
+
+- No remote account is required.
+- Saved credentials are not uploaded by the extension.
+- Vault data stored in `chrome.storage.local` is encrypted.
+- The master password is not persisted.
+- Favicon handling avoids third-party logo services.
+- Sensitive exports are explicit and user-controlled.
+
+### Install
+
+#### Option 1: Load unpacked extension
+
+```bash
+npm install
+npm run build
+```
+
+Then open:
+
+- Chrome: `chrome://extensions/`
+- Edge: `edge://extensions/`
+
+Enable Developer mode, choose **Load unpacked**, and select the generated `dist/` folder.
+
+#### Option 2: Release package
+
+Download from [Releases](https://github.com/tigersvip/keypilot-extension/releases):
+
+- `keypilot-extension-v1.1.zip`: recommended for local testing. Extract it and load the extracted folder.
+- `keypilot-extension-v1.1.crx`: packaged CRX build. Some browsers may block direct installation of external CRX files.
+
+### Development
+
+```bash
+npm install
+npm run build
+npm run lab
+```
+
+If PowerShell blocks `npm.ps1`, use:
+
+```bash
+npm.cmd install
+npm.cmd run build
+npm.cmd run lab
+```
+
+The local test lab runs at:
+
+```text
+http://127.0.0.1:4173/test-lab/
+```
+
+### Project structure
+
+```text
+.
+├── public/                 # manifest, icons, and local test pages
+├── src/
+│   ├── background/         # Manifest V3 service worker
+│   ├── content/            # form detection, inline menu, autofill
+│   ├── options/            # standalone settings page
+│   ├── popup/              # browser toolbar popup
+│   ├── shared/             # crypto, Vault, import/export, matching
+│   └── vault/              # full Vault management page
+├── popup.html
+├── options.html
+├── vault.html
+└── vite.config.ts
+```
+
+### Tech stack
+
+- Manifest V3
+- React 18
+- TypeScript
+- Vite
+- Web Crypto API
+- Chrome Extension APIs
+
+### Security model
+
+KeyPilot handles sensitive user data. The current model is:
+
+- PBKDF2 + SHA-256 for key derivation.
+- AES-GCM for Vault encryption.
+- Encrypted Vault data is stored in browser extension storage.
+- Plain Vault data only exists in an unlocked runtime session.
+- High security mode can disable unlocked session caching.
+- Exported CSV and `.kpfill` files may contain plaintext sensitive data and should be handled carefully.
+
+Read [SECURITY.md](SECURITY.md) before reporting vulnerabilities.
+
+### Current limitations
+
+- Beta preview, not security-audited.
+- Website login flows vary widely; one-click login compatibility still needs more rules and testing.
+- No cloud sync, team sharing, passkey support, production TOTP management, or breach monitoring yet.
+- Firefox support has not started.
+
+### Roadmap
+
+- Larger site-rule library and auto-login repair flows.
+- TOTP management and safer OTP field detection.
+- Passkey / WebAuthn research.
+- More granular export permissions and encrypted sharing.
+- Automated tests and browser compatibility matrix.
+- Chrome Web Store release assets and privacy documentation.
+
+### Contributing
+
+Issues, compatibility cases, site rules, documentation improvements, and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### License
 

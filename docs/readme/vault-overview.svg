@@ -1,0 +1,95 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFF6FF"/>
+      <stop offset="0.48" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#155EEF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="26" flood-color="#0F172A" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      text { font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif; }
+      .muted { fill:#64748B; font-size:18px; }
+      .title { fill:#0F172A; font-size:30px; font-weight:800; }
+      .brand { fill:#0F172A; font-size:24px; font-weight:850; }
+      .small { fill:#64748B; font-size:15px; }
+      .head { fill:#334155; font-size:16px; font-weight:700; }
+      .row-title { fill:#0F172A; font-size:18px; font-weight:780; }
+    </style>
+  </defs>
+  <rect width="1200" height="720" rx="32" fill="url(#bg)"/>
+  <rect x="48" y="46" width="1104" height="628" rx="28" fill="white" filter="url(#shadow)"/>
+  <rect x="48" y="46" width="168" height="628" rx="28" fill="#F8FAFC"/>
+  <rect x="76" y="78" width="42" height="42" rx="12" fill="url(#blue)"/>
+  <path d="M97 87l17 7v15c0 13-8 20-17 23-9-3-17-10-17-23V94l17-7z" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+  <text x="130" y="105" class="brand">KeyPilot</text>
+  <text x="130" y="130" class="small">本地密码库</text>
+  <rect x="70" y="176" width="122" height="46" rx="13" fill="#DBEAFE"/>
+  <text x="112" y="205" fill="#155EEF" font-size="17" font-weight="800">主目录</text>
+  <text x="74" y="268" class="head">登录</text>
+  <text x="74" y="318" class="head">个人信息</text>
+  <text x="74" y="368" class="head">密码生成器</text>
+  <text x="74" y="418" class="head">安全中心</text>
+  <text x="74" y="468" class="head">设置与帮助</text>
+  <rect x="254" y="82" width="480" height="52" rx="15" fill="#F8FAFC" stroke="#DCE6F3"/>
+  <circle cx="286" cy="108" r="10" stroke="#94A3B8" stroke-width="3"/>
+  <path d="M294 116l11 11" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+  <text x="324" y="115" class="muted">在 KeyPilot 中搜索</text>
+  <rect x="806" y="82" width="80" height="52" rx="15" fill="#EEF2FF"/>
+  <text x="830" y="115" fill="#2563EB" font-size="17" font-weight="800">导入</text>
+  <rect x="898" y="82" width="96" height="52" rx="15" fill="#F8FAFC" stroke="#DCE6F3"/>
+  <text x="922" y="115" fill="#334155" font-size="17" font-weight="800">导出</text>
+  <rect x="1010" y="82" width="52" height="52" rx="15" fill="#F1F5F9"/>
+  <text x="1026" y="116" fill="#334155" font-size="24">☰</text>
+  <text x="254" y="190" fill="#2563EB" font-size="19" font-weight="850">热门</text>
+  <text x="506" y="190" fill="#0F172A" font-size="19" font-weight="750">最近使用</text>
+  <text x="778" y="190" fill="#0F172A" font-size="19" font-weight="750">A-Z</text>
+  <rect x="248" y="214" width="846" height="54" fill="#F1F5F9"/>
+  <text x="286" y="248" class="head">名称</text>
+  <text x="568" y="248" class="head">文件夹</text>
+  <text x="730" y="248" class="head">用户名</text>
+  <text x="902" y="248" class="head">网站地址</text>
+  <g>
+    <rect x="248" y="268" width="846" height="72" fill="#FFFFFF"/>
+    <circle cx="294" cy="304" r="22" fill="#DCFCE7" stroke="#86EFAC"/>
+    <text x="284" y="312" fill="#16A34A" font-size="20" font-weight="900">车</text>
+    <text x="334" y="300" class="row-title">车险005</text>
+    <text x="334" y="324" class="small">车险资料 · K. Gonzales</text>
+    <text x="568" y="310" class="small">车险资料</text>
+    <text x="730" y="310" class="small">kami@example.com</text>
+    <text x="902" y="310" class="small">US · 31 字段</text>
+  </g>
+  <g>
+    <rect x="248" y="340" width="846" height="72" fill="#F8FBFF"/>
+    <rect x="272" y="362" width="44" height="44" rx="12" fill="#DBEAFE" stroke="#BFDBFE"/>
+    <text x="287" y="390" fill="#2563EB" font-size="22" font-weight="900">A</text>
+    <text x="334" y="372" class="row-title">Affise</text>
+    <text x="334" y="396" class="small">leon@example.com</text>
+    <text x="568" y="384" class="small">主目录</text>
+    <text x="730" y="384" class="small">leon@example.com</text>
+    <text x="902" y="384" class="small">affise.com</text>
+  </g>
+  <g>
+    <rect x="248" y="412" width="846" height="72" fill="#FFFFFF"/>
+    <circle cx="294" cy="448" r="22" fill="#FEF3C7" stroke="#FACC15"/>
+    <text x="284" y="456" fill="#CA8A04" font-size="20" font-weight="900">证</text>
+    <text x="334" y="444" class="row-title">Loen Chen</text>
+    <text x="334" y="468" class="small">身份资料 · US</text>
+    <text x="568" y="456" class="small">个人信息</text>
+    <text x="730" y="456" class="small">loen@example.com</text>
+    <text x="902" y="456" class="small">本地资料</text>
+  </g>
+  <rect x="742" y="492" width="316" height="116" rx="22" fill="#EFF6FF" stroke="#BFDBFE"/>
+  <text x="774" y="532" fill="#1D4ED8" font-size="22" font-weight="850">本地优先 Vault</text>
+  <text x="774" y="566" class="small">账号、密码、身份资料保存在本机</text>
+  <text x="774" y="594" class="small">高安全模式可关闭会话缓存</text>
+  <rect x="282" y="530" width="154" height="52" rx="16" fill="url(#blue)"/>
+  <text x="326" y="563" fill="white" font-size="18" font-weight="850">一键登录</text>
+  <rect x="454" y="530" width="180" height="52" rx="16" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="502" y="563" fill="#334155" font-size="18" font-weight="850">浏览并填写</text>
+</svg>
