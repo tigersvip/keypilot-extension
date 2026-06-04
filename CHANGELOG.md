@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 - Beta Preview
+## 1.1 - Beta Preview
 
 - Added local encrypted Vault.
 - Added credential management, search, folders, details, edit, copy, delete, and restore flows.
