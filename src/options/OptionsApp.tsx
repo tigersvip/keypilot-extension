@@ -18,7 +18,6 @@ import {
   Lock,
   MonitorSmartphone,
   RefreshCw,
-  RotateCcw,
   Save,
   Settings,
   ShieldCheck,
@@ -29,8 +28,14 @@ import {
 } from 'lucide-react';
 import { exportRoboFormCsv } from '../shared/csvExport';
 import { generateRecoveryCode } from '../shared/crypto';
+import {
+  clearDiagnosticLogEntries,
+  DEFAULT_DIAGNOSTIC_LOG_LIMIT,
+  DEFAULT_DIAGNOSTIC_LOG_RETENTION_DAYS,
+  getDiagnosticLogEntries
+} from '../shared/diagnosticsLog';
 import { clearEncryptedVault, getEncryptedVault, saveEncryptedVault } from '../shared/storage';
-import type { UnlockedVaultSession, VaultEncrypted, VaultPlain } from '../shared/types';
+import type { DiagnosticLogEntry, UnlockedVaultSession, VaultEncrypted, VaultPlain } from '../shared/types';
 import {
   changeVaultMasterPassword,
   clearVaultSessionCache,
@@ -66,16 +71,16 @@ interface Notice {
 const SECTIONS: Array<{ key: SectionKey; label: string; icon: ReactNode }> = [
   { key: 'general', label: '一般', icon: <Settings size={20} aria-hidden="true" /> },
   { key: 'account', label: '账户&数据', icon: <UserCircle size={20} aria-hidden="true" /> },
-  { key: 'security', label: 'Log In & Security', icon: <Lock size={20} aria-hidden="true" /> },
+  { key: 'security', label: '登录与安全', icon: <Lock size={20} aria-hidden="true" /> },
   { key: 'device', label: '设备&活动', icon: <MonitorSmartphone size={20} aria-hidden="true" /> },
   { key: 'autofill', label: '自动填表', icon: <SlidersHorizontal size={20} aria-hidden="true" /> },
   { key: 'autosave', label: '自动保存', icon: <Save size={20} aria-hidden="true" /> },
   { key: 'hotkeys', label: '快捷键', icon: <Keyboard size={20} aria-hidden="true" /> },
   { key: 'domains', label: '域名', icon: <Globe size={20} aria-hidden="true" /> },
   { key: 'advanced', label: '高级设置', icon: <RefreshCw size={20} aria-hidden="true" /> },
-  { key: 'billing', label: 'License & Billing', icon: <BadgeCheck size={20} aria-hidden="true" /> },
+  { key: 'billing', label: '许可&版本', icon: <BadgeCheck size={20} aria-hidden="true" /> },
   { key: 'apps', label: '应用程序', icon: <AppWindow size={20} aria-hidden="true" /> },
-  { key: 'referral', label: 'Referral Rewards', icon: <Gift size={20} aria-hidden="true" /> }
+  { key: 'referral', label: '分享', icon: <Gift size={20} aria-hidden="true" /> }
 ];
 
 function getErrorMessage(error: unknown): string {
@@ -147,6 +152,7 @@ export function OptionsApp() {
   const [backupPassword, setBackupPassword] = useState('');
   const [recoveryCodeToShow, setRecoveryCodeToShow] = useState('');
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
+  const [diagnosticLogs, setDiagnosticLogs] = useState<DiagnosticLogEntry[]>([]);
 
   useEffect(() => {
     void loadVault();
@@ -157,6 +163,17 @@ export function OptionsApp() {
     setBlacklistDraft(session.vault.settings.blacklist.join('\n'));
     setInlineBlacklistDraft((session.vault.settings.inlineBlacklist ?? []).join('\n'));
   }, [session]);
+
+  useEffect(() => {
+    if (activeSection === 'advanced' && session) {
+      void loadDiagnosticLogs();
+    }
+  }, [
+    activeSection,
+    session?.vault.settings.diagnosticLogging,
+    session?.vault.settings.diagnosticLogLimit,
+    session?.vault.settings.diagnosticLogRetentionDays
+  ]);
 
   const stats = useMemo(() => {
     if (!session) return null;
@@ -187,7 +204,11 @@ export function OptionsApp() {
 
     if (cachedSession) {
       setSession(cachedSession);
+      setEncryptedVault(cachedSession.encryptedVault);
       setStatus('unlocked');
+      if (cachedSession.saveInboxJustEnabled) {
+        setNotice({ kind: 'success', text: '锁定态保存已启用。以后 Vault 锁定时也可以先加密暂存登录信息。' });
+      }
       return;
     }
 
@@ -206,7 +227,10 @@ export function OptionsApp() {
       setEncryptedVault(nextSession.encryptedVault);
       setStatus('unlocked');
       setMasterPassword('');
-      setNotice({ kind: 'success', text: 'Vault 已解锁，可以修改设置。' });
+      setNotice({
+        kind: 'success',
+        text: nextSession.saveInboxJustEnabled ? 'Vault 已解锁，锁定态保存已启用。' : 'Vault 已解锁，可以修改设置。'
+      });
     } catch (error) {
       setNotice({ kind: 'error', text: getErrorMessage(error) });
     } finally {
@@ -226,6 +250,30 @@ export function OptionsApp() {
   async function updateSettings(settings: Partial<VaultPlain['settings']>, message = '设置已保存。') {
     if (!session) return;
     await persist(upsertVaultSettings(session.vault, settings), message);
+  }
+
+  async function loadDiagnosticLogs() {
+    const settings = session?.vault.settings;
+
+    if (!settings) {
+      setDiagnosticLogs([]);
+      return;
+    }
+
+    const logs = await getDiagnosticLogEntries({
+      limit: settings.diagnosticLogLimit,
+      retentionDays: settings.diagnosticLogRetentionDays
+    });
+    setDiagnosticLogs(logs);
+  }
+
+  async function clearDiagnosticLogs() {
+    const confirmed = window.confirm('确定清空本地识别诊断日志吗？这不会影响账号、密码和站点规则。');
+    if (!confirmed) return;
+
+    await clearDiagnosticLogEntries();
+    setDiagnosticLogs([]);
+    setNotice({ kind: 'success', text: '识别诊断日志已清空。' });
   }
 
   async function toggleHighSecurityMode(checked: boolean) {
@@ -334,7 +382,7 @@ export function OptionsApp() {
     setSession(nextSession);
     setEncryptedVault(nextSession.encryptedVault);
     setRecoveryCodeToShow(code);
-    setNotice({ kind: 'success', text: '恢复码已生成，请立即保存。' });
+    setNotice({ kind: 'success', text: '恢复码已生成，请立即离线保存。' });
   }
 
   async function disableRecovery() {
@@ -388,7 +436,7 @@ export function OptionsApp() {
         <SettingsSection title="一般" description="控制 KeyPilot 的默认入口、界面语言和工具栏行为。">
           <SettingRow
             title="语言"
-            description="请选择 KeyPilot 应用程序界面语言"
+            description="选择 KeyPilot 应用界面语言。"
             control={
               <select value={settings.language} onChange={(event) => void updateSettings({ language: event.currentTarget.value as VaultPlain['settings']['language'] })}>
                 <option value="zh-CN">简体中文 (Simplified Chinese)</option>
@@ -397,8 +445,8 @@ export function OptionsApp() {
             }
           />
           <SettingRow
-            title="打开 KeyPilot 浏览器扩展程序和起始页"
-            description="每次打开扩展和起始页时，都显示选定的排序"
+            title="打开扩展和起始页时显示"
+            description="每次打开 KeyPilot 扩展或起始页时，默认使用选定的排序方式。"
             control={
               <select value={settings.defaultHomeSort} onChange={(event) => void updateSettings({ defaultHomeSort: event.currentTarget.value as VaultPlain['settings']['defaultHomeSort'] })}>
                 <option value="favorite">常用登录名</option>
@@ -409,32 +457,32 @@ export function OptionsApp() {
           />
           <ToggleRow title="登录 KeyPilot 时打开起始页" checked={settings.openStartPageOnLogin} onChange={(checked) => void updateSettings({ openStartPageOnLogin: checked })} />
           <ToggleRow
-            title="单击扩展按钮可在空白选项卡上打开起始页"
-            description="如果用户在空白浏览器选项卡上单击扩展按钮，则打开 KeyPilot 的起始页"
+            title="在空白标签页点击扩展时打开起始页"
+            description="如果当前是浏览器空白页，点击 KeyPilot 扩展按钮会打开 KeyPilot 起始页。"
             checked={settings.openStartPageOnToolbarClick}
             onChange={(checked) => void updateSettings({ openStartPageOnToolbarClick: checked })}
           />
           <ToggleRow
             title="同时显示书签和登录信息"
-            description="所有 KeyPilot 登录名账户中将被列入书签视图"
+            description="在登录名账户视图中同时显示书签类入口。"
             checked={settings.showLoginBookmarksTogether}
             onChange={(checked) => void updateSettings({ showLoginBookmarksTogether: checked })}
           />
           <ToggleRow
-            title="在浏览器快捷菜单中显示 KeyPilot 指令"
-            description="KeyPilot 指令将出现在浏览器右键菜单中"
+            title="在浏览器右键菜单中显示 KeyPilot 指令"
+            description="KeyPilot 指令会出现在浏览器右键菜单中。"
             checked={settings.showContextMenuCommands}
             onChange={(checked) => void updateSettings({ showContextMenuCommands: checked })}
           />
           <ToggleRow
-            title="为弹出窗口显示较低的 KeyPilot 工具栏"
-            description="在扩展弹窗底部显示导入、新建、自动保存等常用操作"
+            title="弹窗底部显示紧凑工具栏"
+            description="在扩展弹窗底部显示导入、新建、自动保存等常用操作。"
             checked={settings.useCompactPopupToolbar}
             onChange={(checked) => void updateSettings({ useCompactPopupToolbar: checked })}
           />
           <ToggleRow
-            title="在 Web 浏览器中显示下方的 KeyPilot 工具栏"
-            description="为后续完整网页工具栏保留设置项，当前网页内仍优先使用字段旁浮层"
+            title="在网页底部显示 KeyPilot 工具栏"
+            description="保留给后续完整网页工具栏使用；当前网页内仍优先使用字段旁浮层。"
             checked={settings.showWebBottomToolbar}
             onChange={(checked) => void updateSettings({ showWebBottomToolbar: checked })}
           />
@@ -483,10 +531,10 @@ export function OptionsApp() {
 
     if (activeSection === 'security') {
       return (
-        <SettingsSection title="Log In & Security" description="控制解锁、恢复码、主密码和敏感信息显示策略。">
+        <SettingsSection title="登录与安全" description="设置自动锁定、高安全模式、恢复码和主密码。">
           <SettingRow
             title="自动锁定时间"
-            description="超过该时间未操作后，KeyPilot 会清除解锁会话"
+            description="超过该时间未操作后，KeyPilot 会清除解锁会话。"
             control={
               <select value={settings.autoLockMinutes} onChange={(event) => void updateSettings({ autoLockMinutes: Number(event.currentTarget.value) })}>
                 <option value={0}>不自动锁定</option>
@@ -500,13 +548,13 @@ export function OptionsApp() {
           <ToggleRow title="启动时自动锁定" checked={settings.lockOnStartup} onChange={(checked) => void updateSettings({ lockOnStartup: checked, lockOnStartupUserSet: true })} />
           <ToggleRow
             title="高安全模式"
-            description="开启后不缓存明文 Vault 和解锁密钥。关闭插件弹窗、刷新后台页或浏览器重启后，需要重新输入主密码；网页内快捷菜单也需要重新解锁后才能使用。"
+            description="开启后不缓存明文 Vault 和解锁密钥。关闭弹窗、刷新后台页或浏览器重启后，需要重新输入主密码。"
             checked={settings.highSecurityMode}
             onChange={(checked) => void toggleHighSecurityMode(checked)}
           />
           <ToggleRow
             title="查看密码时要求主密码"
-            description="复制密码仍可使用；查看明文时会提高安全门槛"
+            description="复制密码仍可使用；查看明文密码时会提高安全门槛。"
             checked={settings.requireMasterPasswordForReveal}
             onChange={(checked) => void updateSettings({ requireMasterPasswordForReveal: checked })}
           />
@@ -531,7 +579,9 @@ export function OptionsApp() {
             <div className="recovery-card">
               <span>请立即保存恢复码，KeyPilot 不会再次显示。</span>
               <code>{recoveryCodeToShow}</code>
-              <button className="secondary-action small" type="button" onClick={() => void copyRecoveryCode()}>复制恢复码</button>
+              <button className="secondary-action small" type="button" onClick={() => void copyRecoveryCode()}>
+                复制恢复码
+              </button>
             </div>
           ) : null}
           <form className="password-form" onSubmit={(event) => void changePassword(event)}>
@@ -550,7 +600,9 @@ export function OptionsApp() {
                 <input type="password" value={passwordDraft.confirm} onChange={(event) => setPasswordDraft((draft) => ({ ...draft, confirm: event.currentTarget.value }))} />
               </label>
             </div>
-            <button className="primary-action" type="submit">保存主密码</button>
+            <button className="primary-action" type="submit">
+              保存主密码
+            </button>
           </form>
         </SettingsSection>
       );
@@ -569,13 +621,21 @@ export function OptionsApp() {
             icon={<ShieldCheck size={20} aria-hidden="true" />}
             title="本地缓存会话"
             description="锁定后会清除本机解锁密钥缓存，下次需要重新输入主密码。"
-            action={<button className="secondary-action small" type="button" onClick={() => void lockOptionsPage()}>立即锁定</button>}
+            action={
+              <button className="secondary-action small" type="button" onClick={() => void lockOptionsPage()}>
+                立即锁定
+              </button>
+            }
           />
           <ActionRow
             icon={<BellDot size={20} aria-hidden="true" />}
             title="最近活动"
             description={`账号 ${stats.credentials} 个，身份资料 ${stats.fillProfiles} 条，站点规则 ${stats.siteRules} 条。`}
-            action={<button className="secondary-action small" type="button" onClick={() => void loadVault()}>刷新</button>}
+            action={
+              <button className="secondary-action small" type="button" onClick={() => void loadVault()}>
+                刷新
+              </button>
+            }
           />
         </SettingsSection>
       );
@@ -583,12 +643,12 @@ export function OptionsApp() {
 
     if (activeSection === 'autofill') {
       return (
-        <SettingsSection title="自动填表" description="控制账号、密码、身份ID在网页中的填充方式。">
-          <ToggleRow title="自动填充用户名和密码" description="检测到匹配登录表单时允许 KeyPilot 填入账号密码" checked={settings.autoFill} onChange={(checked) => void updateSettings({ autoFill: checked })} />
-          <ToggleRow title="允许一键登录自动点击登录按钮" description="一键登录会填入账号密码，并尝试点击页面登录按钮" checked={settings.autoSubmit} onChange={(checked) => void updateSettings({ autoSubmit: checked })} />
+        <SettingsSection title="自动填表" description="控制账号、密码、身份 ID 在网页中的填充方式。">
+          <ToggleRow title="自动填充用户名和密码" description="检测到匹配登录表单时允许 KeyPilot 填入账号密码。" checked={settings.autoFill} onChange={(checked) => void updateSettings({ autoFill: checked })} />
+          <ToggleRow title="允许一键登录自动点击登录按钮" description="一键登录会填入账号密码，并尝试点击页面登录按钮。" checked={settings.autoSubmit} onChange={(checked) => void updateSettings({ autoSubmit: checked })} />
           <SettingRow
             title="复制后清空剪贴板"
-            description="复制密码后，KeyPilot 会在指定时间后尝试清空剪贴板"
+            description="复制密码后，KeyPilot 会在指定时间后尝试清空剪贴板。"
             control={
               <select value={settings.clearClipboardSeconds} onChange={(event) => void updateSettings({ clearClipboardSeconds: Number(event.currentTarget.value) })}>
                 <option value={0}>不自动清空</option>
@@ -601,17 +661,35 @@ export function OptionsApp() {
           <ActionRow
             icon={<Clipboard size={20} aria-hidden="true" />}
             title="身份资料填表"
-            description="身份ID资料会在网页注册/表单页面显示，可通过字段绑定提升准确率。"
-            action={<button className="secondary-action small" type="button" onClick={() => openExtensionPage('vault.html#identities')}>管理资料</button>}
+            description="身份 ID 资料会在网页注册/表单页面显示，可通过字段绑定提升准确率。"
+            action={
+              <button className="secondary-action small" type="button" onClick={() => openExtensionPage('vault.html#identities')}>
+                管理资料
+              </button>
+            }
           />
         </SettingsSection>
       );
     }
 
     if (activeSection === 'autosave') {
+      const saveInboxEnabled = Boolean(session.encryptedVault.saveInboxPublicKey?.keyId && session.vault.saveInboxKeyPair?.privateKey);
+
       return (
         <SettingsSection title="自动保存" description="控制登录成功后的保存密码提示和不保存网站。">
           <ToggleRow title="自动提示保存登录信息" checked={settings.autoPromptSave} onChange={(checked) => void updateSettings({ autoPromptSave: checked })} />
+          <ActionRow
+            icon={<ShieldCheck size={20} aria-hidden="true" />}
+            title="锁定态保存"
+            description={saveInboxEnabled ? 'Vault 锁定时点击保存，会先在本地加密暂存；下次解锁后自动保存或更新到账号库。' : '解锁一次 Vault 后会自动启用。启用前，锁定状态无法直接暂存新的登录信息。'}
+            action={<span className={saveInboxEnabled ? 'status-pill success' : 'status-pill'}>{saveInboxEnabled ? '已启用' : '需初始化'}</span>}
+          />
+          <ActionRow
+            icon={<KeyRound size={20} aria-hidden="true" />}
+            title="密码变更检测"
+            description="同一网站和用户名已存在但新密码不同，会提示更新密码；没有匹配账号时会提示保存为新账号。"
+            action={<span className="status-pill success">自动判断</span>}
+          />
           <label className="field-block">
             <span>不保存密码的网站</span>
             <textarea value={blacklistDraft} onChange={(event) => setBlacklistDraft(event.currentTarget.value)} rows={8} placeholder="每行一个域名，例如 example.com" />
@@ -659,34 +737,99 @@ export function OptionsApp() {
     }
 
     if (activeSection === 'advanced') {
+      const diagnosticLimit = settings.diagnosticLogLimit ?? DEFAULT_DIAGNOSTIC_LOG_LIMIT;
+      const diagnosticRetentionDays = settings.diagnosticLogRetentionDays ?? DEFAULT_DIAGNOSTIC_LOG_RETENTION_DAYS;
+
       return (
-        <SettingsSection title="高级设置" description="维护站点规则、剪贴板策略和本地运行状态。">
+        <SettingsSection title="高级设置" description="维护站点规则、浏览器指令和本地诊断能力。">
           <ActionRow
             icon={<RefreshCw size={20} aria-hidden="true" />}
             title="站点规则库"
             description={`当前保存 ${stats.siteRules} 条规则。清空后自动登录会重新学习表单结构。`}
-            action={<button className="secondary-action small" type="button" onClick={() => void updateSettings({ siteRules: [] }, '站点规则库已清空。')}>清空规则</button>}
+            action={
+              <button className="secondary-action small" type="button" onClick={() => void updateSettings({ siteRules: [] }, '站点规则库已清空。')}>
+                清空规则
+              </button>
+            }
           />
           <ToggleRow
-            title="在浏览器快捷菜单中显示 KeyPilot 指令"
+            title="在浏览器右键菜单中显示 KeyPilot 指令"
             checked={settings.showContextMenuCommands}
             onChange={(checked) => void updateSettings({ showContextMenuCommands: checked })}
           />
           <ActionRow
             icon={<CircleHelp size={20} aria-hidden="true" />}
-            title="识别调试"
-            description="调试面板仅用于开发，不会作为客户默认功能显示。"
+            title="识别调试面板"
+            description="只用于开发排查。普通客户默认不会看到这个入口。"
             action={<span className="status-pill">仅开发</span>}
           />
+          <ToggleRow
+            title="保存识别诊断日志"
+            description="默认关闭。开启后只记录最近的识别原因、域名和字段数量，不保存密码、用户名或完整表单内容。"
+            checked={Boolean(settings.diagnosticLogging)}
+            onChange={(checked) => void updateSettings({ diagnosticLogging: checked }, checked ? '识别诊断日志已开启。' : '识别诊断日志已关闭。')}
+          />
+          <SettingRow
+            title="最多保存记录"
+            description="超过上限会自动删除最旧记录，避免长期占用空间。"
+            control={
+              <select value={diagnosticLimit} onChange={(event) => void updateSettings({ diagnosticLogLimit: Number(event.currentTarget.value) }, '诊断日志上限已更新。')}>
+                <option value={20}>20 条</option>
+                <option value={50}>50 条</option>
+                <option value={100}>100 条</option>
+              </select>
+            }
+          />
+          <SettingRow
+            title="自动清理周期"
+            description="超过保留时间的记录会在读取或写入时自动清理。"
+            control={
+              <select
+                value={diagnosticRetentionDays}
+                onChange={(event) => void updateSettings({ diagnosticLogRetentionDays: Number(event.currentTarget.value) }, '诊断日志保留时间已更新。')}
+              >
+                <option value={1}>1 天</option>
+                <option value={7}>7 天</option>
+                <option value={14}>14 天</option>
+                <option value={30}>30 天</option>
+              </select>
+            }
+          />
+          <ActionRow
+            icon={<CircleHelp size={20} aria-hidden="true" />}
+            title="最近诊断记录"
+            description={`当前保留 ${diagnosticLogs.length} 条。仅用于开发排查，发布给客户时默认不会开启。`}
+            action={
+              <div className="inline-actions">
+                <button className="secondary-action small" type="button" onClick={() => void loadDiagnosticLogs()}>
+                  刷新
+                </button>
+                <button className="text-danger small" type="button" onClick={() => void clearDiagnosticLogs()}>
+                  清空
+                </button>
+              </div>
+            }
+          />
+          {settings.diagnosticLogging || diagnosticLogs.length ? <DiagnosticLogList logs={diagnosticLogs} /> : null}
         </SettingsSection>
       );
     }
 
     if (activeSection === 'billing') {
       return (
-        <SettingsSection title="License & Billing" description="当前版本为本地专业版，没有云端订阅和账单数据。">
-          <ActionRow icon={<BadgeCheck size={20} aria-hidden="true" />} title="KeyPilot 本地专业版" description="功能在本机运行，不依赖云端账号。" action={<span className="status-pill success">已启用</span>} />
-          <ActionRow icon={<ShieldCheck size={20} aria-hidden="true" />} title="隐私模式" description="不会把保存的网站域名发送给第三方图标或 Logo 服务。" action={<span className="status-pill success">本地优先</span>} />
+        <SettingsSection title="许可&版本" description="当前版本为本地专业版，没有云端订阅和账单数据。">
+          <ActionRow
+            icon={<BadgeCheck size={20} aria-hidden="true" />}
+            title="KeyPilot 本地专业版"
+            description="功能在本机运行，不依赖云端账号。"
+            action={<span className="status-pill success">已启用</span>}
+          />
+          <ActionRow
+            icon={<ShieldCheck size={20} aria-hidden="true" />}
+            title="隐私模式"
+            description="不会把保存的网站域名发送给第三方图标或 Logo 服务。"
+            action={<span className="status-pill success">本地优先</span>}
+          />
         </SettingsSection>
       );
     }
@@ -713,8 +856,17 @@ export function OptionsApp() {
     }
 
     return (
-      <SettingsSection title="Referral Rewards" description="分享功能后续会和安全导出、授权分享流程一起完善。">
-        <ActionRow icon={<Gift size={20} aria-hidden="true" />} title="本地分享建议" description="如果需要把资料发给朋友，优先导出加密备份或 .kpfill 文件，不建议发送明文 CSV。" action={<button className="secondary-action small" type="button" onClick={() => openExtensionPage('vault.html#identities')}>去导出</button>} />
+      <SettingsSection title="分享" description="分享功能后续会和安全导出、授权分享流程一起完善。">
+        <ActionRow
+          icon={<Gift size={20} aria-hidden="true" />}
+          title="本地分享建议"
+          description="如果需要把资料发给朋友，优先导出加密备份或 .kpfill 文件，不建议发送明文 CSV。"
+          action={
+            <button className="secondary-action small" type="button" onClick={() => openExtensionPage('vault.html#identities')}>
+              去导出
+            </button>
+          }
+        />
       </SettingsSection>
     );
   }
@@ -819,6 +971,56 @@ function ShortcutRow({ action, shortcut }: { action: string; shortcut: string })
   );
 }
 
+function diagnosticOutcomeText(outcome: DiagnosticLogEntry['outcome']): string {
+  if (outcome === 'success') return '成功';
+  if (outcome === 'failure') return '失败';
+  if (outcome === 'pending') return '等待';
+  if (outcome === 'ignored') return '忽略';
+  return '信息';
+}
+
+function formatDiagnosticTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+}
+
+function DiagnosticLogList({ logs }: { logs: DiagnosticLogEntry[] }) {
+  if (!logs.length) {
+    return (
+      <div className="diagnostic-log-empty">
+        <strong>暂无诊断记录</strong>
+        <span>开启后，KeyPilot 只会保留最近的识别判断摘要。</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="diagnostic-log-list" role="list" aria-label="最近识别诊断记录">
+      {logs.slice(0, 12).map((entry) => (
+        <article className={`diagnostic-log-item ${entry.outcome}`} key={entry.id} role="listitem">
+          <div>
+            <strong>{entry.event}</strong>
+            <span>{entry.domain}</span>
+          </div>
+          <p>{entry.reason || '没有记录原因。'}</p>
+          <footer>
+            <time dateTime={new Date(entry.createdAt).toISOString()}>{formatDiagnosticTime(entry.createdAt)}</time>
+            <span>{diagnosticOutcomeText(entry.outcome)}</span>
+            {entry.signal ? <span>{entry.signal}</span> : null}
+            {entry.counts ? <span>{Object.entries(entry.counts).slice(0, 4).map(([key, value]) => `${key}:${String(value)}`).join(' · ')}</span> : null}
+          </footer>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function DangerZone({ onReset }: { onReset: () => void }) {
   return (
     <div className="danger-zone">
@@ -838,7 +1040,9 @@ function NoticeToast({ notice, onDismiss }: { notice: Notice; onDismiss: () => v
   return (
     <div className={`options-notice ${notice.kind}`}>
       <span>{notice.text}</span>
-      <button type="button" aria-label="关闭提示" onClick={onDismiss}>×</button>
+      <button type="button" aria-label="关闭提示" onClick={onDismiss}>
+        ×
+      </button>
     </div>
   );
 }
@@ -859,7 +1063,9 @@ function EmptyVaultPanel({ onOpenVault }: { onOpenVault: () => void }) {
       <Database size={34} aria-hidden="true" />
       <h1>还没有本地 Vault</h1>
       <p>先创建本地密码库后，设置项会保存到加密 Vault 中。</p>
-      <button className="primary-action" type="button" onClick={onOpenVault}>创建 Vault</button>
+      <button className="primary-action" type="button" onClick={onOpenVault}>
+        创建 Vault
+      </button>
     </div>
   );
 }
@@ -889,7 +1095,9 @@ function UnlockPanel({
       <button className="primary-action" type="submit" disabled={unlocking || !password.trim()}>
         {unlocking ? '正在解锁' : '解锁设置'}
       </button>
-      <button className="text-action" type="button" onClick={onOpenVault}>打开 KeyPilot 主页</button>
+      <button className="text-action" type="button" onClick={onOpenVault}>
+        打开 KeyPilot 主页
+      </button>
     </form>
   );
 }

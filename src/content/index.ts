@@ -4,6 +4,7 @@ import type {
   CredentialFormProfile,
   CredentialFormField,
   CredentialSubmitTarget,
+  DiagnosticLogEntry,
   BindingTestResult,
   FillField,
   FillFieldBinding,
@@ -202,6 +203,10 @@ const SUBMIT_REPAIR_DELAY = 1400;
 const DEFAULT_REPAIR_ACTIONS: SubmitRepairAction[] = ['commit-fields', 'wait-enabled-click', 'retry-click', 'click-nearby', 'enter-password', 'request-submit'];
 const ERROR_TEXT_PATTERN =
   /incorrect|invalid|wrong|failed|failure|error|denied|locked|disabled|try again|not match|does not match|required|empty|missing|expired|too many|captcha|verify|verification|blocked|用户名|账号|账户|帐号|密码|错误|失败|无效|不存在|不正确|不匹配|重试|不能为空|必填|验证码|校验码|验证|锁定|禁用|过期|频繁|异常/i;
+const POST_LOGIN_TEXT_PATTERN =
+  /logout|log\s*out|sign\s*out|dashboard|console|control\s*panel|my\s+account|account\s+settings|profile|user\s+center|member\s+center|退出|注销|登出|控制台|仪表盘|后台|管理中心|个人中心|用户中心|会员中心|我的账户|账户设置|个人资料/i;
+const POST_LOGIN_SELECTOR =
+  'a[href*="logout"], a[href*="signout"], a[href*="sign-out"], button[aria-label*="account" i], button[aria-label*="profile" i], [class*="avatar" i], [class*="user-menu" i], [class*="account-menu" i], [data-testid*="avatar" i], [data-testid*="user" i]';
 const REGISTER_PASSWORD_PATTERN =
   /sign\s*up|signup|register|registration|create\s+(?:an?\s+)?account|new\s+account|join\s+now|application|apply|set\s+password|create\s+(?:a\s+)?password|choose\s+(?:a\s+)?password|confirm\s+password|repeat\s+password|retype\s+password|注册|创建账号|新建账号|申请|设置密码|创建密码|确认密码|重复密码|再次输入密码/i;
 const REGISTER_URL_PATTERN =
@@ -345,6 +350,7 @@ interface FillProfileBindingSession {
   profile: FillProfilePayload;
   selectedKey: string;
   bindings: FillFieldBinding[];
+  scope: 'path' | 'domain';
   status?: string;
 }
 
@@ -430,6 +436,7 @@ let savePromptContext: SavePromptContext | null = null;
 let savePromptMode: SaveCandidateMode = 'save';
 let savePromptDraftTitle = '';
 let savePromptDropdownOpen = false;
+let pendingSavePromptCheckTimer: number | null = null;
 
 try {
   document.documentElement.dataset.keypilotContentScript = '0.1.0';
@@ -459,6 +466,21 @@ interface SavePromptContext {
 
 interface SavePromptResponse extends SavePromptContext {
   candidate?: PendingLoginCandidate | null;
+}
+
+interface LoginSubmitSnapshot {
+  url: string;
+  title: string;
+  formSignature: string;
+  passwordFieldCount: number;
+}
+
+type SaveCandidateSuccessSignal = NonNullable<PendingLoginCandidate['successSignal']>;
+
+interface SaveCandidateDecision {
+  status: 'success' | 'pending' | 'failure';
+  reason: string;
+  signal?: SaveCandidateSuccessSignal;
 }
 
 function toHttpUrl(value: string | null | undefined): string | undefined {
@@ -1481,6 +1503,149 @@ function visibleErrorText(scope: ParentNode): string | undefined {
   return undefined;
 }
 
+function loginContextSignature(context: LoginContext | null): string {
+  if (!context?.passwordField) return '';
+
+  const scope = context.scope instanceof Element ? elementSelector(context.scope) ?? context.scope.tagName.toLowerCase() : 'document';
+  const username = context.usernameField ? elementSelector(context.usernameField, context.scope) ?? inputText(context.usernameField).slice(0, 80) : '';
+  const password = elementSelector(context.passwordField, context.scope) ?? inputText(context.passwordField).slice(0, 80);
+  return [scope, username, password].filter(Boolean).join('|');
+}
+
+function createLoginSubmitSnapshot(): LoginSubmitSnapshot {
+  const context = findLoginContext();
+
+  return {
+    url: window.location.href,
+    title: document.title,
+    formSignature: loginContextSignature(context),
+    passwordFieldCount: getAllVisibleInputs(context?.scope ?? document).filter((input) => isPasswordInput(input)).length
+  };
+}
+
+function comparablePageUrl(value: string | undefined): string {
+  if (!value) return '';
+
+  try {
+    const parsed = new URL(value, document.baseURI);
+    parsed.hash = '';
+    return parsed.href.replace(/\/$/, '');
+  } catch {
+    return value.trim().replace(/#.*$/, '').replace(/\/$/, '');
+  }
+}
+
+function safePostLoginElements(): Element[] {
+  try {
+    return Array.from(document.querySelectorAll<Element>(POST_LOGIN_SELECTOR)).filter(visibleElement).slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
+function pageHasPostLoginSignal(username?: string): boolean {
+  const scopeText = compactText(
+    [
+      document.title,
+      ...Array.from(document.querySelectorAll<HTMLElement>('header, nav, main, aside, [role="navigation"], [role="banner"]'))
+        .filter(visibleElement)
+        .slice(0, 8)
+        .map((element) => elementText(element).slice(0, 700))
+    ].join(' ')
+  );
+  const normalizedUsername = username?.trim().toLowerCase();
+
+  return Boolean(
+    POST_LOGIN_TEXT_PATTERN.test(scopeText) ||
+      safePostLoginElements().length > 0 ||
+      (normalizedUsername && scopeText.toLowerCase().includes(normalizedUsername))
+  );
+}
+
+function pageStillLooksLikeSubmittedLogin(candidate: PendingLoginCandidate, context: LoginContext | null): boolean {
+  if (!context?.passwordField) return false;
+
+  const currentSignature = loginContextSignature(context);
+  const sameForm = Boolean(candidate.submitFormSignature && currentSignature && candidate.submitFormSignature === currentSignature);
+  const sameUsername = Boolean(context.usernameField?.value?.trim() && context.usernameField.value.trim() === candidate.username);
+  const samePassword = Boolean(context.passwordField.value && context.passwordField.value === candidate.password);
+
+  return sameForm || sameUsername || samePassword || (pageLooksLikeLoginUrl() && scopeLooksLikeLogin(context.scope));
+}
+
+function evaluateSaveCandidateDecision(candidate: PendingLoginCandidate, isFinalAttempt: boolean): SaveCandidateDecision {
+  const context = findLoginContext();
+  const errorText = (context ? visibleErrorText(context.scope) : undefined) ?? visibleErrorText(document);
+  const urlChanged = Boolean(candidate.submitUrl && comparablePageUrl(window.location.href) !== comparablePageUrl(candidate.submitUrl));
+  const loginFormPresent = Boolean(context?.passwordField);
+  const postLoginSignal = pageHasPostLoginSignal(candidate.username);
+
+  if (errorText) {
+    return { status: 'failure', reason: `页面显示错误：${errorText}` };
+  }
+
+  if (context?.unsafeReason) {
+    return { status: isFinalAttempt ? 'failure' : 'pending', reason: `检测到安全字段：${context.unsafeReason}` };
+  }
+
+  if (!loginFormPresent && postLoginSignal) {
+    return { status: 'success', reason: '页面出现账户或退出登录信号。', signal: 'account-signal' };
+  }
+
+  if (!loginFormPresent && urlChanged) {
+    return { status: 'success', reason: '登录后页面已跳转且登录框消失。', signal: 'navigation' };
+  }
+
+  if (!loginFormPresent && !pageLooksLikeLoginUrl() && !pageLooksLikeRegistration()) {
+    return { status: 'success', reason: '登录框已消失。', signal: 'login-form-disappeared' };
+  }
+
+  if (pageStillLooksLikeSubmittedLogin(candidate, context)) {
+    return {
+      status: isFinalAttempt ? 'failure' : 'pending',
+      reason: '仍停留在同一个登录表单。'
+    };
+  }
+
+  if (urlChanged && !pageLooksLikeLoginUrl()) {
+    return { status: 'success', reason: '页面已跳转。', signal: 'navigation' };
+  }
+
+  return {
+    status: isFinalAttempt ? 'failure' : 'pending',
+    reason: '登录结果尚未确认。'
+  };
+}
+
+function saveCandidateDiagnosticCounts(candidate?: PendingLoginCandidate, context = findLoginContext()): DiagnosticLogEntry['counts'] {
+  const inputs = getAllVisibleInputs(document);
+
+  return {
+    visibleInputs: inputs.length,
+    passwordFields: inputs.filter((input) => isPasswordInput(input)).length,
+    loginFormPresent: Boolean(context?.passwordField),
+    capturedFields: candidate?.formFields?.length ?? 0,
+    submitFields: candidate?.formProfile?.fieldCount ?? 0
+  };
+}
+
+function recordDiagnosticLog(
+  entry: Omit<DiagnosticLogEntry, 'id' | 'createdAt' | 'domain'> & Partial<Pick<DiagnosticLogEntry, 'id' | 'createdAt' | 'domain'>>
+) {
+  chrome.runtime.sendMessage(
+    {
+      type: 'KEYPILOT_RECORD_DIAGNOSTIC_LOG',
+      entry: {
+        ...entry,
+        domain: entry.domain || window.location.hostname.replace(/^www\./i, '').toLowerCase() || 'unknown'
+      }
+    },
+    () => {
+      void chrome.runtime.lastError;
+    }
+  );
+}
+
 function recentSubmitOutcome(): SubmitOutcome | undefined {
   if (!lastSubmitOutcome) return undefined;
   if (Date.now() - lastSubmitOutcome.checkedAt > SUBMIT_OUTCOME_TTL) return undefined;
@@ -2260,7 +2425,115 @@ function normalizedSelectValueCandidates(value: string): string[] {
     china: ['cn', 'china', '中国'],
     '中国': ['cn', 'china', '中国']
   };
-  return Array.from(new Set([normalized, ...(countryAliases[normalized] ?? []).map(normalizeFillText)]));
+  const monthAliases: Record<string, string[]> = {
+    '1': ['1', '01', 'jan', 'january', '一月', '1月'],
+    '01': ['1', '01', 'jan', 'january', '一月', '1月'],
+    jan: ['1', '01', 'jan', 'january'],
+    january: ['1', '01', 'jan', 'january'],
+    '2': ['2', '02', 'feb', 'february', '二月', '2月'],
+    '02': ['2', '02', 'feb', 'february', '二月', '2月'],
+    feb: ['2', '02', 'feb', 'february'],
+    february: ['2', '02', 'feb', 'february'],
+    '3': ['3', '03', 'mar', 'march', '三月', '3月'],
+    '03': ['3', '03', 'mar', 'march', '三月', '3月'],
+    mar: ['3', '03', 'mar', 'march'],
+    march: ['3', '03', 'mar', 'march'],
+    '4': ['4', '04', 'apr', 'april', '四月', '4月'],
+    '04': ['4', '04', 'apr', 'april', '四月', '4月'],
+    apr: ['4', '04', 'apr', 'april'],
+    april: ['4', '04', 'apr', 'april'],
+    '5': ['5', '05', 'may', '五月', '5月'],
+    '05': ['5', '05', 'may', '五月', '5月'],
+    may: ['5', '05', 'may'],
+    '6': ['6', '06', 'jun', 'june', '六月', '6月'],
+    '06': ['6', '06', 'jun', 'june', '六月', '6月'],
+    jun: ['6', '06', 'jun', 'june'],
+    june: ['6', '06', 'jun', 'june'],
+    '7': ['7', '07', 'jul', 'july', '七月', '7月'],
+    '07': ['7', '07', 'jul', 'july', '七月', '7月'],
+    jul: ['7', '07', 'jul', 'july'],
+    july: ['7', '07', 'jul', 'july'],
+    '8': ['8', '08', 'aug', 'august', '八月', '8月'],
+    '08': ['8', '08', 'aug', 'august', '八月', '8月'],
+    aug: ['8', '08', 'aug', 'august'],
+    august: ['8', '08', 'aug', 'august'],
+    '9': ['9', '09', 'sep', 'sept', 'september', '九月', '9月'],
+    '09': ['9', '09', 'sep', 'sept', 'september', '九月', '9月'],
+    sep: ['9', '09', 'sep', 'sept', 'september'],
+    sept: ['9', '09', 'sep', 'sept', 'september'],
+    september: ['9', '09', 'sep', 'sept', 'september'],
+    '10': ['10', 'oct', 'october', '十月', '10月'],
+    oct: ['10', 'oct', 'october'],
+    october: ['10', 'oct', 'october'],
+    '11': ['11', 'nov', 'november', '十一月', '11月'],
+    nov: ['11', 'nov', 'november'],
+    november: ['11', 'nov', 'november'],
+    '12': ['12', 'dec', 'december', '十二月', '12月'],
+    dec: ['12', 'dec', 'december'],
+    december: ['12', 'dec', 'december']
+  };
+  const stateAliases: Record<string, string[]> = {
+    al: ['al', 'alabama'],
+    ak: ['ak', 'alaska'],
+    az: ['az', 'arizona'],
+    ar: ['ar', 'arkansas'],
+    ca: ['ca', 'california'],
+    co: ['co', 'colorado'],
+    ct: ['ct', 'connecticut'],
+    de: ['de', 'delaware'],
+    fl: ['fl', 'florida'],
+    ga: ['ga', 'georgia'],
+    hi: ['hi', 'hawaii'],
+    id: ['id', 'idaho'],
+    il: ['il', 'illinois'],
+    in: ['in', 'indiana'],
+    ia: ['ia', 'iowa'],
+    ks: ['ks', 'kansas'],
+    ky: ['ky', 'kentucky'],
+    la: ['la', 'louisiana'],
+    me: ['me', 'maine'],
+    md: ['md', 'maryland'],
+    ma: ['ma', 'massachusetts'],
+    mi: ['mi', 'michigan'],
+    mn: ['mn', 'minnesota'],
+    ms: ['ms', 'mississippi'],
+    mo: ['mo', 'missouri'],
+    mt: ['mt', 'montana'],
+    ne: ['ne', 'nebraska'],
+    nv: ['nv', 'nevada'],
+    nh: ['nh', 'new hampshire'],
+    nj: ['nj', 'new jersey'],
+    nm: ['nm', 'new mexico'],
+    ny: ['ny', 'new york'],
+    nc: ['nc', 'north carolina'],
+    nd: ['nd', 'north dakota'],
+    oh: ['oh', 'ohio'],
+    ok: ['ok', 'oklahoma'],
+    or: ['or', 'oregon'],
+    pa: ['pa', 'pennsylvania'],
+    ri: ['ri', 'rhode island'],
+    sc: ['sc', 'south carolina'],
+    sd: ['sd', 'south dakota'],
+    tn: ['tn', 'tennessee'],
+    tx: ['tx', 'texas'],
+    ut: ['ut', 'utah'],
+    vt: ['vt', 'vermont'],
+    va: ['va', 'virginia'],
+    wa: ['wa', 'washington'],
+    wv: ['wv', 'west virginia'],
+    wi: ['wi', 'wisconsin'],
+    wy: ['wy', 'wyoming'],
+    dc: ['dc', 'district of columbia', 'washington dc']
+  };
+  const stateMatch = Object.entries(stateAliases).find(([, aliases]) => aliases.includes(normalized));
+  const yearAliases = /^\d{4}$/.test(normalized) ? [normalized.slice(-2)] : /^\d{2}$/.test(normalized) ? [`20${normalized}`, `19${normalized}`] : [];
+  return Array.from(new Set([
+    normalized,
+    ...(countryAliases[normalized] ?? []).map(normalizeFillText),
+    ...(monthAliases[normalized] ?? []).map(normalizeFillText),
+    ...(stateMatch?.[1] ?? []).map(normalizeFillText),
+    ...yearAliases.map(normalizeFillText)
+  ]));
 }
 
 function fillFieldAliases(field: FillField): string[] {
@@ -2269,23 +2542,41 @@ function fillFieldAliases(field: FillField): string[] {
     firstName: ['first name', 'firstname', 'given name', 'fname', '名'],
     lastName: ['last name', 'lastname', 'family name', 'surname', 'lname', '姓'],
     fullName: ['full name', 'fullname', 'name', '姓名', '联系人'],
+    middleName: ['middle name', 'middle initial', 'mname', 'mi'],
+    namePrefix: ['prefix', 'name prefix', 'salutation', 'honorific', '称谓'],
+    nameSuffix: ['suffix', 'name suffix', 'generation', '后缀'],
     email: ['email', 'e-mail', 'mail', '邮箱', '电子邮件'],
+    secondaryEmail: ['secondary email', 'alternate email', 'backup email', 'email2', 'other email', '备用邮箱'],
     phone: ['phone', 'mobile', 'telephone', 'tel', 'cell', '手机', '电话'],
+    fax: ['fax', 'fax number', 'facsimile', '传真'],
     address1: ['address', 'address line 1', 'street', 'street address', 'addr1', '地址'],
     address2: ['address line 2', 'apt', 'apartment', 'suite', 'unit', 'addr2'],
     city: ['city', 'town', '城市', '市'],
+    county: ['county', 'parish', 'district', '县', '区'],
     state: ['state', 'province', 'region', '州', '省'],
     postalCode: ['zip', 'zipcode', 'zip code', 'postal code', 'postcode', '邮编'],
     country: ['country', 'country code', 'country/region', 'country region', 'nation', 'nationality', '国家', '国家/地区', '所在国家'],
     dob: ['dob', 'date of birth', 'birth date', 'birthday', '出生日期'],
+    dobMonth: ['birth month', 'dob month', 'birthday month', 'month of birth', '出生月'],
+    dobDay: ['birth day', 'dob day', 'birthday day', 'day of birth', '出生日'],
+    dobYear: ['birth year', 'dob year', 'birthday year', 'year of birth', '出生年'],
     gender: ['gender', 'sex', '性别'],
     ssn: ['ssn', 'social security', 'social security number'],
+    ssnLast4: ['ssn last 4', 'last 4 ssn', 'last four ssn', 'social last 4'],
+    itin: ['itin', 'individual taxpayer id', 'individual taxpayer identification number'],
+    idNumber: ['id number', 'identity number', 'national id', 'government id', '证件号码'],
+    passportNumber: ['passport', 'passport number', '护照号'],
+    passportCountry: ['passport country', 'passport issuing country', 'passport nationality'],
+    passportExpiry: ['passport expiry', 'passport expiration', 'passport expire date'],
+    driverLicenseNumber: ['driver license number', 'drivers license number', 'driving license', 'dl number', 'license number', '驾照号'],
+    driverLicenseExpiry: ['driver license expiry', 'license expiration', 'license expiry', 'dl expiration'],
     website: ['website', 'web site', 'url', 'company website', 'business website'],
     businessName: ['company', 'company name', 'business', 'business name', 'legal business name', 'organization', 'organisation'],
     dbaName: ['dba', 'doing business as', 'trade name', 'assumed name'],
     entityType: ['entity type', 'business type', 'company type', 'legal structure'],
     ein: ['ein', 'fein', 'federal tax id', 'tax id', 'taxpayer id', 'employer identification number'],
     businessPhone: ['business phone', 'company phone', 'office phone', 'work phone'],
+    businessFax: ['business fax', 'company fax', 'office fax'],
     businessEmail: ['business email', 'company email', 'work email'],
     businessAddress1: ['business address', 'company address', 'business street', 'company street', 'street address'],
     businessAddress2: ['business address line 2', 'company suite', 'suite', 'unit'],
@@ -2295,7 +2586,12 @@ function fillFieldAliases(field: FillField): string[] {
     businessCountry: ['business country', 'company country', 'country of business', 'country', '国家', '公司国家'],
     industry: ['industry', 'business industry', 'sector'],
     industryCode: ['naics', 'naics code', 'sic', 'sic code'],
+    mcc: ['mcc', 'merchant category code'],
+    dunsNumber: ['duns', 'duns number', 'dun and bradstreet', 'd&b'],
+    businessLicenseNumber: ['business license', 'business license number', 'license permit number', '营业执照号'],
     businessStartDate: ['business start date', 'date established', 'established', 'founded', 'incorporation date'],
+    businessStartMonth: ['business start month', 'start month', 'established month', 'incorporation month'],
+    businessStartYear: ['business start year', 'start year', 'established year', 'incorporation year'],
     stateOfIncorporation: ['state of incorporation', 'incorporation state', 'formed in'],
     employeeCount: ['employees', 'number of employees', 'employee count'],
     annualRevenue: ['annual revenue', 'gross annual revenue', 'yearly revenue', 'annual sales', 'sales'],
@@ -2319,14 +2615,22 @@ function fillFieldAliases(field: FillField): string[] {
     jobTitle: ['job title', 'occupation title', 'position'],
     yearsEmployed: ['years employed', 'time employed', 'employment length'],
     bankName: ['bank', 'bank name', 'financial institution'],
+    bankAccountHolder: ['account holder', 'bank account holder', 'name on account'],
     routingNumber: ['routing number', 'aba', 'aba number'],
     bankAccountNumber: ['account number', 'bank account', 'checking account'],
     bankAccountType: ['account type', 'bank account type'],
     vehicleMake: ['make', 'vehicle make', 'car make', '车辆品牌', '品牌'],
     vehicleModel: ['model', 'vehicle model', 'car model', '车型'],
     vehicleYear: ['year', 'vehicle year', 'car year', '年份'],
+    vin: ['vin', 'vehicle vin', 'vehicle identification number', '车架号'],
+    vehicleTrim: ['trim', 'vehicle trim', 'submodel', 'series', '配置'],
+    vehicleMileage: ['mileage', 'odometer', 'current mileage', '里程'],
+    vehicleUse: ['vehicle use', 'usage', 'primary use', '车辆用途'],
+    vehicleOwnership: ['vehicle ownership', 'owned or leased', 'lease or own', '车辆所有权'],
     currentInsuranceCompany: ['insurance company', 'current insurance company', 'carrier'],
     currentCoverageType: ['coverage type', 'current coverage'],
+    policyNumber: ['policy number', 'current policy number', 'insurance policy', '保单号'],
+    drivingIncidents: ['accidents', 'claims', 'violations', 'tickets', '事故', '违章'],
     requestedCoverageType: ['requested coverage', 'coverage'],
     creditRating: ['credit rating', 'credit'],
     maritalStatus: ['marital status', 'marital'],
@@ -2373,7 +2677,10 @@ function fillFieldAliases(field: FillField): string[] {
     licensedState: ['drivers license state', 'driver license state'],
     relationshipToApplicant: ['relation to applicant'],
     cardNumber: ['credit card number', 'cc number'],
+    cardHolderName: ['card holder', 'cardholder', 'name on card', 'card name'],
     cardExpiry: ['exp date', 'expiration date', 'card expiry'],
+    cardExpiryMonth: ['exp month', 'expiry month', 'expiration month', 'cc month'],
+    cardExpiryYear: ['exp year', 'expiry year', 'expiration year', 'cc year'],
     bankAccountNumber: ['deposit account number', 'dda account', 'checking account number'],
     bankAccountType: ['checking or savings', 'deposit account type'],
     cvv: ['cvc', 'security code', 'card code']
@@ -2388,19 +2695,30 @@ function autocompleteScore(field: FillField, control: FillControl): number {
 
   const tokens: Record<string, string[]> = {
     firstName: ['given name', 'name'],
+    middleName: ['additional name', 'additional-name'],
     lastName: ['family name', 'name'],
+    namePrefix: ['honorific prefix', 'honorific-prefix'],
+    nameSuffix: ['honorific suffix', 'honorific-suffix'],
     fullName: ['name'],
     email: ['email', 'username'],
     phone: ['tel'],
+    fax: ['fax'],
     address1: ['street address', 'address line1', 'address-line1'],
     address2: ['address line2', 'address-line2'],
     city: ['address level2', 'address-level2'],
     state: ['address level1', 'address-level1'],
     postalCode: ['postal code', 'postal-code'],
     country: ['country', 'country name', 'country-name'],
+    dob: ['bday'],
+    dobMonth: ['bday month', 'bday-month'],
+    dobDay: ['bday day', 'bday-day'],
+    dobYear: ['bday year', 'bday-year'],
     website: ['url'],
+    cardHolderName: ['cc name', 'cc-name'],
     cardNumber: ['cc number', 'cc-number'],
     cardExpiry: ['cc exp', 'cc-exp'],
+    cardExpiryMonth: ['cc exp month', 'cc-exp-month'],
+    cardExpiryYear: ['cc exp year', 'cc-exp-year'],
     cvv: ['cc csc', 'cc-csc'],
     businessName: ['organization'],
     businessEmail: ['email', 'username'],
@@ -2423,9 +2741,12 @@ function typeScore(field: FillField, control: FillControl): number {
   if (field.key === 'businessEmail' && type === 'email') return 42;
   if (field.key === 'phone' && type === 'tel') return 42;
   if (field.key === 'businessPhone' && type === 'tel') return 38;
+  if (field.key === 'fax' && type === 'tel') return 22;
   if (field.key === 'dob' && type === 'date') return 35;
   if (field.key === 'businessStartDate' && type === 'date') return 32;
-  if (['postalCode', 'businessPostalCode', 'vehicleYear', 'employeeCount', 'loanAmount', 'annualRevenue', 'monthlyRevenue', 'annualIncome', 'monthlyIncome', 'creditScore'].includes(field.key) && ['number', 'text'].includes(type)) return 12;
+  if (['passportExpiry', 'driverLicenseExpiry', 'insuranceExpirationDate', 'insuredSinceDate'].includes(field.key) && type === 'date') return 32;
+  if (['dobMonth', 'dobDay', 'dobYear', 'cardExpiryMonth', 'cardExpiryYear', 'businessStartMonth', 'businessStartYear'].includes(field.key) && ['number', 'text'].includes(type)) return 18;
+  if (['postalCode', 'businessPostalCode', 'vehicleYear', 'vehicleMileage', 'employeeCount', 'loanAmount', 'annualRevenue', 'monthlyRevenue', 'annualIncome', 'monthlyIncome', 'creditScore'].includes(field.key) && ['number', 'text'].includes(type)) return 12;
   if (field.sensitivity === 'secret' && type === 'password') return 20;
   if (type === 'password' && field.sensitivity !== 'secret') return -120;
   return 0;
@@ -2448,25 +2769,43 @@ function fieldSemanticScore(field: FillField, text: string, label: string): numb
   const normalizedText = normalizeFillText(text);
   const fieldHints: Record<string, string[]> = {
     firstName: ['first name', 'given name', 'fname'],
+    middleName: ['middle name', 'middle initial', 'mi'],
     lastName: ['last name', 'family name', 'surname', 'lname'],
     fullName: ['full name', 'your name', 'contact name', 'applicant name', 'legal name', 'customer name', 'lead name', 'borrower name', 'insured name'],
+    namePrefix: ['prefix', 'salutation', 'honorific'],
+    nameSuffix: ['suffix', 'generation'],
     email: ['email', 'email address', 'e mail', 'contact email'],
+    secondaryEmail: ['secondary email', 'alternate email', 'backup email', 'other email'],
     phone: ['phone', 'phone number', 'mobile', 'cell phone', 'telephone'],
+    fax: ['fax', 'fax number', 'facsimile'],
     address1: ['address', 'street address', 'address line 1', 'mailing address', 'physical address', 'residential address', 'home address'],
     address2: ['address line 2', 'apt', 'apartment', 'suite', 'unit', 'floor'],
     city: ['city', 'town', 'locality'],
+    county: ['county', 'parish', 'district'],
     state: ['state', 'province', 'region', 'state region'],
     postalCode: ['zip', 'zip code', 'postal code', 'postcode'],
     country: ['country', 'country region', 'country of residence'],
     dob: ['dob', 'date of birth', 'birth date', 'birthday'],
+    dobMonth: ['birth month', 'dob month', 'birthday month', 'month of birth'],
+    dobDay: ['birth day', 'dob day', 'birthday day', 'day of birth'],
+    dobYear: ['birth year', 'dob year', 'birthday year', 'year of birth'],
     gender: ['gender', 'sex'],
     ssn: ['ssn', 'social security', 'social security number'],
+    ssnLast4: ['ssn last 4', 'last 4 ssn', 'last four ssn', 'social last 4'],
+    itin: ['itin', 'individual taxpayer id', 'individual taxpayer identification number'],
+    idNumber: ['id number', 'identity number', 'national id', 'government id'],
+    passportNumber: ['passport', 'passport number'],
+    passportCountry: ['passport country', 'passport issuing country', 'passport nationality'],
+    passportExpiry: ['passport expiry', 'passport expiration', 'passport expire date'],
+    driverLicenseNumber: ['driver license number', 'drivers license number', 'driving license', 'dl number', 'license number'],
+    driverLicenseExpiry: ['driver license expiry', 'license expiration', 'license expiry', 'dl expiration'],
     website: ['website', 'url', 'web address', 'homepage'],
     businessName: ['company', 'company name', 'business name', 'legal business name', 'organization', 'merchant name', 'vendor name', 'agency name', 'affiliate company'],
     dbaName: ['dba', 'doing business as', 'trade name'],
     entityType: ['entity type', 'business type', 'company type', 'legal structure'],
     ein: ['ein', 'fein', 'federal tax id', 'tax id', 'employer identification number', 'business tax id', 'irs tax id'],
     businessPhone: ['business phone', 'company phone', 'office phone'],
+    businessFax: ['business fax', 'company fax', 'office fax'],
     businessEmail: ['business email', 'company email', 'work email'],
     businessAddress1: ['business address', 'company address', 'office address', 'registered address'],
     businessAddress2: ['business suite', 'company suite', 'business address line 2'],
@@ -2476,7 +2815,12 @@ function fieldSemanticScore(field: FillField, text: string, label: string): numb
     businessCountry: ['business country', 'company country', 'country of business'],
     industry: ['industry', 'business industry', 'sector'],
     industryCode: ['naics', 'sic', 'industry code'],
+    mcc: ['mcc', 'merchant category code'],
+    dunsNumber: ['duns', 'duns number', 'dun and bradstreet'],
+    businessLicenseNumber: ['business license', 'business license number', 'license permit number'],
     businessStartDate: ['business start date', 'date established', 'founded', 'incorporation date'],
+    businessStartMonth: ['business start month', 'established month', 'incorporation month'],
+    businessStartYear: ['business start year', 'established year', 'incorporation year'],
     stateOfIncorporation: ['state of incorporation', 'incorporation state', 'formed in'],
     employeeCount: ['employees', 'number of employees', 'employee count'],
     annualRevenue: ['annual revenue', 'gross annual revenue', 'annual sales', 'yearly revenue', 'annual gross receipts'],
@@ -2500,11 +2844,14 @@ function fieldSemanticScore(field: FillField, text: string, label: string): numb
     jobTitle: ['job title', 'occupation title', 'position'],
     yearsEmployed: ['years employed', 'time employed', 'employment length'],
     bankName: ['bank', 'bank name', 'financial institution'],
+    bankAccountHolder: ['account holder', 'bank account holder', 'name on account'],
     routingNumber: ['routing number', 'aba number'],
     bankAccountNumber: ['account number', 'bank account', 'checking account', 'deposit account number', 'dda account'],
     bankAccountType: ['account type', 'bank account type'],
     currentCoverageType: ['current coverage', 'coverage type'],
     currentInsuranceCompany: ['insurance company', 'insurance carrier', 'current carrier'],
+    policyNumber: ['policy number', 'current policy number', 'insurance policy'],
+    drivingIncidents: ['accidents', 'claims', 'violations', 'tickets'],
     insuranceExpirationDate: ['insurance expiration', 'expiration date'],
     insuredSinceDate: ['insured since'],
     requestedCoverageType: ['requested coverage', 'coverage'],
@@ -2522,8 +2869,16 @@ function fieldSemanticScore(field: FillField, text: string, label: string): numb
     vehicleMake: ['vehicle make', 'car make', 'make'],
     vehicleModel: ['vehicle model', 'car model', 'model'],
     vehicleYear: ['vehicle year', 'car year', 'year'],
+    vin: ['vin', 'vehicle vin', 'vehicle identification number'],
+    vehicleTrim: ['trim', 'vehicle trim', 'submodel', 'series'],
+    vehicleMileage: ['mileage', 'odometer', 'current mileage'],
+    vehicleUse: ['vehicle use', 'usage', 'primary use'],
+    vehicleOwnership: ['vehicle ownership', 'owned or leased', 'lease or own'],
     cardNumber: ['card number', 'credit card number', 'cc number'],
+    cardHolderName: ['card holder', 'cardholder', 'name on card', 'card name'],
     cardExpiry: ['expiration', 'expiry', 'exp date', 'card expiry'],
+    cardExpiryMonth: ['expiration month', 'expiry month', 'exp month', 'card month'],
+    cardExpiryYear: ['expiration year', 'expiry year', 'exp year', 'card year'],
     cvv: ['cvv', 'cvc', 'security code']
   };
 
@@ -2543,6 +2898,11 @@ function fieldSemanticScore(field: FillField, text: string, label: string): numb
   if (field.key === 'businessPhone' && /(home|personal|mobile)/.test(normalizedText)) score -= 12;
   if (field.key === 'address1' && /(billing|shipping|business|company)/.test(normalizedText)) score -= 14;
   if (field.key === 'businessAddress1' && /(home|residential|personal)/.test(normalizedText)) score -= 14;
+  if (field.key === 'fullName' && /(card|account|company|business|bank|organization)/.test(normalizedText)) score -= 18;
+  if (field.key === 'businessName' && /(first|last|full|contact|applicant|owner|principal|cardholder|name on card)/.test(normalizedText)) score -= 14;
+  if (field.key === 'cardHolderName' && /(company|business|owner|principal)/.test(normalizedText)) score -= 12;
+  if (field.key === 'ssn' && /(last 4|last four|ending)/.test(normalizedText)) score -= 22;
+  if (field.key === 'ssnLast4' && !/(last 4|last four|ending|ssn4)/.test(normalizedText)) score -= 14;
 
   return score;
 }
@@ -2572,10 +2932,12 @@ function scoreFillProfileControl(field: FillField, control: FillControl, usedCon
   if (field.group === 'vehicle' && /(vehicle|car|auto|make|model|year|车辆|车型|品牌)/i.test(text)) score += 10;
   if (field.group === 'insurance' && /(insurance|coverage|carrier|policy|保险|投保)/i.test(text)) score += 10;
   if (field.group === 'payment' && /(card|credit|cvv|cvc|expiry|payment|信用卡|卡号)/i.test(text)) score += 12;
-  if (field.group === 'business' && /(business|company|organization|entity|ein|tax|dba|industry|naics|employee|owner|principal|incorporation|公司|企业|税号|法人)/i.test(text)) score += 12;
+  if (field.group === 'business' && /(business|company|organization|entity|ein|tax|dba|industry|naics|sic|mcc|duns|employee|owner|principal|incorporation|merchant|vendor|公司|企业|税号|法人)/i.test(text)) score += 12;
   if (field.group === 'loan' && /(loan|financing|funding|amount|purpose|term|borrow|lender|贷款|融资|金额|用途|期限)/i.test(text)) score += 12;
   if (field.group === 'employment' && /(employment|employer|job|occupation|position|title|income|工作|雇主|职位|就业)/i.test(text)) score += 10;
   if (field.group === 'finance' && /(income|revenue|sales|credit|fico|bank|routing|account|rent|mortgage|收入|营业额|信用|银行|账号)/i.test(text)) score += 10;
+  if (field.group === 'driver' && /(driver|driving|license|licensed|dl|dui|sr22|accident|claim|ticket|violation|驾照|驾驶证|违章|事故)/i.test(text)) score += 12;
+  if (field.group === 'sensitive' && /(ssn|social security|taxpayer|passport|identity|national id|government id|身份证|证件|护照)/i.test(text)) score += 12;
   if (field.sensitivity !== 'secret' && /password|current-password|密码/.test(text)) score -= 120;
 
   return score;
@@ -2645,6 +3007,67 @@ function fillProfileControl(control: FillControl, value: string): boolean {
   return true;
 }
 
+interface ParsedDateParts {
+  month?: string;
+  day?: string;
+  year?: string;
+}
+
+function normalizeDateYear(value: string): string {
+  if (/^\d{2}$/.test(value)) {
+    const number = Number(value);
+    return `${number >= 35 ? '19' : '20'}${value}`;
+  }
+  return value;
+}
+
+function parseDateParts(value: string): ParsedDateParts {
+  const trimmed = value.trim();
+  if (!trimmed) return {};
+
+  const iso = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (iso) {
+    return { year: iso[1], month: String(Number(iso[2])), day: String(Number(iso[3])) };
+  }
+
+  const us = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if (us) {
+    return { month: String(Number(us[1])), day: String(Number(us[2])), year: normalizeDateYear(us[3]) };
+  }
+
+  const monthYear = trimmed.match(/^(\d{1,2})[-/.](\d{2,4})$/);
+  if (monthYear) {
+    return { month: String(Number(monthYear[1])), year: normalizeDateYear(monthYear[2]) };
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime()) && /\d/.test(trimmed)) {
+    return {
+      month: String(parsed.getUTCMonth() + 1),
+      day: String(parsed.getUTCDate()),
+      year: String(parsed.getUTCFullYear())
+    };
+  }
+
+  return {};
+}
+
+function addDerivedFillField(
+  fields: FillField[],
+  byKey: Map<string, string>,
+  key: string,
+  label: string,
+  value: string | undefined,
+  group: FillField['group'],
+  aliases: string[],
+  sensitivity: FillField['sensitivity'] = 'normal'
+) {
+  const trimmed = value?.trim() ?? '';
+  if (!trimmed || byKey.has(key)) return;
+  byKey.set(key, trimmed);
+  fields.push({ key, label, value: trimmed, group, sensitivity, aliases });
+}
+
 function expandFillProfileFields(profile: FillProfilePayload): FillField[] {
   const fields = [...profile.fields];
   const byKey = new Map(fields.map((field) => [field.key, field.value]));
@@ -2656,31 +3079,20 @@ function expandFillProfileFields(profile: FillProfilePayload): FillField[] {
   const address2 = byKey.get('address2') ?? '';
   const businessAddress1 = byKey.get('businessAddress1') ?? '';
   const businessAddress2 = byKey.get('businessAddress2') ?? '';
+  const dobParts = parseDateParts(byKey.get('dob') ?? '');
+  const cardExpiryParts = parseDateParts(byKey.get('cardExpiry') ?? '');
+  const businessStartParts = parseDateParts(byKey.get('businessStartDate') ?? '');
   const hasAddressSignal = fields.some((field) =>
     field.group === 'address' ||
     ['address1', 'address2', 'city', 'state', 'postalCode', 'licensedState', 'businessState', 'businessPostalCode'].includes(field.key)
   );
 
   if (!byKey.has('fullName') && (firstName || lastName)) {
-    fields.push({
-      key: 'fullName',
-      label: '姓名',
-      value: `${firstName} ${lastName}`.trim(),
-      group: 'personal',
-      sensitivity: 'normal',
-      aliases: ['full name', 'name', '姓名']
-    });
+    addDerivedFillField(fields, byKey, 'fullName', '姓名', `${firstName} ${lastName}`.trim(), 'personal', ['full name', 'name', '姓名']);
   }
 
   if (!byKey.has('address') && (address1 || address2)) {
-    fields.push({
-      key: 'address',
-      label: '完整地址',
-      value: `${address1} ${address2}`.trim(),
-      group: 'address',
-      sensitivity: 'normal',
-      aliases: ['address', 'street address', '完整地址', '地址']
-    });
+    addDerivedFillField(fields, byKey, 'address', '完整地址', `${address1} ${address2}`.trim(), 'address', ['address', 'street address', 'complete address', '完整地址', '地址']);
   }
 
   if (!byKey.has('country') && !byKey.has('businessCountry') && profile.countryCode && hasAddressSignal) {
@@ -2695,26 +3107,20 @@ function expandFillProfileFields(profile: FillProfilePayload): FillField[] {
   }
 
   if (!byKey.has('ownerName') && (ownerFirstName || ownerLastName)) {
-    fields.push({
-      key: 'ownerName',
-      label: '负责人姓名',
-      value: `${ownerFirstName} ${ownerLastName}`.trim(),
-      group: 'business',
-      sensitivity: 'normal',
-      aliases: ['owner name', 'principal name', 'authorized signer', 'business owner', 'applicant name']
-    });
+    addDerivedFillField(fields, byKey, 'ownerName', '负责人姓名', `${ownerFirstName} ${ownerLastName}`.trim(), 'business', ['owner name', 'principal name', 'authorized signer', 'business owner', 'applicant name']);
   }
 
   if (!byKey.has('businessAddress') && (businessAddress1 || businessAddress2)) {
-    fields.push({
-      key: 'businessAddress',
-      label: '公司完整地址',
-      value: `${businessAddress1} ${businessAddress2}`.trim(),
-      group: 'business',
-      sensitivity: 'normal',
-      aliases: ['business address', 'company address', 'business street address', 'company street address']
-    });
+    addDerivedFillField(fields, byKey, 'businessAddress', '公司完整地址', `${businessAddress1} ${businessAddress2}`.trim(), 'business', ['business address', 'company address', 'business street address', 'company street address']);
   }
+
+  addDerivedFillField(fields, byKey, 'dobMonth', '出生月份', dobParts.month, 'personal', ['birth month', 'dob month', 'birthday month', 'month of birth'], 'private');
+  addDerivedFillField(fields, byKey, 'dobDay', '出生日', dobParts.day, 'personal', ['birth day', 'dob day', 'birthday day', 'day of birth'], 'private');
+  addDerivedFillField(fields, byKey, 'dobYear', '出生年份', dobParts.year, 'personal', ['birth year', 'dob year', 'birthday year', 'year of birth'], 'private');
+  addDerivedFillField(fields, byKey, 'cardExpiryMonth', '卡有效期月', cardExpiryParts.month, 'payment', ['exp month', 'expiry month', 'expiration month', 'cc month'], 'secret');
+  addDerivedFillField(fields, byKey, 'cardExpiryYear', '卡有效期年', cardExpiryParts.year, 'payment', ['exp year', 'expiry year', 'expiration year', 'cc year'], 'secret');
+  addDerivedFillField(fields, byKey, 'businessStartMonth', '成立月份', businessStartParts.month, 'business', ['business start month', 'established month', 'incorporation month']);
+  addDerivedFillField(fields, byKey, 'businessStartYear', '成立年份', businessStartParts.year, 'business', ['business start year', 'established year', 'incorporation year']);
 
   return fields.filter((field) => field.value.trim());
 }
@@ -3342,6 +3748,10 @@ function renderFillProfileBinding() {
   const fields = expandFillProfileFields(fillProfileBinding.profile);
   const selectedField = fields.find((field) => field.key === fillProfileBinding?.selectedKey) ?? fields[0];
   const boundKeys = new Set(fillProfileBinding.bindings.map((binding) => binding.key));
+  const pathPattern = currentRulePathPattern();
+  const scopeText = fillProfileBinding.scope === 'path' && pathPattern
+    ? `仅当前路径：${pathPattern}`
+    : `整个域名：${window.location.hostname.replace(/^www\./i, '').toLowerCase()}`;
   const options = fields
     .map((field) => `<option value="${escapeHtml(field.key)}" ${field.key === selectedField?.key ? 'selected' : ''}>${escapeHtml(field.label)}${boundKeys.has(field.key) ? ' · 已绑定' : ''}</option>`)
     .join('');
@@ -3452,6 +3862,42 @@ function renderFillProfileBinding() {
         color: #ffffff;
       }
       .actions button:hover { transform: translateY(-1px); }
+      .scope {
+        display: grid;
+        gap: 7px;
+      }
+      .scope-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        border: 1px solid #d7e4f7;
+        border-radius: 10px;
+        background: #f8fbff;
+        padding: 4px;
+      }
+      .scope-row button {
+        height: 30px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: #475467;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .scope-row button.active {
+        background: #ffffff;
+        color: #175cd3;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
+      }
+      .scope small {
+        color: #667085;
+        font-size: 11px;
+        line-height: 1.35;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .count {
         display: inline-flex;
         width: fit-content;
@@ -3483,6 +3929,13 @@ function renderFillProfileBinding() {
           <span>先在下方选择资料字段，再点击网页上对应的输入框、下拉框或文本框。</span>
         </div>
         <select data-fill-binding-field aria-label="选择要绑定的资料字段">${options}</select>
+        <div class="scope">
+          <div class="scope-row" role="group" aria-label="规则应用范围">
+            <button class="${fillProfileBinding.scope === 'path' ? 'active' : ''}" type="button" data-fill-binding-scope="path" ${pathPattern ? '' : 'disabled'}>当前路径</button>
+            <button class="${fillProfileBinding.scope === 'domain' ? 'active' : ''}" type="button" data-fill-binding-scope="domain">整个域名</button>
+          </div>
+          <small title="${escapeHtml(scopeText)}">${escapeHtml(scopeText)}</small>
+        </div>
         <span class="count">已绑定 ${fillProfileBinding.bindings.length} 个字段</span>
         <p class="status">${escapeHtml(fillProfileBinding.status || '点击页面里的对应表单字段。按 Esc 可取消。')}</p>
         <div class="actions">
@@ -3511,6 +3964,16 @@ function renderFillProfileBinding() {
     fillProfileBinding.selectedKey = select?.value ?? fillProfileBinding.selectedKey;
     fillProfileBinding.status = '现在点击网页上对应的表单字段。';
     renderFillProfileBinding();
+  });
+  bindingRoot.querySelectorAll<HTMLElement>('[data-fill-binding-scope]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (!fillProfileBinding) return;
+      const nextScope = button.dataset.fillBindingScope === 'domain' ? 'domain' : 'path';
+      fillProfileBinding.scope = nextScope;
+      fillProfileBinding.status = nextScope === 'path' ? '规则将只应用到当前路径。' : '规则将应用到整个域名。';
+      renderFillProfileBinding();
+    });
   });
 }
 
@@ -3553,6 +4016,7 @@ function startFillProfileBinding(profile: FillProfilePayload) {
     profile,
     selectedKey: fields[0]?.key ?? '',
     bindings: [...(profile.siteBinding?.fields ?? [])],
+    scope: currentRulePathPattern() ? 'path' : 'domain',
     status: '选择字段后，点击网页上对应的表单字段。'
   };
 
@@ -3630,6 +4094,7 @@ async function saveFillProfileBinding() {
     profileId: fillProfileBinding.profile.id,
     url: window.location.href,
     domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+    pathPattern: fillProfileBinding.scope === 'path' ? currentRulePathPattern() : undefined,
     fields: fillProfileBinding.bindings
   };
 
@@ -4272,6 +4737,7 @@ function inlineErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error || '');
 
   if (message === 'VAULT_LOCKED') return 'KeyPilot 已锁定，请先打开插件解锁。';
+  if (message === 'SAVE_INBOX_NOT_READY') return '请先打开 KeyPilot 解锁一次，之后锁定状态也可以直接加密暂存。';
   if (message === 'NO_MATCHING_CREDENTIAL') return '当前网页没有匹配的账号。';
   if (message === 'NO_LOGIN_FORM') return '没有检测到登录表单。';
   if (message === 'NO_USERNAME_FIELD') return '没有检测到用户名输入框。';
@@ -9132,7 +9598,7 @@ function ensureSavePrompt() {
   savePromptHost.style.zIndex = '2147483647';
   savePromptHost.style.top = '16px';
   savePromptHost.style.right = '18px';
-  savePromptHost.style.width = 'min(456px, calc(100vw - 36px))';
+  savePromptHost.style.width = 'min(386px, calc(100vw - 24px))';
   savePromptHost.style.display = 'none';
   savePromptHost.style.colorScheme = 'light';
   savePromptRoot = savePromptHost.attachShadow({ mode: 'open' });
@@ -9149,6 +9615,18 @@ function hideSavePrompt() {
   if (savePromptHost) {
     savePromptHost.style.display = 'none';
   }
+}
+
+function renderSavePromptSiteIcon(candidate: PendingLoginCandidate): string {
+  const [iconUrl, nextIconUrl] = getIconCandidates(candidate.iconUrl, candidate.url || candidate.domain);
+  const nextAttribute = nextIconUrl ? ` data-next-icon="${escapeHtml(nextIconUrl)}"` : '';
+
+  return `
+    <span class="site-mark" aria-hidden="true">
+      ${renderDefaultInlineIcon()}
+      ${iconUrl ? `<img data-fallback${nextAttribute} class="site-favicon" src="${escapeHtml(iconUrl)}" alt="" referrerpolicy="no-referrer" draggable="false" />` : ''}
+    </span>
+  `;
 }
 
 function showSavePrompt(candidate: PendingLoginCandidate, context: SavePromptContext) {
@@ -9175,17 +9653,17 @@ function renderSavePrompt(status = '') {
   const hasExisting = Boolean(context.existing);
   const selectedSaveMode: SaveCandidateMode = savePromptMode === 'new' && !hasExisting ? 'save' : savePromptMode;
   const primaryAction = hasExisting ? selectedSaveMode : 'save';
-  const title = '保存到 KeyPilot?';
+  const title = hasExisting ? '更新保存的密码?' : '保存到 KeyPilot?';
   const displayName = `${candidate.title || candidate.domain}${candidate.username ? ` (${candidate.username})` : ''}`;
   const draftTitle = (savePromptDraftTitle || context.existing?.title || candidate.title || candidate.domain).trim();
   const existingName = `${context.existing?.title || candidate.domain}${candidate.username ? ` (${candidate.username})` : ''}`;
   const newName = `${draftTitle || candidate.title || candidate.domain}${candidate.username ? ` (${candidate.username})` : ''}`;
-  const selectedTargetLabel = primaryAction === 'update' ? `更新已有账号：${existingName}` : `保存为新账号：${newName}`;
-  const actionLabel = primaryAction === 'update' ? '更新' : primaryAction === 'new' ? '保存为新记录' : '保存';
+  const selectedTargetLabel = primaryAction === 'update' ? `更新已有账号密码：${existingName}` : `保存为新账号：${newName}`;
+  const actionLabel = primaryAction === 'update' ? '更新密码' : primaryAction === 'new' ? '保存为新记录' : '保存';
   const targetOptions = hasExisting
     ? `
       <button type="button" class="${primaryAction === 'update' ? 'active' : ''}" data-save-action="select-update">
-        <strong>更新已有账号</strong>
+        <strong>更新已有账号密码</strong>
         <span>${escapeHtml(existingName)}</span>
       </button>
       <button type="button" class="${primaryAction === 'new' ? 'active' : ''}" data-save-action="select-new">
@@ -9208,42 +9686,51 @@ function renderSavePrompt(status = '') {
       .card {
         overflow: hidden;
         border: 1px solid #dfe7f3;
-        border-radius: 14px;
+        border-radius: 12px;
         background: #ffffff;
-        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.15);
         color: #111827;
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
       }
       header {
         display: grid;
-        grid-template-columns: 30px minmax(0, 1fr) auto;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
         align-items: center;
-        gap: 10px;
-        padding: 14px 16px 10px;
+        gap: 8px;
+        padding: 9px 12px 8px;
         border-bottom: 1px solid #eef2f7;
       }
-      .bot {
+      .site-mark {
+        position: relative;
         display: grid;
         width: 28px;
         height: 28px;
         place-items: center;
         border: 1px solid #bbf7d0;
-        border-radius: 9px;
+        border-radius: 8px;
         background: #f0fdf4;
+        overflow: hidden;
       }
-      .bot::before {
-        content: "";
-        width: 14px;
-        height: 14px;
-        border: 2px solid #16a34a;
-        border-radius: 4px;
-        box-shadow: inset 0 -4px 0 rgba(22, 163, 74, 0.14);
+      .site-mark .default-site-icon,
+      .site-mark .site-favicon {
+        display: block;
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        border-radius: 5px;
+      }
+      .site-mark .site-favicon {
+        position: absolute;
+        inset: 4px;
+        width: 20px;
+        height: 20px;
+        background: #ffffff;
       }
       h3 {
         margin: 0;
         overflow: hidden;
         color: #111827;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 720;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -9253,51 +9740,51 @@ function renderSavePrompt(status = '') {
         background: transparent;
         color: #64748b;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 560;
       }
       .report:hover { text-decoration: underline; }
       .body {
         display: grid;
-        gap: 12px;
-        padding: 12px 16px 16px;
+        gap: 8px;
+        padding: 8px 12px 12px;
       }
       .select-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 22px;
+        grid-template-columns: minmax(0, 1fr) 20px;
         align-items: center;
-        min-height: 50px;
+        min-height: 42px;
         border: 1px solid #dfe7f3;
-        border-radius: 10px;
+        border-radius: 9px;
         background: #f8fafc;
-        padding: 0 12px 0 13px;
+        padding: 0 10px 0 11px;
       }
       .select-row strong {
         overflow: hidden;
         color: #0f172a;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 650;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
       .name-field {
         display: grid;
-        gap: 5px;
+        gap: 4px;
       }
       .name-field span {
         color: #64748b;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
       }
       .name-field input {
         width: 100%;
-        min-height: 36px;
+        min-height: 31px;
         border: 1px solid #dfe7f3;
-        border-radius: 9px;
+        border-radius: 8px;
         background: #ffffff;
         color: #0f172a;
-        font: 13px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
-        padding: 0 10px;
+        font: 12px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        padding: 0 9px;
       }
       .name-field input:focus {
         border-color: #2563eb;
@@ -9310,7 +9797,7 @@ function renderSavePrompt(status = '') {
       .target-button {
         width: 100%;
         border: 1px solid #dfe7f3;
-        border-radius: 10px;
+        border-radius: 9px;
         background: #ffffff;
         color: #0f172a;
         cursor: pointer;
@@ -9321,11 +9808,11 @@ function renderSavePrompt(status = '') {
         z-index: 4;
         right: 0;
         left: 0;
-        top: calc(100% + 6px);
+        top: calc(100% + 5px);
         display: grid;
         overflow: hidden;
         border: 1px solid #dfe7f3;
-        border-radius: 10px;
+        border-radius: 9px;
         background: #ffffff;
         box-shadow: 0 14px 28px rgba(16, 24, 40, 0.13);
       }
@@ -9336,7 +9823,7 @@ function renderSavePrompt(status = '') {
         border-bottom: 1px solid #eef2f7;
         background: #ffffff;
         cursor: pointer;
-        padding: 9px 12px;
+        padding: 8px 10px;
         text-align: left;
       }
       .target-menu button:last-child { border-bottom: 0; }
@@ -9357,29 +9844,32 @@ function renderSavePrompt(status = '') {
         white-space: nowrap;
       }
       .chevron {
-        width: 16px;
-        height: 16px;
-        border-right: 3px solid #334155;
-        border-bottom: 3px solid #334155;
+        width: 14px;
+        height: 14px;
+        border-right: 2.5px solid #334155;
+        border-bottom: 2.5px solid #334155;
         transform: rotate(45deg) translateY(-3px);
         justify-self: center;
       }
       .actions {
         display: grid;
-        grid-template-columns: 1fr 1fr 100px;
+        grid-template-columns: 1fr 1fr 88px;
         align-items: center;
-        gap: 8px;
+        gap: 7px;
       }
       .actions button {
-        min-height: 40px;
+        min-height: 34px;
         border: 1px solid #e2e8f0;
-        border-radius: 10px;
+        border-radius: 9px;
         background: #ffffff;
         color: #334155;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 620;
       }
+      .actions [data-save-action="blacklist"] { order: 1; }
+      .actions [data-save-action="skip"] { order: 2; }
+      .actions .primary { order: 3; }
       .actions button:hover { background: #f8fafc; }
       .actions .primary {
         border-color: #165dff;
@@ -9399,7 +9889,7 @@ function renderSavePrompt(status = '') {
     </style>
     <section class="card" role="dialog" aria-label="${escapeHtml(title)}">
       <header>
-        <span class="bot" aria-hidden="true"></span>
+        ${renderSavePromptSiteIcon(candidate)}
         <h3>${escapeHtml(title)}</h3>
         <button class="report" type="button" data-save-action="report">报告一个问题</button>
       </header>
@@ -9418,7 +9908,7 @@ function renderSavePrompt(status = '') {
         <div class="actions">
           ${
             context.locked
-              ? `<button type="button" data-save-action="skip">现在不行</button><button type="button" data-save-action="blacklist">不再提示</button><button class="primary" type="button" data-save-action="open">${actionLabel}</button>`
+              ? `<button type="button" data-save-action="skip">现在不行</button><button type="button" data-save-action="blacklist">不再提示</button><button class="primary" type="button" data-save-action="${primaryAction}">${actionLabel}</button>`
               : `<button type="button" data-save-action="blacklist">不要保存这个网页</button><button type="button" data-save-action="skip">现在不行</button><button class="primary" type="button" data-save-action="${primaryAction}">${actionLabel}</button>`
           }
         </div>
@@ -9477,6 +9967,29 @@ function renderSavePrompt(status = '') {
       if (action) {
         void resolveSavePrompt(action);
       }
+    });
+  });
+
+  savePromptRoot.querySelectorAll<HTMLImageElement>('img[data-fallback]').forEach((image) => {
+    const tryNextIcon = () => {
+      const nextIcon = image.dataset.nextIcon;
+      if (nextIcon && image.src !== nextIcon) {
+        image.dataset.nextIcon = '';
+        image.src = nextIcon;
+        return;
+      }
+
+      image.remove();
+    };
+
+    image.addEventListener('load', () => {
+      if (image.naturalWidth <= 1 && image.naturalHeight <= 1) {
+        tryNextIcon();
+      }
+    });
+
+    image.addEventListener('error', () => {
+      tryNextIcon();
     });
   });
 
@@ -9647,7 +10160,7 @@ function renderSavePromptLegacy(status = '') {
         <div class="actions">
           ${
             context.locked
-              ? '<button class="primary" type="button" data-save-action="open">打开 KeyPilot</button><button type="button" data-save-action="skip">暂不保存</button>'
+              ? '<button class="primary" type="button" data-save-action="save">保存</button><button type="button" data-save-action="skip">暂不保存</button>'
               : `<button class="primary" type="button" data-save-action="${primaryAction}">${primaryLabel}</button><button type="button" data-save-action="skip">暂不保存</button>`
           }
         </div>
@@ -9702,10 +10215,18 @@ async function resolveSavePrompt(mode: SaveCandidateMode) {
     title: savePromptDraftTitle || savePromptCandidate.title || savePromptCandidate.domain
   };
 
-  renderSavePrompt(mode === 'skip' ? '正在关闭...' : '正在保存...');
+  renderSavePrompt(mode === 'skip' ? '正在关闭...' : savePromptContext.locked ? '正在加密暂存...' : '正在保存...');
 
   try {
-    const response = await sendRuntimeMessage<{ ok: boolean; locked?: boolean; error?: string; duplicate?: boolean; updated?: boolean; blacklisted?: boolean }>({
+    const response = await sendRuntimeMessage<{
+      ok: boolean;
+      locked?: boolean;
+      error?: string;
+      duplicate?: boolean;
+      updated?: boolean;
+      blacklisted?: boolean;
+      queued?: boolean;
+    }>({
       type: 'KEYPILOT_RESOLVE_SAVE_CANDIDATE',
       mode,
       candidateId: savePromptContext.candidateId,
@@ -9721,7 +10242,9 @@ async function resolveSavePrompt(mode: SaveCandidateMode) {
       return;
     }
 
-    const text = response.duplicate
+    const text = response.queued
+      ? '已加密暂存，解锁 KeyPilot 后会自动保存。'
+      : response.duplicate
       ? '这条登录信息已经存在。'
       : response.blacklisted
         ? '已加入不保存网站列表。'
@@ -9740,7 +10263,72 @@ async function checkPendingSavePrompt() {
     const response = await sendRuntimeMessage<SavePromptResponse>({ type: 'KEYPILOT_GET_SAVE_PROMPT' });
 
     if (response.ok && response.candidate) {
-      showSavePrompt(response.candidate, response);
+      const candidate = response.candidate;
+
+      if (candidate.submitUrl && !candidate.confirmedAt) {
+        const candidateAge = Date.now() - candidate.capturedAt;
+        const decision = evaluateSaveCandidateDecision(candidate, candidateAge > 8500);
+
+        if (decision.status === 'failure') {
+          recordDiagnosticLog({
+            area: 'save-prompt',
+            event: 'prompt-suppressed',
+            outcome: 'failure',
+            domain: candidate.domain,
+            reason: decision.reason,
+            signal: decision.signal,
+            source: candidate.source,
+            counts: {
+              ...saveCandidateDiagnosticCounts(candidate),
+              ageMs: candidateAge
+            }
+          });
+          clearSaveCandidateState();
+          return;
+        }
+
+        if (decision.status === 'pending') {
+          schedulePendingSavePromptCheck(candidateAge > 5000 ? 1200 : 700);
+          return;
+        }
+
+        recordDiagnosticLog({
+          area: 'save-prompt',
+          event: 'prompt-ready',
+          outcome: 'success',
+          domain: candidate.domain,
+          reason: decision.reason,
+          signal: decision.signal,
+          source: candidate.source,
+          counts: {
+            ...saveCandidateDiagnosticCounts(candidate),
+            ageMs: candidateAge
+          }
+        });
+
+        showSavePrompt(
+          {
+            ...candidate,
+            url: window.location.href,
+            domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+            confirmedAt: Date.now(),
+            successSignal: decision.signal
+          },
+          response
+        );
+        return;
+      }
+
+      recordDiagnosticLog({
+        area: 'save-prompt',
+        event: 'prompt-ready',
+        outcome: 'success',
+        domain: candidate.domain,
+        reason: '后台已有待处理保存候选，准备显示保存提示。',
+        source: candidate.source,
+        counts: saveCandidateDiagnosticCounts(candidate)
+      });
+      showSavePrompt(candidate, response);
     }
   } catch {
     // The page can still work without a proactive save prompt.
@@ -9826,9 +10414,25 @@ function rememberCandidate(source: PendingLoginCandidate['source'], submitter?: 
 function clearSaveCandidateState() {
   lastCandidate = null;
 
+  if (pendingSavePromptCheckTimer) {
+    window.clearTimeout(pendingSavePromptCheckTimer);
+    pendingSavePromptCheckTimer = null;
+  }
+
   chrome.runtime.sendMessage({ type: 'KEYPILOT_CLEAR_SAVE_CANDIDATE' }, () => {
     void chrome.runtime.lastError;
   });
+}
+
+function schedulePendingSavePromptCheck(delay = 700) {
+  if (pendingSavePromptCheckTimer) {
+    window.clearTimeout(pendingSavePromptCheckTimer);
+  }
+
+  pendingSavePromptCheckTimer = window.setTimeout(() => {
+    pendingSavePromptCheckTimer = null;
+    void checkPendingSavePrompt();
+  }, delay);
 }
 
 function nodeContains(scope: ParentNode, element: HTMLElement): boolean {
@@ -9853,13 +10457,33 @@ function isLikelyCredentialSubmitElement(element: HTMLElement): boolean {
 }
 
 function sendCandidateAfterLikelySuccess(source: PendingLoginCandidate['source'], submitter?: HTMLElement) {
+  const snapshot = createLoginSubmitSnapshot();
   rememberCandidate(source, submitter);
 
-  const candidate = lastCandidate;
+  const candidate = lastCandidate
+    ? {
+        ...lastCandidate,
+        submitUrl: snapshot.url,
+        submitTitle: snapshot.title,
+        submitFormSignature: snapshot.formSignature
+      }
+    : null;
 
   if (!candidate) {
     return;
   }
+
+  lastCandidate = candidate;
+
+  recordDiagnosticLog({
+    area: 'save-prompt',
+    event: 'candidate-staged',
+    outcome: 'info',
+    domain: candidate.domain,
+    reason: '已捕获一次可能成功登录后的保存候选。',
+    source,
+    counts: saveCandidateDiagnosticCounts(candidate)
+  });
 
   chrome.runtime.sendMessage(
     {
@@ -9881,18 +10505,42 @@ function sendCandidateAfterLikelySuccess(source: PendingLoginCandidate['source']
         return;
       }
 
-      const context = findLoginContext();
-      const errorText = (context ? visibleErrorText(context.scope) : undefined) ?? visibleErrorText(document);
       const isFinalAttempt = index === delays.length - 1;
-      const urlChanged = window.location.href !== currentCandidate.url;
-      const stillOnLoginForm = Boolean(context?.passwordField && !urlChanged);
+      const decision = evaluateSaveCandidateDecision(currentCandidate, isFinalAttempt);
 
-      if (errorText || stillOnLoginForm) {
-        if (errorText || isFinalAttempt) {
+      if (decision.status !== 'success') {
+        if (decision.status === 'failure' || isFinalAttempt) {
+          recordDiagnosticLog({
+            area: 'save-prompt',
+            event: 'candidate-rejected',
+            outcome: 'failure',
+            domain: currentCandidate.domain,
+            reason: decision.reason,
+            source: currentCandidate.source,
+            counts: {
+              ...saveCandidateDiagnosticCounts(currentCandidate),
+              attempt: index + 1,
+              finalAttempt: isFinalAttempt
+            }
+          });
           clearSaveCandidateState();
         }
         return;
       }
+
+      recordDiagnosticLog({
+        area: 'save-prompt',
+        event: 'candidate-confirmed',
+        outcome: 'success',
+        domain: currentCandidate.domain,
+        reason: decision.reason,
+        signal: decision.signal,
+        source: currentCandidate.source,
+        counts: {
+          ...saveCandidateDiagnosticCounts(currentCandidate),
+          attempt: index + 1
+        }
+      });
 
       chrome.runtime.sendMessage(
         {
@@ -9901,7 +10549,9 @@ function sendCandidateAfterLikelySuccess(source: PendingLoginCandidate['source']
             ...currentCandidate,
             url: window.location.href,
             domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
-            capturedAt: Date.now()
+            capturedAt: Date.now(),
+            confirmedAt: Date.now(),
+            successSignal: decision.signal
           }
         },
         (response: SavePromptContext | undefined) => {
@@ -9909,7 +10559,16 @@ function sendCandidateAfterLikelySuccess(source: PendingLoginCandidate['source']
             return;
           }
 
-          showSavePrompt(currentCandidate, response);
+          showSavePrompt(
+            {
+              ...currentCandidate,
+              url: window.location.href,
+              domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+              confirmedAt: Date.now(),
+              successSignal: decision.signal
+            },
+            response
+          );
         }
       );
 

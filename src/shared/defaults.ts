@@ -23,7 +23,11 @@ export const defaultSettings: VaultSettings = {
   blacklist: [],
   inlineBlacklist: [],
   siteRules: [],
-  fillImportBatches: []
+  fillImportBatches: [],
+  fillImportMappingTemplates: [],
+  diagnosticLogging: false,
+  diagnosticLogLimit: 50,
+  diagnosticLogRetentionDays: 7
 };
 
 export function createEmptyVault(): VaultPlain {
@@ -35,6 +39,6 @@ export function createEmptyVault(): VaultPlain {
     fillProfiles: [],
     folders: [],
     deletedItems: [],
-    settings: { ...defaultSettings, blacklist: [], inlineBlacklist: [], siteRules: [], fillImportBatches: [] }
+    settings: { ...defaultSettings, blacklist: [], inlineBlacklist: [], siteRules: [], fillImportBatches: [], fillImportMappingTemplates: [] }
   };
 }

@@ -1,4 +1,5 @@
 import { KDF_ITERATIONS } from './defaults';
+import { getSaveInboxPublicKeyFromVault } from './saveInbox';
 import type { VaultEncrypted, VaultPlain } from './types';
 
 const textEncoder = new TextEncoder();
@@ -166,6 +167,20 @@ function parseVerifier(value: string): { iv: string; data: string } {
   return { iv, data };
 }
 
+function withSaveInboxPublicKey(encryptedVault: VaultEncrypted, vault: VaultPlain): VaultEncrypted {
+  const saveInboxPublicKey = getSaveInboxPublicKeyFromVault(vault.saveInboxKeyPair);
+
+  if (!saveInboxPublicKey) {
+    const { saveInboxPublicKey: _saveInboxPublicKey, ...withoutPublicKey } = encryptedVault;
+    return withoutPublicKey;
+  }
+
+  return {
+    ...encryptedVault,
+    saveInboxPublicKey
+  };
+}
+
 export async function createEncryptedVault(
   masterPassword: string,
   vault: VaultPlain,
@@ -190,6 +205,8 @@ export async function createEncryptedVault(
     encryptedData: encryptedVaultData.data,
     verifier: serializeVerifier(verifier)
   };
+
+  encryptedVault = withSaveInboxPublicKey(encryptedVault, vault);
 
   if (recoveryCode?.trim()) {
     encryptedVault = await attachRecoveryToEncryptedVault(key, encryptedVault, recoveryCode);
@@ -316,12 +333,12 @@ export async function encryptVaultWithExistingKey(
 ): Promise<VaultEncrypted> {
   const encryptedVaultData = await encryptStringWithKey(key, JSON.stringify(vault));
 
-  return {
+  return withSaveInboxPublicKey({
     ...previousEncryptedVault,
     cipher: {
       name: 'AES-GCM',
       iv: encryptedVaultData.iv
     },
     encryptedData: encryptedVaultData.data
-  };
+  }, vault);
 }

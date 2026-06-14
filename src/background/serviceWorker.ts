@@ -1,8 +1,11 @@
 import { credentialMatchesUrl, domainsMatch, extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from '../shared/domain';
+import { appendDiagnosticLogEntry, clearDiagnosticLogEntries, getDiagnosticLogEntries } from '../shared/diagnosticsLog';
 import { getRootFaviconUrl, toHttpIconUrl } from '../shared/icons';
+import { appendPendingSaveCandidate } from '../shared/saveInbox';
 import {
   addCredentialToVault,
   buildCredential,
+  clearVaultSessionCache,
   deleteCredentialFromVault,
   deleteFillProfileFromVault,
   persistVaultSession,
@@ -15,6 +18,7 @@ import {
 import type {
   Credential,
   CredentialFormField,
+  DiagnosticLogEntry,
   BindingTestResult,
   InlineCredentialCommand,
   FillCredentialPayload,
@@ -80,6 +84,7 @@ const SUBMIT_OUTCOME_TTL = 30000;
 const STAGED_CANDIDATE_TTL = 90000;
 const SITE_RULE_LIMIT = 120;
 const DEFAULT_REPAIR_ACTIONS: SubmitRepairAction[] = ['commit-fields', 'wait-enabled-click', 'retry-click', 'click-nearby', 'enter-password', 'request-submit'];
+const FAILED_LOGIN_REDIRECT_PATTERN = /(?:^|[?&#/])(error|err|failed|failure|invalid|denied|captcha|verify|verification|locked|disabled)(?:[=&#/]|$)/i;
 const CONTENT_SCRIPT_FILE = 'content.js';
 let pendingLoginCandidate: PendingLoginCandidate | null = null;
 let pendingLoginCandidateExpiresAt = 0;
@@ -517,13 +522,39 @@ function credentialToFillPayload(credential: Credential, autoSubmit = false, vau
   };
 }
 
+function normalizedPathPatternFromUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+
+  try {
+    const path = new URL(value).pathname || '/';
+    return path === '/' ? undefined : path;
+  } catch {
+    return undefined;
+  }
+}
+
+function bindingPathMatches(binding: FillProfileSiteBinding, targetUrl?: string): boolean {
+  if (!binding.pathPattern) return true;
+  const path = normalizedPathPatternFromUrl(targetUrl);
+  if (!path) return false;
+  return path === binding.pathPattern || path.startsWith(`${binding.pathPattern.replace(/\/$/, '')}/`);
+}
+
+function sameBindingTarget(left: FillProfileSiteBinding, domain: string, pathPattern?: string): boolean {
+  return domainsMatch(left.domain, domain) && (left.pathPattern ?? '') === (pathPattern ?? '');
+}
+
 function selectFillProfileSiteBinding(profile: FillProfile, targetUrl?: string): FillProfileSiteBinding | undefined {
   const domain = getTabDomain(targetUrl);
   if (!domain) return undefined;
 
   return (profile.siteBindings ?? [])
     .filter((binding) => domainsMatch(binding.domain, domain))
+    .filter((binding) => bindingPathMatches(binding, targetUrl))
     .sort((left, right) => {
+      const leftPathScore = left.pathPattern ? left.pathPattern.length : 0;
+      const rightPathScore = right.pathPattern ? right.pathPattern.length : 0;
+      if (leftPathScore !== rightPathScore) return rightPathScore - leftPathScore;
       const leftScore = (left.successCount ?? 0) - (left.failureCount ?? 0);
       const rightScore = (right.successCount ?? 0) - (right.failureCount ?? 0);
       if (leftScore !== rightScore) return rightScore - leftScore;
@@ -1098,20 +1129,21 @@ async function saveFillProfileBinding(
 
   const domain = binding.domain || getTabDomain(binding.url || senderUrl);
   if (!domain) return { ok: false, error: 'INVALID_BINDING_DOMAIN' };
+  const pathPattern = binding.pathPattern || undefined;
 
   const now = Date.now();
-  const existing = (profile.siteBindings ?? []).find((item) => domainsMatch(item.domain, domain));
+  const existing = (profile.siteBindings ?? []).find((item) => sameBindingTarget(item, domain, pathPattern));
   const siteBinding: FillProfileSiteBinding = {
     id: existing?.id ?? crypto.randomUUID(),
     domain,
-    pathPattern: existing?.pathPattern,
+    pathPattern,
     fields: binding.fields.slice(0, 120),
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     successCount: existing?.successCount,
     failureCount: existing?.failureCount
   };
-  const siteBindings = [siteBinding, ...(profile.siteBindings ?? []).filter((item) => !domainsMatch(item.domain, domain))].slice(0, 80);
+  const siteBindings = [siteBinding, ...(profile.siteBindings ?? []).filter((item) => !sameBindingTarget(item, domain, pathPattern))].slice(0, 80);
 
   await persistVaultSession(
     session,
@@ -1811,6 +1843,11 @@ function promoteStagedLoginCandidate(tabId: number, url?: string): PendingLoginC
   const staged = getStagedLoginCandidate(tabId);
   if (!staged) return null;
 
+  if (url && FAILED_LOGIN_REDIRECT_PATTERN.test(url)) {
+    stagedLoginCandidates.delete(tabId);
+    return null;
+  }
+
   const urlDomain = getTabDomain(url);
   if (urlDomain && !domainsMatch(staged.candidate.domain, urlDomain)) {
     return null;
@@ -1835,6 +1872,33 @@ function getPendingLoginCandidate() {
   }
 
   return pendingLoginCandidate;
+}
+
+async function recordDiagnosticLog(entry: Omit<DiagnosticLogEntry, 'id' | 'createdAt'> & Partial<Pick<DiagnosticLogEntry, 'id' | 'createdAt'>>) {
+  const session = await restoreCachedVaultSession();
+  const settings = session?.vault.settings;
+
+  if (!settings?.diagnosticLogging) {
+    return { ok: true, stored: false };
+  }
+
+  const logs = await appendDiagnosticLogEntry(entry, {
+    limit: settings.diagnosticLogLimit,
+    retentionDays: settings.diagnosticLogRetentionDays
+  });
+
+  return { ok: true, stored: true, count: logs.length };
+}
+
+async function readDiagnosticLog() {
+  const session = await restoreCachedVaultSession();
+  const settings = session?.vault.settings;
+  const logs = await getDiagnosticLogEntries({
+    limit: settings?.diagnosticLogLimit,
+    retentionDays: settings?.diagnosticLogRetentionDays
+  });
+
+  return { ok: true, logs, enabled: Boolean(settings?.diagnosticLogging) };
 }
 
 function sameCandidateAccount(credential: Credential, candidate: PendingLoginCandidate): boolean {
@@ -1986,6 +2050,14 @@ async function resolveSaveCandidate(mode: SaveCandidateMode, candidateId?: strin
   }
 
   if (mode === 'skip') {
+    void recordDiagnosticLog({
+      area: 'save-prompt',
+      event: 'resolve-save-candidate',
+      outcome: 'ignored',
+      domain: candidate.domain,
+      reason: '用户暂不保存登录信息。',
+      source: candidate.source
+    }).catch(() => undefined);
     clearPendingLoginCandidate();
     return { ok: true, skipped: true };
   }
@@ -1993,12 +2065,48 @@ async function resolveSaveCandidate(mode: SaveCandidateMode, candidateId?: strin
   const session = await restoreCachedVaultSession();
 
   if (!session) {
-    return { ok: false, locked: true, error: 'VAULT_LOCKED' };
+    if (mode === 'blacklist') {
+      savePolicy.blacklist = Array.from(new Set([...savePolicy.blacklist, candidate.domain]));
+      void recordDiagnosticLog({
+        area: 'save-prompt',
+        event: 'resolve-save-candidate',
+        outcome: 'ignored',
+        domain: candidate.domain,
+        reason: 'Vault 锁定时将当前网站加入临时不保存列表。',
+        source: candidate.source
+      }).catch(() => undefined);
+      clearPendingLoginCandidate();
+      return { ok: true, blacklisted: true, volatile: true };
+    }
+
+    await appendPendingSaveCandidate(candidate);
+    void recordDiagnosticLog({
+      area: 'save-prompt',
+      event: 'resolve-save-candidate',
+      outcome: 'success',
+      domain: candidate.domain,
+      reason: 'Vault 锁定，登录信息已加密暂存等待下次解锁导入。',
+      source: candidate.source,
+      counts: {
+        locked: true,
+        fields: candidate.formFields?.length ?? 0
+      }
+    }).catch(() => undefined);
+    clearPendingLoginCandidate();
+    return { ok: true, queued: true };
   }
 
   if (mode === 'blacklist') {
     const blacklist = Array.from(new Set([...session.vault.settings.blacklist, candidate.domain]));
     await persistVaultSession(session, upsertVaultSettings(session.vault, { blacklist }));
+    void recordDiagnosticLog({
+      area: 'save-prompt',
+      event: 'resolve-save-candidate',
+      outcome: 'ignored',
+      domain: candidate.domain,
+      reason: '用户选择不再保存此网站登录信息。',
+      source: candidate.source
+    }).catch(() => undefined);
     clearPendingLoginCandidate();
     return { ok: true, blacklisted: true };
   }
@@ -2007,6 +2115,18 @@ async function resolveSaveCandidate(mode: SaveCandidateMode, candidateId?: strin
 
   if (exactDuplicate) {
     const refreshed = await refreshCredentialFormProfile(session, exactDuplicate, candidate);
+    void recordDiagnosticLog({
+      area: 'save-prompt',
+      event: 'resolve-save-candidate',
+      outcome: 'success',
+      domain: candidate.domain,
+      reason: refreshed ? '账号已存在，已刷新表单结构或图标信息。' : '账号密码已存在，无需重复保存。',
+      source: candidate.source,
+      counts: {
+        duplicate: true,
+        refreshed
+      }
+    }).catch(() => undefined);
     clearPendingLoginCandidate();
     return { ok: true, duplicate: !refreshed, updated: refreshed };
   }
@@ -2046,6 +2166,18 @@ async function resolveSaveCandidate(mode: SaveCandidateMode, candidateId?: strin
   });
 
   await persistVaultSession(session, withRule);
+  void recordDiagnosticLog({
+    area: 'save-prompt',
+    event: 'resolve-save-candidate',
+    outcome: 'success',
+    domain: candidate.domain,
+    reason: shouldUpdate ? '同站点同用户名，已更新保存的密码。' : '已保存为新的登录账号。',
+    source: candidate.source,
+    counts: {
+      updated: shouldUpdate,
+      fields: candidate.formFields?.length ?? 0
+    }
+  }).catch(() => undefined);
   clearPendingLoginCandidate();
 
   return { ok: true, saved: true, updated: shouldUpdate, credentialId: credential.id };
@@ -2120,9 +2252,56 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === 'KEYPILOT_LOCK_VAULT') {
+    void clearVaultSessionCache()
+      .then(() => {
+        pendingFills.clear();
+        pendingBindings.clear();
+        pendingBindingTests.clear();
+        pendingSubmitOutcomes.clear();
+        stagedLoginCandidates.clear();
+        clearPendingLoginCandidate();
+        sendResponse({ ok: true });
+      })
+      .catch((error) => sendResponse({ ok: false, error: toErrorMessage(error) }));
+
+    return true;
+  }
+
   if (message?.type === 'KEYPILOT_FETCH_SITE_METADATA') {
     void fetchSiteMetadata(message.url as string | undefined)
       .then((response) => sendResponse(response))
+      .catch((error) => sendResponse({ ok: false, error: toErrorMessage(error) }));
+
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_RECORD_DIAGNOSTIC_LOG') {
+    const entry = message.entry as Omit<DiagnosticLogEntry, 'id' | 'createdAt'> & Partial<Pick<DiagnosticLogEntry, 'id' | 'createdAt'>> | undefined;
+
+    if (!entry?.area || !entry.event || !entry.outcome || !entry.domain) {
+      sendResponse({ ok: false, error: 'INVALID_DIAGNOSTIC_LOG' });
+      return true;
+    }
+
+    void recordDiagnosticLog(entry)
+      .then((response) => sendResponse(response))
+      .catch((error) => sendResponse({ ok: false, error: toErrorMessage(error) }));
+
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_GET_DIAGNOSTIC_LOG') {
+    void readDiagnosticLog()
+      .then((response) => sendResponse(response))
+      .catch((error) => sendResponse({ ok: false, error: toErrorMessage(error), logs: [] }));
+
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_CLEAR_DIAGNOSTIC_LOG') {
+    void clearDiagnosticLogEntries()
+      .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: toErrorMessage(error) }));
 
     return true;

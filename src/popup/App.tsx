@@ -729,17 +729,29 @@ export function App() {
   function handleUnlocked(nextSession: UnlockedVaultSession, recoveryCode?: string) {
     setSession(nextSession);
     setStatus('unlocked');
-    setNotice({ kind: 'success', text: 'Vault 已解锁。' });
+    setNotice({
+      kind: 'success',
+      text: nextSession.pendingSaveImportCount
+        ? `Vault 已解锁，已自动保存 ${nextSession.pendingSaveImportCount} 条暂存账号。`
+        : nextSession.saveInboxJustEnabled
+          ? 'Vault 已解锁，锁定态保存已启用。以后保存登录信息不会再打开解锁页。'
+        : 'Vault 已解锁。'
+    });
     if (recoveryCode) {
       setRecoveryCodeToShow(recoveryCode);
     }
   }
 
   function handleLock() {
-    void clearVaultSessionCache();
-    setSession(null);
-    setStatus('locked');
-    setNotice({ kind: 'info', text: 'Vault 已锁定。' });
+    void (async () => {
+      await clearVaultSessionCache();
+      if (canUseExtensionApi()) {
+        await sendRuntimeMessage({ type: 'KEYPILOT_LOCK_VAULT' }).catch(() => undefined);
+      }
+      setSession(null);
+      setStatus('locked');
+      setNotice({ kind: 'info', text: 'Vault 已锁定。' });
+    })();
   }
 
   function requestResetVault() {
@@ -1465,6 +1477,7 @@ function PopupHome({
         onEdit={openEdit}
         autoSaveEnabled={currentDomainAutoSaveEnabled}
         onToggleAutoSave={() => void handleToggleCurrentDomainAutoSave()}
+        onLock={onLock}
       />
     );
   })();
@@ -1619,7 +1632,8 @@ function HomePage({
   onDelete,
   onEdit,
   autoSaveEnabled,
-  onToggleAutoSave
+  onToggleAutoSave,
+  onLock
 }: {
   view: ViewKey;
   query: string;
@@ -1650,6 +1664,7 @@ function HomePage({
   onEdit: (credential: Credential) => void;
   autoSaveEnabled: boolean;
   onToggleAutoSave: () => void;
+  onLock: () => void;
 }) {
   const [mode, setMode] = useState<'login' | 'username' | 'identity'>('login');
   const [sortMode, setSortMode] = useState<'favorite' | 'recent' | 'az'>(defaultSort);
@@ -1923,10 +1938,10 @@ function HomePage({
         )}
 
         <footer className="kp-dock">
-          <div className="kp-lock-state">
+          <button className="kp-lock-state" type="button" onClick={onLock} title="点击锁定 Vault" aria-label="锁定 Vault">
             <UnlockKeyhole size={19} aria-hidden="true" />
             <span>Vault 已解锁</span>
-          </div>
+          </button>
           <button
             className={autoSaveEnabled ? 'kp-save-toggle active' : 'kp-save-toggle'}
             type="button"

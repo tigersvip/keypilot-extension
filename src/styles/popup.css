@@ -2723,7 +2723,24 @@ a {
   min-width: 0;
   align-items: center;
   gap: 7px;
+  border: 0;
+  border-radius: 12px;
+  padding: 7px 8px;
+  background: transparent;
   color: #16a34a;
+  text-align: left;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 120ms ease;
+}
+
+.kp-lock-state:hover {
+  background: rgba(22, 163, 74, 0.09);
+}
+
+.kp-lock-state:active {
+  transform: translateY(1px);
 }
 
 .kp-lock-state span {

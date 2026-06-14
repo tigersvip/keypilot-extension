@@ -558,6 +558,99 @@ kbd {
   font-weight: 760;
 }
 
+.diagnostic-log-empty,
+.diagnostic-log-list {
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0 22px;
+}
+
+.diagnostic-log-empty {
+  min-height: 92px;
+  align-content: center;
+  border: 1px dashed #d6dfec;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+.diagnostic-log-empty strong {
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 760;
+}
+
+.diagnostic-log-empty span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.diagnostic-log-item {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid #94a3b8;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px 14px;
+}
+
+.diagnostic-log-item.success {
+  border-left-color: var(--success);
+}
+
+.diagnostic-log-item.failure {
+  border-left-color: var(--danger);
+}
+
+.diagnostic-log-item.pending {
+  border-left-color: var(--warning);
+}
+
+.diagnostic-log-item > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.diagnostic-log-item strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostic-log-item div span,
+.diagnostic-log-item footer span,
+.diagnostic-log-item time {
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.diagnostic-log-item p {
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.diagnostic-log-item footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.diagnostic-log-item footer span,
+.diagnostic-log-item time {
+  border-radius: 999px;
+  background: #f3f6fb;
+  padding: 3px 8px;
+}
+
 .options-notice {
   position: sticky;
   top: 14px;

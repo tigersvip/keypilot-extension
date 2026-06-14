@@ -45,7 +45,14 @@ import {
   X
 } from 'lucide-react';
 import { exportRoboFormCsv } from '../shared/csvExport';
-import { exportFillProfilesKpFill, parseFillProfileImportFile, type FillProfileImportPreview } from '../shared/fillProfiles';
+import {
+  FILL_FIELD_MAPPING_PRESETS,
+  applyFillProfileHeaderMappingOverrides,
+  exportFillProfilesKpFill,
+  parseFillProfileImportFile,
+  type FillHeaderMappingOverride,
+  type FillProfileImportPreview
+} from '../shared/fillProfiles';
 import { getEncryptedVault } from '../shared/storage';
 import { extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from '../shared/domain';
 import { getIconCandidates, getRootFaviconUrl, toHttpIconUrl } from '../shared/icons';
@@ -83,7 +90,10 @@ import type {
   DeletedVaultItem,
   FillCredentialPayload,
   FillField,
+  FillFieldGroup,
+  FillFieldSensitivity,
   FillImportBatchRecord,
+  FillImportMappingTemplate,
   FillProfile,
   IdentityProfile,
   SecureNote,
@@ -629,6 +639,58 @@ function fillImportSourceKey(preview: FillProfileImportPreview): string {
   return [preview.sourceName, preview.sourceType, preview.totalRows, preview.importableRows, preview.fieldCount, preview.category, preview.countryCode, headerKey]
     .join('::')
     .toLowerCase();
+}
+
+function fillImportHeaderSignature(preview: FillProfileImportPreview): string {
+  return preview.headers.map((header) => header.column.trim().toLowerCase()).join('|');
+}
+
+function fillImportColumns(preview: FillProfileImportPreview): string[] {
+  return preview.headers.map((header) => header.column);
+}
+
+function fillImportTemplateSortValue(template: FillImportMappingTemplate): number {
+  return template.lastUsedAt ?? template.updatedAt ?? template.createdAt;
+}
+
+function sortFillImportMappingTemplates(templates: FillImportMappingTemplate[], preview: FillProfileImportPreview): FillImportMappingTemplate[] {
+  const signature = fillImportHeaderSignature(preview);
+  const previewColumns = new Set(fillImportColumns(preview).map((column) => column.trim().toLowerCase()));
+  return [...templates]
+    .filter((template) => template.sourceType === preview.sourceType)
+    .filter((template) => template.headerSignature === signature || template.columns.some((column) => previewColumns.has(column.trim().toLowerCase())))
+    .sort((left, right) => {
+      const leftExact = left.headerSignature === signature ? 1 : 0;
+      const rightExact = right.headerSignature === signature ? 1 : 0;
+      if (leftExact !== rightExact) return rightExact - leftExact;
+      return fillImportTemplateSortValue(right) - fillImportTemplateSortValue(left);
+    });
+}
+
+function fillImportOverridesRecord(overrides: FillHeaderMappingOverride[]): Record<string, FillHeaderMappingOverride> {
+  return overrides.reduce<Record<string, FillHeaderMappingOverride>>((result, override) => {
+    result[override.column] = override;
+    return result;
+  }, {});
+}
+
+function fillImportOverridesFromPreview(preview: FillProfileImportPreview): FillHeaderMappingOverride[] {
+  return preview.headers.map((header) => {
+    if (header.key === '__skip') {
+      return { column: header.column, skip: true };
+    }
+
+    const presetMatch = FILL_FIELD_MAPPING_PRESETS.some((preset) => preset.key === header.key);
+    return {
+      column: header.column,
+      mode: presetMatch ? 'preset' : 'custom',
+      key: header.key,
+      label: header.label,
+      group: header.group,
+      sensitivity: header.sensitivity,
+      aliases: header.aliases
+    };
+  });
 }
 
 function sortFillImportProfiles(profiles: FillProfile[], order: FillImportOrder): FillProfile[] {
@@ -1819,6 +1881,29 @@ export function VaultApp() {
     openSection('identities');
   }
 
+  async function saveFillImportMappingTemplate(template: FillImportMappingTemplate) {
+    if (!session) return;
+    const templates = session.vault.settings.fillImportMappingTemplates ?? [];
+    const existing = templates.find((item) => item.id === template.id);
+    const now = Date.now();
+    const nextTemplate: FillImportMappingTemplate = {
+      ...template,
+      name: template.name.trim() || '填表映射模板',
+      useCount: existing?.useCount ?? template.useCount ?? 0,
+      createdAt: existing?.createdAt ?? template.createdAt ?? now,
+      updatedAt: now
+    };
+    const nextVault: VaultPlain = {
+      ...session.vault,
+      settings: {
+        ...session.vault.settings,
+        fillImportMappingTemplates: [nextTemplate, ...templates.filter((item) => item.id !== nextTemplate.id)].slice(0, 60)
+      }
+    };
+
+    await persist(nextVault, `映射模板已保存：${nextTemplate.name}`);
+  }
+
   async function startCredentialBinding(credential: Credential) {
     try {
       const response = await sendRuntimeMessage<OpenTabResult & { locked?: boolean }>({
@@ -2166,9 +2251,11 @@ export function VaultApp() {
       {fillImportPreview ? (
         <FillImportPreviewDialog
           preview={fillImportPreview}
-          batchRecord={session.vault.settings.fillImportBatches?.find((record) => record.sourceKey === fillImportSourceKey(fillImportPreview))}
+          mappingTemplates={session.vault.settings.fillImportMappingTemplates ?? []}
+          batchRecords={session.vault.settings.fillImportBatches ?? []}
           onClose={() => setFillImportPreview(null)}
-          onConfirm={(options) => void confirmFillProfileImport(fillImportPreview, options)}
+          onConfirm={(mappedPreview, options) => void confirmFillProfileImport(mappedPreview, options)}
+          onSaveTemplate={(template) => void saveFillImportMappingTemplate(template)}
         />
       ) : null}
 
@@ -2736,30 +2823,82 @@ function DeletedItemIcon({ item }: { item: DeletedVaultItem }) {
   return <span className="item-kind note"><NotebookText size={17} /></span>;
 }
 
+const FILL_MAPPING_GROUPS: FillFieldGroup[] = [
+  'personal',
+  'contact',
+  'address',
+  'sensitive',
+  'driver',
+  'vehicle',
+  'insurance',
+  'payment',
+  'business',
+  'finance',
+  'loan',
+  'employment',
+  'custom'
+];
+
+const FILL_MAPPING_SENSITIVITY_OPTIONS: FillFieldSensitivity[] = ['normal', 'private', 'secret'];
+
 function FillImportPreviewDialog({
   preview,
-  batchRecord,
+  batchRecords = [],
+  mappingTemplates = [],
   onClose,
-  onConfirm
+  onConfirm,
+  onSaveTemplate
 }: {
   preview: FillProfileImportPreview;
-  batchRecord?: FillImportBatchRecord;
+  batchRecords?: FillImportBatchRecord[];
+  mappingTemplates?: FillImportMappingTemplate[];
   onClose: () => void;
-  onConfirm: (options: FillImportOptions) => void;
+  onConfirm: (preview: FillProfileImportPreview, options: FillImportOptions) => void;
+  onSaveTemplate: (template: FillImportMappingTemplate) => void;
 }) {
-  const recommendedCount = preview.importableRows > 1000 ? Math.min(500, preview.importableRows) : preview.importableRows;
-  const initialOffset = Math.min(batchRecord?.nextOffset ?? 0, preview.importableRows);
+  const compatibleMappingTemplates = useMemo(
+    () => sortFillImportMappingTemplates(mappingTemplates, preview),
+    [mappingTemplates, preview]
+  );
+  const initialMappingTemplate = compatibleMappingTemplates.find((template) => template.headerSignature === fillImportHeaderSignature(preview)) ?? null;
+  const [activeTemplateId, setActiveTemplateId] = useState(initialMappingTemplate?.id ?? '');
+  const [mappingTemplateName, setMappingTemplateName] = useState(initialMappingTemplate?.name ?? `${defaultFillImportPrefix(preview.category)}映射模板`);
+  const [mappingOverrides, setMappingOverrides] = useState<Record<string, FillHeaderMappingOverride>>(() =>
+    initialMappingTemplate ? fillImportOverridesRecord(initialMappingTemplate.overrides) : {}
+  );
+  const mappedPreview = useMemo(
+    () => applyFillProfileHeaderMappingOverrides(preview, Object.values(mappingOverrides)),
+    [mappingOverrides, preview]
+  );
+  const batchRecord = useMemo(
+    () => batchRecords.find((record) => record.sourceKey === fillImportSourceKey(mappedPreview)),
+    [batchRecords, mappedPreview]
+  );
+  const sampleValueByColumn = useMemo(() => {
+    const samples = new Map<string, string>();
+    preview.profiles.forEach((profile) => {
+      profile.fields.forEach((field) => {
+        if (field.sourceColumn && field.value && !samples.has(field.sourceColumn)) {
+          samples.set(field.sourceColumn, field.value);
+        }
+      });
+    });
+    return samples;
+  }, [preview]);
+  const totalImportable = mappedPreview.importableRows;
+  const recommendedCount = totalImportable > 1000 ? Math.min(500, totalImportable) : totalImportable;
+  const initialOffset = Math.min(batchRecord?.nextOffset ?? 0, totalImportable);
   const initialPrefix = batchRecord?.prefix || defaultFillImportPrefix(preview.category);
   const initialNumberStart = batchRecord?.numberStart ?? initialOffset + 1;
-  const [importCount, setImportCount] = useState(Math.min(recommendedCount, Math.max(0, preview.importableRows - initialOffset)));
+  const [importCount, setImportCount] = useState(Math.min(recommendedCount, Math.max(0, totalImportable - initialOffset)));
   const [importOffset, setImportOffset] = useState(initialOffset);
   const [namePrefix, setNamePrefix] = useState(initialPrefix);
   const [numberStart, setNumberStart] = useState(initialNumberStart);
   const [numberPadding, setNumberPadding] = useState(batchRecord?.numberPadding ?? 3);
   const [importOrder, setImportOrder] = useState<FillImportOrder>(batchRecord?.order ?? 'source');
-  const clampImportCount = (value: number) => Math.max(0, Math.min(preview.importableRows, Number.isFinite(value) ? Math.floor(value) : 0));
-  const clampImportOffset = (value: number) => Math.max(0, Math.min(preview.importableRows, Number.isFinite(value) ? Math.floor(value) : 0));
-  const effectiveCount = Math.min(importCount, Math.max(0, preview.importableRows - importOffset));
+  const clampImportCount = (value: number) => Math.max(0, Math.min(totalImportable, Number.isFinite(value) ? Math.floor(value) : 0));
+  const clampImportOffset = (value: number) => Math.max(0, Math.min(totalImportable, Number.isFinite(value) ? Math.floor(value) : 0));
+  const effectiveCount = Math.min(importCount, Math.max(0, totalImportable - importOffset));
   const previewOptions: FillImportOptions = {
     offset: importOffset,
     count: effectiveCount,
@@ -2768,13 +2907,145 @@ function FillImportPreviewDialog({
     numberPadding,
     order: importOrder
   };
-  const shownHeaders = preview.headers.slice(0, 14);
-  const hiddenHeaderCount = Math.max(0, preview.headers.length - shownHeaders.length);
-  const shownSamples = applyFillImportOptions(preview, { ...previewOptions, count: Math.min(4, effectiveCount) });
-  const importAll = importOffset === 0 && effectiveCount >= preview.importableRows;
+  const shownSamples = applyFillImportOptions(mappedPreview, { ...previewOptions, count: Math.min(4, effectiveCount) });
+  const importAll = importOffset === 0 && effectiveCount >= totalImportable;
   const rangeLabel = effectiveCount
     ? `将导入第 ${importOffset + 1} - ${importOffset + effectiveCount} 条资料`
     : '当前没有可导入的资料';
+
+  function updateMappingOverride(column: string, override?: FillHeaderMappingOverride) {
+    setMappingOverrides((current) => {
+      const next = { ...current };
+      if (!override) {
+        delete next[column];
+      } else {
+        next[column] = override;
+      }
+      return next;
+    });
+  }
+
+  function originalHeaderFor(column: string) {
+    return preview.headers.find((header) => header.column === column) ?? mappedPreview.headers.find((header) => header.column === column);
+  }
+
+  function selectMappingPreset(column: string, value: string) {
+    const originalHeader = originalHeaderFor(column);
+    if (!originalHeader) return;
+
+    if (value === '__auto') {
+      updateMappingOverride(column);
+      return;
+    }
+
+    if (value === '__skip') {
+      updateMappingOverride(column, { column, skip: true });
+      return;
+    }
+
+    if (value === '__custom') {
+      updateMappingOverride(column, {
+        column,
+        mode: 'custom',
+        key: originalHeader.key,
+        label: originalHeader.label,
+        group: originalHeader.group,
+        sensitivity: originalHeader.sensitivity,
+        aliases: originalHeader.aliases
+      });
+      return;
+    }
+
+    const preset = FILL_FIELD_MAPPING_PRESETS.find((item) => item.key === value);
+    if (!preset) return;
+
+    updateMappingOverride(column, {
+      column,
+      mode: 'preset',
+      key: preset.key,
+      label: preset.label,
+      group: preset.group,
+      sensitivity: preset.sensitivity,
+      aliases: preset.aliases
+    });
+  }
+
+  function updateCustomMapping(column: string, patch: Partial<FillHeaderMappingOverride>) {
+    const originalHeader = originalHeaderFor(column);
+    if (!originalHeader) return;
+
+    setMappingOverrides((current) => ({
+      ...current,
+      [column]: {
+        key: originalHeader.key,
+        label: originalHeader.label,
+        group: originalHeader.group,
+        sensitivity: originalHeader.sensitivity,
+        aliases: originalHeader.aliases,
+        ...current[column],
+        ...patch,
+        column,
+        mode: 'custom',
+        skip: false
+      }
+    }));
+  }
+
+  function syncImportBatchDefaults(nextPreview: FillProfileImportPreview) {
+    const nextBatchRecord = batchRecords.find((record) => record.sourceKey === fillImportSourceKey(nextPreview));
+    const nextTotal = nextPreview.importableRows;
+    const nextOffset = Math.min(nextBatchRecord?.nextOffset ?? 0, nextTotal);
+    const nextRecommendedCount = nextTotal > 1000 ? Math.min(500, nextTotal) : nextTotal;
+
+    setImportOffset(nextOffset);
+    setImportCount(Math.min(nextRecommendedCount, Math.max(0, nextTotal - nextOffset)));
+    if (nextBatchRecord) {
+      setNamePrefix(nextBatchRecord.prefix);
+      setNumberStart(nextBatchRecord.numberStart);
+      setNumberPadding(nextBatchRecord.numberPadding);
+      setImportOrder(nextBatchRecord.order);
+    }
+  }
+
+  function applyMappingTemplate(templateId: string) {
+    setActiveTemplateId(templateId);
+    if (!templateId) {
+      setMappingOverrides({});
+      syncImportBatchDefaults(preview);
+      return;
+    }
+
+    const template = mappingTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    const nextOverrides = fillImportOverridesRecord(template.overrides);
+    const nextPreview = applyFillProfileHeaderMappingOverrides(preview, Object.values(nextOverrides));
+    setMappingTemplateName(template.name);
+    setMappingOverrides(nextOverrides);
+    syncImportBatchDefaults(nextPreview);
+  }
+
+  function saveCurrentMappingTemplate() {
+    const now = Date.now();
+    const existingTemplate = activeTemplateId ? mappingTemplates.find((template) => template.id === activeTemplateId) : undefined;
+    const templateName = mappingTemplateName.trim() || `${defaultFillImportPrefix(mappedPreview.category)}映射模板`;
+    const template: FillImportMappingTemplate = {
+      id: existingTemplate?.id ?? crypto.randomUUID(),
+      name: templateName,
+      sourceType: preview.sourceType,
+      category: mappedPreview.category,
+      countryCode: mappedPreview.countryCode,
+      headerSignature: fillImportHeaderSignature(preview),
+      columns: fillImportColumns(preview),
+      overrides: fillImportOverridesFromPreview(mappedPreview),
+      useCount: existingTemplate?.useCount ?? 0,
+      createdAt: existingTemplate?.createdAt ?? now,
+      updatedAt: now
+    };
+
+    setActiveTemplateId(template.id);
+    setMappingTemplateName(template.name);
+    onSaveTemplate(template);
+  }
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -2794,35 +3065,35 @@ function FillImportPreviewDialog({
 
         <div className="fill-import-stats">
           <span>
-            <strong>{preview.totalRows}</strong>
+            <strong>{mappedPreview.totalRows}</strong>
             总行数
           </span>
           <span>
-            <strong>{preview.importableRows}</strong>
+            <strong>{mappedPreview.importableRows}</strong>
             可导入
           </span>
           <span>
-            <strong>{preview.fieldCount}</strong>
+            <strong>{mappedPreview.fieldCount}</strong>
             字段
           </span>
           <span>
-            <strong>{preview.countryCode}</strong>
+            <strong>{mappedPreview.countryCode}</strong>
             国家
           </span>
         </div>
 
         <div className="fill-import-summary-card">
           <div>
-            <strong>{fillProfileCategoryLabel(preview.category)}</strong>
+            <strong>{fillProfileCategoryLabel(mappedPreview.category)}</strong>
             <p>
               已自动识别 Excel 表头并映射为网页填表字段。敏感字段只会写入本地加密 Vault，不会上传到第三方。
-              {preview.importableRows > 1000 ? ' 文件较大，建议先分批导入，避免列表和弹窗变慢。' : ''}
+              {mappedPreview.importableRows > 1000 ? ' 文件较大，建议先分批导入，避免列表和弹窗变慢。' : ''}
             </p>
           </div>
-          {preview.sensitiveFieldCount ? (
+          {mappedPreview.sensitiveFieldCount ? (
             <em>
               <Shield size={16} />
-              {preview.sensitiveFieldCount} 个敏感字段
+              {mappedPreview.sensitiveFieldCount} 个敏感字段
             </em>
           ) : (
             <em className="safe">
@@ -2846,12 +3117,12 @@ function FillImportPreviewDialog({
               <input
                 type="number"
                 min={1}
-                max={Math.max(1, preview.importableRows)}
-                value={Math.min(preview.importableRows, importOffset + 1)}
+                max={Math.max(1, totalImportable)}
+                value={Math.min(totalImportable, importOffset + 1)}
                 onChange={(event) => {
                   const nextOffset = clampImportOffset(Number(event.currentTarget.value) - 1);
                   setImportOffset(nextOffset);
-                  setImportCount((count) => Math.min(count, Math.max(0, preview.importableRows - nextOffset)));
+                  setImportCount((count) => Math.min(count, Math.max(0, totalImportable - nextOffset)));
                 }}
               />
               <small>1 表示第一条</small>
@@ -2861,21 +3132,21 @@ function FillImportPreviewDialog({
               <input
                 type="number"
                 min={0}
-                max={Math.max(0, preview.importableRows - importOffset)}
+                max={Math.max(0, totalImportable - importOffset)}
                 value={importCount}
                 onChange={(event) => setImportCount(clampImportCount(Number(event.currentTarget.value)))}
               />
-              <small>/ 剩余 {Math.max(0, preview.importableRows - importOffset)} 条</small>
+              <small>/ 剩余 {Math.max(0, totalImportable - importOffset)} 条</small>
             </label>
             <div>
               {[100, 500, 1000]
-                .filter((count) => count < Math.max(0, preview.importableRows - importOffset))
+                .filter((count) => count < Math.max(0, totalImportable - importOffset))
                 .map((count) => (
                   <button key={count} type="button" onClick={() => setImportCount(clampImportCount(count))}>
                     {count} 条
                   </button>
                 ))}
-              <button type="button" onClick={() => setImportCount(Math.max(0, preview.importableRows - importOffset))}>
+              <button type="button" onClick={() => setImportCount(Math.max(0, totalImportable - importOffset))}>
                 剩余全部
               </button>
             </div>
@@ -2921,15 +3192,141 @@ function FillImportPreviewDialog({
         </section>
 
         <section className="fill-import-fields" aria-label="字段映射">
-          <h3>字段映射</h3>
-          <div>
-            {shownHeaders.map((header) => (
-              <span key={`${header.column}-${header.key}`}>
-                <small>{header.column}</small>
-                <strong>{header.label}</strong>
-              </span>
-            ))}
-            {hiddenHeaderCount ? <span className="more">+{hiddenHeaderCount} 个字段</span> : null}
+          <div className="fill-import-field-head">
+            <div>
+              <h3>字段映射</h3>
+              <p>识别不准的列可以改成指定字段，也可以跳过不导入。</p>
+            </div>
+            {Object.keys(mappingOverrides).length ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTemplateId('');
+                  setMappingOverrides({});
+                  syncImportBatchDefaults(preview);
+                }}
+              >
+                恢复自动识别
+              </button>
+            ) : null}
+          </div>
+          <div className="fill-import-template-bar">
+            <label>
+              <span>映射模板</span>
+              <select value={activeTemplateId} onChange={(event) => applyMappingTemplate(event.currentTarget.value)}>
+                <option value="">自动识别 / 不套用模板</option>
+                {compatibleMappingTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}{template.headerSignature === fillImportHeaderSignature(preview) ? ' · 表头匹配' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>保存名称</span>
+              <input value={mappingTemplateName} onChange={(event) => setMappingTemplateName(event.currentTarget.value)} placeholder="例如 车险资料模板" />
+            </label>
+            <button type="button" onClick={saveCurrentMappingTemplate}>
+              <FolderPlus size={16} />
+              保存模板
+            </button>
+            <small>
+              {initialMappingTemplate ? `已自动套用：${initialMappingTemplate.name}` : compatibleMappingTemplates.length ? '可选择历史模板，也可保存当前映射。' : '当前还没有可用模板，调整字段后可保存。'}
+            </small>
+          </div>
+          <div className="fill-import-mapping-list">
+            {mappedPreview.headers.map((header) => {
+              const originalHeader = originalHeaderFor(header.column) ?? header;
+              const override = mappingOverrides[header.column];
+              const presetMatch = FILL_FIELD_MAPPING_PRESETS.some((preset) => preset.key === header.key);
+              const selectedValue = header.key === '__skip'
+                ? '__skip'
+                : override?.mode === 'custom'
+                  ? '__custom'
+                  : override?.mode === 'preset' && presetMatch
+                    ? header.key
+                    : '__auto';
+              const isCustom = selectedValue === '__custom';
+              const sampleValue = sampleValueByColumn.get(header.column);
+
+              return (
+                <article className={header.key === '__skip' ? 'is-skipped' : ''} key={header.column}>
+                  <div className="fill-import-mapping-source">
+                    <strong>{header.column}</strong>
+                    <small>{sampleValue ? `样例：${sampleValue}` : '此列样例为空'}</small>
+                  </div>
+                  <div className="fill-import-mapping-target">
+                    <select value={selectedValue} onChange={(event) => selectMappingPreset(header.column, event.currentTarget.value)}>
+                      <option value="__auto">自动识别：{originalHeader.label}</option>
+                      <option value="__custom">自定义字段</option>
+                      <option value="__skip">不导入此列</option>
+                      {FILL_MAPPING_GROUPS.map((group) => {
+                        const presets = FILL_FIELD_MAPPING_PRESETS.filter((preset) => preset.group === group);
+                        if (!presets.length) return null;
+                        return (
+                          <optgroup key={group} label={fillFieldGroupLabel(group)}>
+                            {presets.map((preset) => (
+                              <option key={`${group}-${preset.key}`} value={preset.key}>
+                                {preset.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                    <span>
+                      {header.key === '__skip' ? '已跳过' : `${fillFieldGroupLabel(header.group)} · ${header.sensitivity === 'secret' ? '敏感' : header.sensitivity === 'private' ? '私密' : '普通'}`}
+                    </span>
+                  </div>
+                  {isCustom ? (
+                    <div className="fill-import-custom-grid">
+                      <label>
+                        <span>字段 key</span>
+                        <input
+                          value={override?.key ?? originalHeader.key}
+                          onChange={(event) => updateCustomMapping(header.column, { key: event.currentTarget.value })}
+                          placeholder="例如 ownerEmail"
+                        />
+                      </label>
+                      <label>
+                        <span>显示名称</span>
+                        <input
+                          value={override?.label ?? originalHeader.label}
+                          onChange={(event) => updateCustomMapping(header.column, { label: event.currentTarget.value })}
+                          placeholder="例如 负责人邮箱"
+                        />
+                      </label>
+                      <label>
+                        <span>分组</span>
+                        <select
+                          value={override?.group ?? originalHeader.group}
+                          onChange={(event) => updateCustomMapping(header.column, { group: event.currentTarget.value as FillFieldGroup })}
+                        >
+                          {FILL_MAPPING_GROUPS.map((group) => (
+                            <option key={group} value={group}>
+                              {fillFieldGroupLabel(group)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>敏感级别</span>
+                        <select
+                          value={override?.sensitivity ?? originalHeader.sensitivity}
+                          onChange={(event) => updateCustomMapping(header.column, { sensitivity: event.currentTarget.value as FillFieldSensitivity })}
+                        >
+                          {FILL_MAPPING_SENSITIVITY_OPTIONS.map((sensitivity) => (
+                            <option key={sensitivity} value={sensitivity}>
+                              {sensitivity === 'secret' ? '敏感' : sensitivity === 'private' ? '私密' : '普通'}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -2952,7 +3349,7 @@ function FillImportPreviewDialog({
           <button type="button" onClick={onClose}>
             取消
           </button>
-          <button className="primary" type="button" onClick={() => onConfirm(previewOptions)} disabled={!effectiveCount}>
+          <button className="primary" type="button" onClick={() => onConfirm(mappedPreview, previewOptions)} disabled={!effectiveCount}>
             <Check size={17} />
             导入 {effectiveCount} 条
           </button>

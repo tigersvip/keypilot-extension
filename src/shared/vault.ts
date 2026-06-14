@@ -1,5 +1,5 @@
 import { createEmptyVault, defaultSettings } from './defaults';
-import { extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from './domain';
+import { domainsMatch, extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from './domain';
 import { getRootFaviconUrl } from './icons';
 import {
   attachRecoveryToEncryptedVault,
@@ -17,14 +17,32 @@ import {
   saveEncryptedVault,
   saveUnlockedVaultCache
 } from './storage';
-import type { Credential, DeletedVaultItem, FillProfile, IdentityProfile, SecureNote, UnlockedVaultSession, VaultEncrypted, VaultFolder, VaultPlain } from './types';
+import {
+  decryptPendingSaveInboxItem,
+  generateSaveInboxKeyPair,
+  getPendingSaveInbox,
+  getSaveInboxPublicKeyFromVault,
+  removePendingSaveInboxItems
+} from './saveInbox';
+import type {
+  Credential,
+  DeletedVaultItem,
+  FillProfile,
+  IdentityProfile,
+  PendingLoginCandidate,
+  SecureNote,
+  UnlockedVaultSession,
+  VaultEncrypted,
+  VaultFolder,
+  VaultPlain
+} from './types';
 
 export async function hasVault(): Promise<boolean> {
   return Boolean(await getEncryptedVault());
 }
 
 export async function createVaultSession(masterPassword: string, recoveryCode?: string): Promise<UnlockedVaultSession> {
-  const vault = createEmptyVault();
+  const { vault } = await ensureSaveInboxKeyPair(createEmptyVault());
   const { encryptedVault, key } = await createEncryptedVault(masterPassword, vault, recoveryCode);
   await saveEncryptedVault(encryptedVault);
   const session = { key, vault, encryptedVault };
@@ -40,14 +58,7 @@ export async function unlockVaultSession(masterPassword: string, encryptedVault?
   }
 
   const { vault: rawVault, key } = await unlockEncryptedVault(masterPassword, storedVault);
-  const vault = normalizeVault(rawVault);
-  const session = {
-    key,
-    vault,
-    encryptedVault: storedVault
-  };
-  await cacheVaultSession(session);
-  return session;
+  return prepareUnlockedVaultSession(key, storedVault, rawVault);
 }
 
 export async function unlockVaultWithRecoveryCode(recoveryCode: string, encryptedVault?: VaultEncrypted): Promise<UnlockedVaultSession> {
@@ -58,14 +69,7 @@ export async function unlockVaultWithRecoveryCode(recoveryCode: string, encrypte
   }
 
   const { vault: rawVault, key } = await unlockEncryptedVaultWithRecoveryCode(recoveryCode, storedVault);
-  const vault = normalizeVault(rawVault);
-  const session = {
-    key,
-    vault,
-    encryptedVault: storedVault
-  };
-  await cacheVaultSession(session);
-  return session;
+  return prepareUnlockedVaultSession(key, storedVault, rawVault);
 }
 
 function normalizeVault(vault: VaultPlain): VaultPlain {
@@ -90,12 +94,211 @@ function normalizeVault(vault: VaultPlain): VaultPlain {
   };
 }
 
+async function ensureSaveInboxKeyPair(vault: VaultPlain): Promise<{ vault: VaultPlain; changed: boolean }> {
+  const normalizedVault = normalizeVault(vault);
+  const keyPair = normalizedVault.saveInboxKeyPair;
+
+  if (keyPair?.publicKey && keyPair.privateKey && keyPair.keyId) {
+    return { vault: normalizedVault, changed: false };
+  }
+
+  return {
+    vault: {
+      ...normalizedVault,
+      saveInboxKeyPair: await generateSaveInboxKeyPair()
+    },
+    changed: true
+  };
+}
+
+function domainInList(domain: string, list: string[] | undefined): boolean {
+  return Boolean(
+    domain &&
+      (list ?? []).some((item) => {
+        const candidate = item.trim();
+        return candidate === domain || domainsMatch(candidate, domain);
+      })
+  );
+}
+
+function samePendingCandidateAccount(credential: Credential, candidate: PendingLoginCandidate): boolean {
+  const username = candidate.username.trim().toLowerCase();
+  const credentialUsername = credential.username.trim().toLowerCase();
+
+  if (!username || !credentialUsername || username !== credentialUsername) {
+    return false;
+  }
+
+  return domainsMatch(credential.matchDomain || credential.domain, candidate.domain) || domainsMatch(credential.domain, candidate.domain);
+}
+
+function samePendingCandidatePassword(credential: Credential, candidate: PendingLoginCandidate): boolean {
+  return samePendingCandidateAccount(credential, candidate) && credential.password === candidate.password;
+}
+
+function shouldRefreshDuplicateCredential(credential: Credential, candidate: PendingLoginCandidate): boolean {
+  return Boolean(
+    (candidate.formFields?.length && !credential.formFields?.length) ||
+      (candidate.formProfile && !credential.formProfile) ||
+      (candidate.iconUrl && (!credential.iconUrl || credential.iconType === 'default')) ||
+      (candidate.title.trim() && (!credential.title.trim() || credential.title.trim() === credential.domain))
+  );
+}
+
+function mergePendingSaveCandidateIntoVault(
+  vault: VaultPlain,
+  candidate: PendingLoginCandidate
+): { vault: VaultPlain; changed: boolean; imported: boolean } {
+  const exactDuplicate = vault.credentials.find((credential) => samePendingCandidatePassword(credential, candidate));
+
+  if (exactDuplicate) {
+    if (!shouldRefreshDuplicateCredential(exactDuplicate, candidate)) {
+      return { vault, changed: false, imported: false };
+    }
+
+    return {
+      vault: updateCredentialInVault(vault, {
+        ...exactDuplicate,
+        formFields: candidate.formFields?.length ? candidate.formFields : exactDuplicate.formFields,
+        formProfile: candidate.formProfile ?? exactDuplicate.formProfile,
+        iconUrl: candidate.iconUrl ?? exactDuplicate.iconUrl,
+        iconType: candidate.iconType ?? exactDuplicate.iconType,
+        title: candidate.title.trim() || exactDuplicate.title || candidate.domain
+      }),
+      changed: true,
+      imported: false
+    };
+  }
+
+  const existing = vault.credentials.find((credential) => samePendingCandidateAccount(credential, candidate));
+
+  if (existing) {
+    return {
+      vault: updateCredentialInVault(vault, {
+        ...existing,
+        password: candidate.password,
+        url: candidate.url,
+        formFields: candidate.formFields?.length ? candidate.formFields : existing.formFields,
+        formProfile: candidate.formProfile ?? existing.formProfile,
+        iconUrl: candidate.iconUrl ?? existing.iconUrl,
+        iconType: candidate.iconType ?? existing.iconType,
+        title: candidate.title.trim() || existing.title || candidate.domain
+      }),
+      changed: true,
+      imported: true
+    };
+  }
+
+  return {
+    vault: addCredentialToVault(
+      vault,
+      buildCredential({
+        title: candidate.title,
+        url: candidate.url,
+        iconUrl: candidate.iconUrl,
+        iconType: candidate.iconType,
+        username: candidate.username,
+        password: candidate.password,
+        formFields: candidate.formFields,
+        formProfile: candidate.formProfile,
+        source: 'manual'
+      })
+    ),
+    changed: true,
+    imported: true
+  };
+}
+
+async function importPendingSaveInbox(vault: VaultPlain): Promise<{
+  vault: VaultPlain;
+  changed: boolean;
+  importedCount: number;
+  consumedIds: string[];
+}> {
+  const keyPair = vault.saveInboxKeyPair;
+
+  if (!keyPair?.privateKey || !keyPair.publicKey || !keyPair.keyId) {
+    return { vault, changed: false, importedCount: 0, consumedIds: [] };
+  }
+
+  const items = await getPendingSaveInbox();
+  let nextVault = vault;
+  let changed = false;
+  let importedCount = 0;
+  const consumedIds: string[] = [];
+
+  for (const item of items) {
+    if (item.keyId !== keyPair.keyId) {
+      continue;
+    }
+
+    let candidate: PendingLoginCandidate;
+
+    try {
+      candidate = await decryptPendingSaveInboxItem(item, keyPair);
+    } catch {
+      consumedIds.push(item.id);
+      continue;
+    }
+
+    if (domainInList(candidate.domain, nextVault.settings.blacklist)) {
+      consumedIds.push(item.id);
+      continue;
+    }
+
+    const result = mergePendingSaveCandidateIntoVault(nextVault, candidate);
+    nextVault = result.vault;
+    changed = changed || result.changed;
+    importedCount += result.imported ? 1 : 0;
+    consumedIds.push(item.id);
+  }
+
+  return {
+    vault: nextVault,
+    changed,
+    importedCount,
+    consumedIds
+  };
+}
+
+async function prepareUnlockedVaultSession(
+  key: CryptoKey,
+  encryptedVault: VaultEncrypted,
+  rawVault: VaultPlain
+): Promise<UnlockedVaultSession> {
+  const prepared = await ensureSaveInboxKeyPair(rawVault);
+  const pending = await importPendingSaveInbox(prepared.vault);
+  const saveInboxPublicKey = getSaveInboxPublicKeyFromVault(pending.vault.saveInboxKeyPair);
+  const publicKeyChanged = saveInboxPublicKey?.keyId !== encryptedVault.saveInboxPublicKey?.keyId;
+  let nextEncryptedVault = encryptedVault;
+
+  if (prepared.changed || pending.changed || publicKeyChanged) {
+    nextEncryptedVault = await encryptVaultWithExistingKey(key, encryptedVault, pending.vault);
+    await saveEncryptedVault(nextEncryptedVault);
+  }
+
+  if (pending.consumedIds.length) {
+    await removePendingSaveInboxItems(pending.consumedIds);
+  }
+
+  const session = {
+    key,
+    vault: pending.vault,
+    encryptedVault: nextEncryptedVault,
+    pendingSaveImportCount: pending.importedCount,
+    saveInboxJustEnabled: prepared.changed
+  };
+  await cacheVaultSession(session);
+  return session;
+}
+
 export async function persistVaultSession(session: UnlockedVaultSession, vault: VaultPlain): Promise<UnlockedVaultSession> {
-  const encryptedVault = await encryptVaultWithExistingKey(session.key, session.encryptedVault, vault);
+  const prepared = await ensureSaveInboxKeyPair(normalizeVault(vault));
+  const encryptedVault = await encryptVaultWithExistingKey(session.key, session.encryptedVault, prepared.vault);
   await saveEncryptedVault(encryptedVault);
   const nextSession = {
     key: session.key,
-    vault,
+    vault: prepared.vault,
     encryptedVault
   };
   await cacheVaultSession(nextSession);
@@ -117,11 +320,12 @@ export async function resetVaultMasterPassword(
   nextMasterPassword: string,
   recoveryCode?: string
 ): Promise<UnlockedVaultSession> {
-  const { encryptedVault, key } = await createEncryptedVault(nextMasterPassword, session.vault, recoveryCode);
+  const prepared = await ensureSaveInboxKeyPair(normalizeVault(session.vault));
+  const { encryptedVault, key } = await createEncryptedVault(nextMasterPassword, prepared.vault, recoveryCode);
   await saveEncryptedVault(encryptedVault);
   const nextSession = {
     key,
-    vault: session.vault,
+    vault: prepared.vault,
     encryptedVault
   };
   await cacheVaultSession(nextSession);
@@ -183,13 +387,7 @@ export async function restoreCachedVaultSession(): Promise<UnlockedVaultSession 
     return null;
   }
 
-  const vault = normalizeVault(cache.vault);
-
-  return {
-    key: await importVaultKey(cache.exportedKey),
-    vault,
-    encryptedVault: cache.encryptedVault
-  };
+  return prepareUnlockedVaultSession(await importVaultKey(cache.exportedKey), cache.encryptedVault, cache.vault);
 }
 
 export async function clearVaultSessionCache(): Promise<void> {

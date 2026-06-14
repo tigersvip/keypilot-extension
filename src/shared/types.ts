@@ -239,6 +239,7 @@ export interface FillProfileBindingResult {
   profileId: string;
   url: string;
   domain: string;
+  pathPattern?: string;
   fields: FillFieldBinding[];
 }
 
@@ -247,6 +248,49 @@ export interface VaultFolder {
   name: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface SaveInboxPublicKey {
+  version: 1;
+  algorithm: 'RSA-OAEP-256';
+  keyId: string;
+  publicKey: JsonWebKey;
+  createdAt: number;
+}
+
+export interface SaveInboxKeyPair extends SaveInboxPublicKey {
+  privateKey: JsonWebKey;
+}
+
+export interface PendingSaveInboxItem {
+  version: 1;
+  id: string;
+  algorithm: 'RSA-OAEP-256/AES-GCM';
+  keyId: string;
+  candidateId: string;
+  domain: string;
+  title: string;
+  usernameHint: string;
+  encryptedKey: string;
+  iv: string;
+  data: string;
+  createdAt: number;
+}
+
+export type DiagnosticLogArea = 'save-prompt' | 'inline-recognition' | 'password-generator' | 'fill-profile';
+export type DiagnosticLogOutcome = 'success' | 'pending' | 'failure' | 'ignored' | 'info';
+
+export interface DiagnosticLogEntry {
+  id: string;
+  createdAt: number;
+  area: DiagnosticLogArea;
+  event: string;
+  outcome: DiagnosticLogOutcome;
+  domain: string;
+  reason?: string;
+  signal?: string;
+  source?: string;
+  counts?: Record<string, string | number | boolean | null>;
 }
 
 export type DeletedVaultItem =
@@ -297,6 +341,36 @@ export interface VaultSettings {
   inlineBlacklist?: string[];
   siteRules?: SiteRule[];
   fillImportBatches?: FillImportBatchRecord[];
+  fillImportMappingTemplates?: FillImportMappingTemplate[];
+  diagnosticLogging?: boolean;
+  diagnosticLogLimit?: number;
+  diagnosticLogRetentionDays?: number;
+}
+
+export interface FillImportMappingOverride {
+  column: string;
+  mode?: 'preset' | 'custom';
+  key?: string;
+  label?: string;
+  group?: FillFieldGroup;
+  sensitivity?: FillFieldSensitivity;
+  aliases?: string[];
+  skip?: boolean;
+}
+
+export interface FillImportMappingTemplate {
+  id: string;
+  name: string;
+  sourceType: 'xlsx' | 'csv' | 'kpfill';
+  category: FillProfileCategory;
+  countryCode: string;
+  headerSignature: string;
+  columns: string[];
+  overrides: FillImportMappingOverride[];
+  useCount: number;
+  createdAt: number;
+  updatedAt: number;
+  lastUsedAt?: number;
 }
 
 export interface FillImportBatchRecord {
@@ -324,6 +398,7 @@ export interface VaultPlain {
   fillProfiles?: FillProfile[];
   folders?: VaultFolder[];
   deletedItems?: DeletedVaultItem[];
+  saveInboxKeyPair?: SaveInboxKeyPair;
   settings: VaultSettings;
 }
 
@@ -341,6 +416,7 @@ export interface VaultEncrypted {
   };
   encryptedData: string;
   verifier: string;
+  saveInboxPublicKey?: SaveInboxPublicKey;
   recovery?: {
     version: 1;
     kdf: {
@@ -372,6 +448,8 @@ export interface UnlockedVaultSession {
   key: CryptoKey;
   vault: VaultPlain;
   encryptedVault: VaultEncrypted;
+  pendingSaveImportCount?: number;
+  saveInboxJustEnabled?: boolean;
 }
 
 export type VaultStatus = 'checking' | 'setup' | 'locked' | 'unlocked';
@@ -558,4 +636,9 @@ export interface PendingLoginCandidate {
   formProfile?: CredentialFormProfile;
   capturedAt: number;
   source?: 'submit' | 'click' | 'enter' | 'input';
+  submitUrl?: string;
+  submitTitle?: string;
+  submitFormSignature?: string;
+  confirmedAt?: number;
+  successSignal?: 'navigation' | 'login-form-disappeared' | 'account-signal';
 }
