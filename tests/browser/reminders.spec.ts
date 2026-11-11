@@ -1,4 +1,5 @@
 import { test, expect, chromium, type BrowserContext, type Worker, type Page } from '@playwright/test';
+import { mockSyntheticIcons } from './syntheticIcons';
 import { resolve, join } from 'node:path';
 import { mkdir, mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ const master = 'Synthetic-reminders!42', evidence = resolve(process.env.TEMP ?? 
 async function launch(path: string) {
   const extension = resolve('dist');
   context = await chromium.launchPersistentContext(path, { channel: 'chromium', headless: true, args: ['--disable-extensions-except='+extension, '--load-extension='+extension, '--mute-audio'], permissions: ['clipboard-read','clipboard-write'] });
+  await mockSyntheticIcons(context);
   worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker'); base = 'chrome-extension://'+new URL(worker.url()).host;
 }
 test.beforeEach(async () => { profile = await mkdtemp(join(tmpdir(), 'keypilot-reminder-test-')); await launch(profile); await mkdir(evidence, { recursive: true }); });

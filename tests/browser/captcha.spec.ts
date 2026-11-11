@@ -6,7 +6,6 @@ import {createEncryptedVault,exportVaultKey} from '../../src/shared/crypto';
 import {generateSaveInboxKeyPair} from '../../src/shared/saveInbox';
 import {buildReminderIndex} from '../../src/shared/reminders';
 import type {CaptchaSiteRule} from '../../src/shared/captcha';
-import {complexFixtures,renderComplex} from '../fixtures/captcha/complex';
 
 let context:BrowserContext,worker:Worker,base:string;
 const evidence=resolve(process.env.TEMP??'..','keypilot-captcha-v1.8.8');
@@ -37,6 +36,11 @@ async function review(page:Page,text:string){
  await expect(panel(page).getByRole('button',{name:'确认填写'})).toBeEnabled();
 }
 async function recognize(page:Page,text='4827'){await page.getByRole('button',{name:'识别验证码',exact:true}).click();await review(page,text);}
+async function complexImages(group:'joined'|'held') {
+ const directory=resolve('tests/fixtures/captcha/complex-fixed');
+ const labels=JSON.parse(await readFile(resolve(directory,'labels.json'),'utf8')) as Record<string,Array<{file:string;text:string}>>;
+ return Promise.all(labels[group].map(async item=>({...item,image:'data:image/png;base64,'+(await readFile(resolve(directory,item.file))).toString('base64')})));
+}
 
 test('OCR is disabled by default; changing settings updates an already open webpage',async()=>{
  await seed(false);const page=await open();await expect(page.getByRole('button',{name:'识别验证码',exact:true})).toBeHidden();
@@ -274,9 +278,8 @@ test('OCR workers are released after idle time and initialize again for another 
 
 test('joined and warped regression images retain complete candidates offline',async()=>{
  const page=await context.newPage();await page.goto(base+'/offscreen.html');await context.setOffline(true);
- const fixtures=complexFixtures(202611110,16);
- for(const index of [26,32,41,44,58]){
-  const fixture=fixtures[index],image=await page.evaluate(renderComplex,fixture);
+ for(const fixture of await complexImages('joined')){
+  const image=fixture.image;
   const result=await worker.evaluate(image=>chrome.runtime.sendMessage({target:'keypilot-captcha-ocr',image,mode:'auto'}),image);
   expect(result.ok).toBe(true);expect(result.candidates[0].text).toBe(fixture.text);
   expect(result.uncertain).toBe(true);expect(result.candidates.length).toBeLessThanOrEqual(4);
@@ -285,9 +288,8 @@ test('joined and warped regression images retain complete candidates offline',as
 
 test('trained local review head improves held development regressions without a character type hint',async()=>{
  const page=await context.newPage();await page.goto(base+'/offscreen.html');await context.setOffline(true);
- const fixtures=complexFixtures(202611111,32);
- for(const index of [37,75,101,136,187]){
-  const fixture=fixtures[index],image=await page.evaluate(renderComplex,fixture);
+ for(const fixture of await complexImages('held')){
+  const image=fixture.image;
   const result=await worker.evaluate(image=>chrome.runtime.sendMessage({target:'keypilot-captcha-ocr',image,mode:'auto'}),image);
   expect(result.ok).toBe(true);expect(result.candidates[0].text).toBe(fixture.text);
   expect(result.uncertain).toBe(true);expect(result.candidates.length).toBeLessThanOrEqual(4);
@@ -331,7 +333,7 @@ test('a failed extra OCR pass retains the original answer and recovers for the n
   };
  });
  await page.goto(base+'/offscreen.html');await context.setOffline(true);
- const image=await page.evaluate(renderComplex,complexFixtures(202611110,16)[32]);
+ const image=(await complexImages('joined')).find(item=>item.text==='489132')!.image;
  const recognize=()=>worker.evaluate(image=>chrome.runtime.sendMessage({target:'keypilot-captcha-ocr',image,mode:'auto'}),image);
  expect((await recognize()).candidates[0].text).toBe('489132');
  await expect.poll(()=>page.workers().length).toBe(0);

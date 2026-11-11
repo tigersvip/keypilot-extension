@@ -1,4 +1,5 @@
 import {test,expect,chromium,type BrowserContext,type Worker,type Page} from '@playwright/test';
+import { mockSyntheticIcons } from './syntheticIcons';
 import {resolve} from 'node:path';
 import {mkdir,readFile} from 'node:fs/promises';
 import {createEmptyVault} from '../../src/shared/defaults';
@@ -21,6 +22,7 @@ function fixture() {
 }
 test.beforeEach(async()=>{
   const extension=resolve('dist');context=await chromium.launchPersistentContext('',{channel:'chromium',headless:true,args:['--disable-extensions-except='+extension,'--load-extension='+extension],permissions:['clipboard-read','clipboard-write']});
+  await mockSyntheticIcons(context);
   worker=context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');base='chrome-extension://'+new URL(worker.url()).host;
   await mkdir(evidence,{recursive:true});
 });

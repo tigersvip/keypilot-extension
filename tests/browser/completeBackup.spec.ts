@@ -1,4 +1,5 @@
 import { test, expect, chromium, type BrowserContext, type Worker, type Page } from '@playwright/test';
+import { mockSyntheticIcons } from './syntheticIcons';
 import { mkdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createEncryptedVault, exportVaultKey, unlockEncryptedVault } from '../../src/shared/crypto';
@@ -14,6 +15,7 @@ const evidence = resolve(process.env.TEMP ?? '..','keypilot-complete-backup-v1.5
 test.beforeEach(async () => {
   const extension = resolve('dist');
   context = await chromium.launchPersistentContext('',{channel:'chromium',headless:true,args:['--disable-extensions-except='+extension,'--load-extension='+extension]});
+  await mockSyntheticIcons(context);
   worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   base = 'chrome-extension://'+new URL(worker.url()).host;
   await worker.evaluate(async()=>{await chrome.storage.local.clear();await chrome.storage.session.clear();});

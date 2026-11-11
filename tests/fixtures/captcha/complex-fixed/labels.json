@@ -1,0 +1,96 @@
+{
+  "joined": [
+    {
+      "file": "joined-26.png",
+      "text": "atlwpr",
+      "seed": 202611110,
+      "index": 26,
+      "font": "Tahoma",
+      "kind": "touching",
+      "sha256": "a81cd902b0a70a878ec643126faa1f3f20505398c45a8ceab0223426ed4f5a8f"
+    },
+    {
+      "file": "joined-32.png",
+      "text": "489132",
+      "seed": 202611110,
+      "index": 32,
+      "font": "Georgia",
+      "kind": "overlap",
+      "sha256": "425ae9724019ca3ceaf7f734ac76376eaa69a35bae8b936909f57014ad473a37"
+    },
+    {
+      "file": "joined-41.png",
+      "text": "7218",
+      "seed": 202611110,
+      "index": 41,
+      "font": "Tahoma",
+      "kind": "overlap",
+      "sha256": "551570cffe58a4b01317ef7fb36a2ec5266b2da2223cb14be9e2895e984d6cc2"
+    },
+    {
+      "file": "joined-44.png",
+      "text": "5376",
+      "seed": 202611110,
+      "index": 44,
+      "font": "Tahoma",
+      "kind": "overlap",
+      "sha256": "43dbe6890fc372812930d7f3c6118730a9932753410dc0cdc812d8820735fa20"
+    },
+    {
+      "file": "joined-58.png",
+      "text": "jjomp",
+      "seed": 202611110,
+      "index": 58,
+      "font": "Arial",
+      "kind": "warp",
+      "sha256": "4af997da7160bc8ef5284bbadd6eeb9363d006bbfda872b1c7c0658ab81c160f"
+    }
+  ],
+  "held": [
+    {
+      "file": "held-37.png",
+      "text": "yqJ6",
+      "seed": 202611111,
+      "index": 37,
+      "font": "Arial",
+      "kind": "touching",
+      "sha256": "9df4aa84bf29f47486d99df029d0ecb42b0b7af0d16839a8eb07178e5e2cd6f4"
+    },
+    {
+      "file": "held-75.png",
+      "text": "TUHK",
+      "seed": 202611111,
+      "index": 75,
+      "font": "Arial",
+      "kind": "overlap",
+      "sha256": "53189a489996bdbb4363e2a8afe9a6676f1f7577167b0e13c595eeb7ff127f9a"
+    },
+    {
+      "file": "held-101.png",
+      "text": "AhjJNn",
+      "seed": 202611111,
+      "index": 101,
+      "font": "Arial",
+      "kind": "warp",
+      "sha256": "fcae707b1da991ec90e553875b60c1908aba2d9613d7582eb82838ea08ff8361"
+    },
+    {
+      "file": "held-136.png",
+      "text": "yAomW",
+      "seed": 202611111,
+      "index": 136,
+      "font": "Arial",
+      "kind": "lines",
+      "sha256": "41909c3bd79c5de4df8541643a25c8f85f3fb50af35c5ac2f9ad604bdfdde605"
+    },
+    {
+      "file": "held-187.png",
+      "text": "534010",
+      "seed": 202611111,
+      "index": 187,
+      "font": "Verdana",
+      "kind": "mixed",
+      "sha256": "ee9e3173c2ddf4c44d825ec67ceefac04d3b659129816c84b2bec0a5b841f1b3"
+    }
+  ]
+}
