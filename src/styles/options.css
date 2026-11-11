@@ -228,6 +228,28 @@ p {
   display: grid;
 }
 
+.website-fill-settings { margin-bottom: 28px; min-width: 0; }
+.website-fill-settings h2 { font-size: 18px; font-weight: 600; }
+.website-fill-settings p { margin: 10px 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.website-fill-search { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.website-fill-search input { flex: 1 1 220px; }
+.website-fill-search select { flex: 0 1 150px; }
+.website-fill-search input, .website-fill-search select, .website-fill-field select { min-width: 0; max-width: 100%; min-height: 42px; border: 1px solid #bfc6d1; border-radius: 6px; padding: 8px 10px; color: #1f2937; background: #fff; font: inherit; font-size: 15px; }
+.website-fill-item { border-bottom: 1px solid var(--line); }
+.website-fill-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; border: 0; border-radius: 6px; padding: 14px 10px; background: transparent; color: #1f2937; font: inherit; text-align: left; cursor: pointer; }
+.website-fill-summary:hover, .website-fill-summary[aria-expanded=true] { background: #edf3ff; color: #173767; }
+.website-fill-summary strong { display: block; font-size: 15px; font-weight: 550; overflow-wrap: anywhere; }
+.website-fill-summary small, .website-fill-toggle small { display: block; margin-top: 4px; color: #52647d; font-size: 13px; overflow-wrap: anywhere; }
+.website-fill-detail { padding: 4px 10px 18px; }
+.website-fill-field { display: grid; gap: 8px; margin: 16px 0; font-size: 15px; }
+.website-fill-field select { width: 100%; }
+.website-fill-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; font-size: 15px; border-bottom: 1px solid var(--line); }
+.website-fill-toggle input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #2563eb; }
+.website-fill-mappings { margin: 12px 0; padding: 0; list-style: none; }
+.website-fill-mappings li { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(0, 2fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; overflow-wrap: anywhere; }
+.website-fill-settings .website-fill-message { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; color: #173767; background: #f8fafc; }
+.website-fill-empty { padding: 20px 0; }
+
 .setting-row,
 .action-row {
   display: grid;

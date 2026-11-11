@@ -12,7 +12,7 @@ import type {FillProfile} from '../../src/shared/types';
 // an isolated extension copy; the packaged extension contains no test entry point.
 let extension:string,context:BrowserContext,worker:Worker;
 const site='https://shortcut.example.test';
-const evidence=resolve(process.env.TEMP??tmpdir(),'keypilot-v1.14.0');
+const evidence=resolve(process.env.TEMP??tmpdir(),'keypilot-v1.15.0');
 const fields='<label>Full name <input id="name" name="fullName" autocomplete="name"></label><label>Email <input id="email" type="email" autocomplete="email"></label><label>Street address <textarea id="address" autocomplete="street-address"></textarea></label><label>Country <select id="country" autocomplete="country-name"><option value="">Choose</option><option>United States</option></select></label>';
 const login='<label>Username <input id="username" autocomplete="username"></label><label>Password <input id="password" type="password" autocomplete="current-password"></label>';
 const profile=(id='one',name='Example Person'):FillProfile=>({id,title:name,countryCode:'US',category:'identity',createdAt:1,updatedAt:1,privacyVersion:1,fields:[
@@ -63,6 +63,82 @@ async function toggleRemember(page:Page){
   await page.keyboard.press('Space');
   for(let i=0;i<3;i++)await page.keyboard.press('Tab');
 }
+
+async function currentVault(){return worker.evaluate(async()=>((await chrome.storage.session.get('keypilot.unlockedSession'))['keypilot.unlockedSession']).vault);}
+function bindingFixture(){
+  const vault=fixture();vault.fillProfiles!.push(profile('two','Second Person'));
+  vault.fillProfiles![0].siteBindings=[
+    {id:'domain-binding',domain:'shortcut.example.test',fields:[{key:'fullName',selector:'#name',controlLabel:'Full name'}],createdAt:1,updatedAt:1},
+    {id:'other-binding',domain:'shortcut.example.test',pathPattern:'/other',fields:[{key:'email',selector:'#email'}],createdAt:1,updatedAt:1}
+  ];
+  vault.settings.siteLoginSettings={[site]:{defaultFillProfileId:'one',autoSubmit:false},[site+':8443']:{defaultFillProfileId:'two'}};
+  return vault;
+}
+
+test('calibration collapses, follows field selection, moves by pointer and keyboard, and stays inside a narrow viewport',async()=>{
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  const repair=page.locator('#keypilot-binding-root');await expect(repair.getByRole('button',{name:'展开',exact:true})).toBeVisible();
+  expect((await repair.boundingBox())!.height).toBeLessThan(150);
+  await page.locator('#name').click();await repair.getByLabel('选择要绑定的资料字段').selectOption('fullName');
+  const handle=repair.getByRole('button',{name:'移动校准面板'}),box=(await handle.boundingBox())!,before=(await repair.boundingBox())!;
+  await page.mouse.move(box.x+10,box.y+10);await page.mouse.down();await page.mouse.move(box.x-180,box.y+60);await page.mouse.up();
+  expect((await repair.boundingBox())!.x).toBeLessThan(before.x-100);
+  await handle.focus();await page.keyboard.press('ArrowLeft');
+  await repair.getByRole('button',{name:'继续选取网页字段'}).click();await expect(repair.getByRole('button',{name:'展开',exact:true})).toBeVisible();
+  await page.locator('#email').click();await expect(repair.getByRole('button',{name:'收起',exact:true})).toBeVisible();
+  await repair.getByLabel('选择要绑定的资料字段').selectOption('email');
+  await page.setViewportSize({width:360,height:560});
+  await expect(repair.getByRole('button',{name:'保存绑定',exact:true})).toBeInViewport({ratio:1});
+  const bounds=(await repair.boundingBox())!;expect(bounds.x).toBeGreaterThanOrEqual(0);expect(bounds.x+bounds.width).toBeLessThanOrEqual(360);expect(bounds.y+bounds.height).toBeLessThanOrEqual(560);
+  await page.screenshot({path:resolve(evidence,'calibration-360.png')});
+  await repair.getByRole('button',{name:'收起',exact:true}).click();await page.screenshot({path:resolve(evidence,'calibration-collapsed-360.png')});
+  await repair.getByRole('button',{name:'展开',exact:true}).click();await repair.getByRole('button',{name:'保存绑定',exact:true}).click();await panel(page,'字段绑定已保存');
+  expect((await currentVault()).fillProfiles[0].siteBindings[0].fields).toHaveLength(2);expect(errors).toEqual([]);
+});
+
+test('removing the last calibration field can clear an existing domain rule without touching other paths',async()=>{
+  await seed(bindingFixture());
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  const repair=page.locator('#keypilot-binding-root');await repair.getByRole('button',{name:'展开',exact:true}).click();
+  await expect(repair.getByRole('button',{name:'整个域名'})).toHaveAttribute('aria-pressed','true');
+  await repair.getByRole('button',{name:'移除',exact:true}).click();await expect(repair.getByRole('button',{name:'清除这组绑定'})).toBeEnabled();
+  page.once('dialog',dialog=>dialog.dismiss());await repair.getByRole('button',{name:'清除这组绑定'}).click();expect((await currentVault()).fillProfiles[0].siteBindings).toHaveLength(2);
+  page.once('dialog',dialog=>{expect(dialog.message()).toContain('整个域名');void dialog.accept();});await repair.getByRole('button',{name:'清除这组绑定'}).click();await panel(page,'字段绑定已清除');
+  const saved=await currentVault();expect(saved.fillProfiles[0].siteBindings.map((item:any)=>item.id)).toEqual(['other-binding']);expect(saved.settings.siteLoginSettings[site].defaultFillProfileId).toBe('one');expect(saved.fillProfiles[0].fields).toHaveLength(3);
+});
+
+test('website manager searches, edits defaults, resets only the exact origin and clears only the selected binding',async()=>{
+  await seed(bindingFixture());const page=await context.newPage(),errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  const base='chrome-extension://'+new URL(worker.url()).host;await page.goto(base+'/options.html#domains');await expect(page).toHaveTitle(/KeyPilot/);
+  const manager=page.getByRole('region',{name:'网站填写设置'});await expect(manager.getByRole('heading',{name:'网站填写设置'})).toBeVisible();
+  const search=manager.getByRole('searchbox');await search.fill(':8443');await expect(manager.locator('article')).toHaveCount(1);await search.clear();
+  await manager.getByRole('button',{name:new RegExp('^https://shortcut.example.test 网站偏好')}).click();
+  await manager.getByLabel('默认填写资料',{exact:true}).selectOption('two');await expect(manager.getByRole('status')).toContainText('已保存');await expect.poll(defaultProfile).toBe('two');
+  await expect(manager.getByRole('switch',{name:/自动点击登录/})).not.toBeChecked();
+  await page.setViewportSize({width:1280,height:800});await page.screenshot({path:resolve(evidence,'website-settings-desktop.png')});
+  await page.setViewportSize({width:400,height:700});await manager.getByLabel('默认填写资料',{exact:true}).scrollIntoViewIfNeeded();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:resolve(evidence,'website-settings-400.png')});
+  page.once('dialog',dialog=>dialog.dismiss());await manager.getByRole('button',{name:'恢复此网站默认设置'}).click();expect((await currentVault()).settings.siteLoginSettings[site]).toBeTruthy();
+  page.once('dialog',dialog=>dialog.accept());await manager.getByRole('button',{name:'恢复此网站默认设置'}).click();await expect(manager.getByRole('status')).toContainText('已恢复');
+  expect((await currentVault()).settings.siteLoginSettings[site]).toBeUndefined();expect((await currentVault()).settings.siteLoginSettings[site+':8443'].defaultFillProfileId).toBe('two');
+  await manager.getByRole('combobox',{name:'设置类型'}).selectOption('bindings');await expect(manager.locator('article')).toHaveCount(2);
+  await manager.getByRole('button',{name:/shortcut.example.test（整个域名）/}).click();await expect(manager).toContainText('不区分协议和端口');
+  page.once('dialog',dialog=>dialog.accept());await manager.getByRole('button',{name:'清除这组绑定'}).click();await expect(manager.getByRole('status')).toContainText('已清除');await expect(manager.locator('article')).toHaveCount(1);
+  await page.reload();await expect(manager.locator('article')).toHaveCount(2);expect((await currentVault()).fillProfiles[0].siteBindings[0].id).toBe('other-binding');
+  await expect(page.locator('vite-error-overlay')).toHaveCount(0);expect(errors).toEqual([]);
+});
+
+test('website manager refreshes stale settings instead of overwriting another page and cancels on lock',async()=>{
+  const vault=bindingFixture();await seed(vault);const page=await context.newPage();await page.goto('chrome-extension://'+new URL(worker.url()).host+'/options.html#domains');
+  const manager=page.getByRole('region',{name:'网站填写设置'});await manager.getByRole('button',{name:new RegExp('^https://shortcut.example.test 网站偏好')}).click();
+  vault.settings.siteLoginSettings![site].autoSubmit=true;await seed(vault);
+  await manager.getByLabel('默认填写资料',{exact:true}).selectOption('two');await expect(manager.getByRole('status')).toContainText('其他页面修改');expect(await defaultProfile()).toBe('one');
+  await manager.getByLabel('默认填写资料',{exact:true}).selectOption('two');await expect(manager.getByRole('status')).toContainText('已保存');expect((await currentVault()).settings.siteLoginSettings[site].autoSubmit).toBe(true);
+  await command('lock-vault');await expect(manager).toHaveCount(0);
+});
 
 test('default identity persists across navigation, switches explicitly, and can be cleared',async()=>{
   const vault=fixture();vault.fillProfiles=[profile(),profile('two','Second Person')];await seed(vault);

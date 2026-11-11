@@ -1,4 +1,5 @@
 import { vaultItemCount } from '../shared/credentialSecurity';
+import { WebsiteFillSettings } from './WebsiteFillSettings';
 import { saveCaptchaRule } from '../shared/captchaRuleStorage';
 import { BackupStatus } from '../shared/BackupStatusPanel';
 import { ReminderSettings } from '../shared/ReminderSettings';
@@ -739,6 +740,7 @@ export function OptionsApp() {
     if (activeSection === 'autofill') {
       return (
         <SettingsSection title="自动填表" description="控制账号、密码、身份 ID 在网页中的填充方式。">
+          <button className="secondary-action" type="button" onClick={() => navigateSection('domains')}>管理网站填写设置</button>
           <ToggleRow title="自动填充用户名和密码" description="检测到匹配登录表单时允许 KeyPilot 填入账号密码。" checked={settings.autoFill} onChange={(checked) => void updateSettings({ autoFill: checked })} />
           <ToggleRow title="允许一键登录自动点击登录按钮" description="一键登录会填入账号密码，并尝试点击页面登录按钮。" checked={settings.autoSubmit} onChange={(checked) => void updateSettings({ autoSubmit: checked })} />
           <ToggleRow title="本地验证码识别（实验功能）" description="一键登录时自动识别图形验证码，填写首选结果并尝试登录一次，失败时交给你处理。单独点击识别仍可核对后按 Enter 填写；不需要的网站可单独关闭。" checked={Boolean(settings.captchaAssistEnabled)} onChange={(checked) => void updateSettings({ captchaAssistEnabled: checked })} />
@@ -820,7 +822,8 @@ export function OptionsApp() {
 
     if (activeSection === 'domains') {
       return (
-        <SettingsSection title="域名" description="管理自动保存黑名单和网页内 KeyPilot 图标隐藏域名。">
+        <SettingsSection title="域名" description="集中管理网站填写设置、字段绑定和图标隐藏域名。">
+          <WebsiteFillSettings session={session} onChange={next => {setSession(next);setEncryptedVault(next.encryptedVault);}} />
           <div className="metrics-grid compact">
             <Metric label="不保存域名" value={stats.saveBlockedDomains} />
             <Metric label="隐藏图标域名" value={stats.hiddenDomains} />

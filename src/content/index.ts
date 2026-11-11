@@ -366,6 +366,9 @@ interface FillProfileBindingSession {
   saving?: boolean;
   bindings: FillFieldBinding[];
   scope: 'path' | 'domain';
+  pathPattern?: string;
+  collapsed?: boolean;
+  position?: { x: number; y: number };
   status?: string;
 }
 
@@ -3673,35 +3676,74 @@ async function applyLoginRecognitionRule() {
   }
 }
 
+function positionFillProfileBinding(x?: number, y?: number) {
+  const state = fillProfileBinding, host = bindingHost;
+  if (!state || !host) return;
+  const rect = host.getBoundingClientRect();
+  const left = Math.max(8, Math.min(x ?? state.position?.x ?? rect.left, innerWidth - rect.width - 8));
+  const top = Math.max(8, Math.min(y ?? state.position?.y ?? rect.top, innerHeight - rect.height - 8));
+  state.position = {x: left, y: top};
+  Object.assign(host.style, {left: left+'px', top: top+'px', right: 'auto'});
+}
+
+function handleFillProfileBindingResize() { positionFillProfileBinding(); }
+
 function renderFillProfileBinding() {
   const state=fillProfileBinding;
   if(!state)return;
   ensureBindingUi();
   if(!bindingRoot || !bindingHost)return;
-  bindingHost.style.width='min(340px, calc(100vw - 40px))';
-  const fields=expandFillProfileFields(state.profile), pathPattern=currentRulePathPattern();
+  bindingHost.style.width='min(340px, calc(100vw - 16px))';
+  const fields=expandFillProfileFields(state.profile), pathPattern=state.pathPattern;
+  const clearing=!state.bindings.length && Boolean(state.profile.siteBinding);
+  const original=state.profile.siteBinding;
   bindingRoot.innerHTML=`<style>
     :host{all:initial;font:15px ${UI_FONT};color:#172338}*{box-sizing:border-box}
-    section{background:white;border:1px solid #dbe3ee;border-radius:12px;box-shadow:0 12px 36px #0002;padding:16px;max-height:calc(100vh - 40px);overflow:auto}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px}h3{font-size:17px;margin:0}p{line-height:1.5;margin:12px 0}small{font-size:13px;color:#52647d;overflow-wrap:anywhere}
+    section{font:15px ${UI_FONT};color:#172338;display:flex;flex-direction:column;background:white;border:1px solid #dbe3ee;border-radius:12px;box-shadow:0 12px 36px #0002;padding:12px;max-height:calc(100dvh - 16px);overflow:hidden}.binding-body{min-height:0;overflow:auto}header,footer{flex-shrink:0}
+    header{display:flex;align-items:center;gap:6px}h3{font-size:16px;margin:0;flex:1}p{line-height:1.5;margin:12px 0}small{font-size:13px;color:#52647d;overflow-wrap:anywhere}[hidden]{display:none!important}
+    header button{padding:4px 6px;min-height:30px}.move{touch-action:none;cursor:move}.compact{margin:8px 0 0}.compact small{display:block}.danger{color:#b42318}.pick{width:100%;margin-top:10px}
     button,select{font:inherit;color:inherit;border:1px solid #cbd5e1;border-radius:6px;background:white;padding:8px;cursor:pointer}select{width:100%;margin:8px 0}button:disabled,select:disabled{opacity:.5;cursor:default}
     button:hover:not(:disabled){background:#edf3ff}button:focus-visible,select:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.primary{background:#2563eb;color:white}.primary:hover:not(:disabled){background:#1d4ed8}
     .scope,footer{display:flex;gap:8px;margin-top:12px}.scope button{flex:1}.scope button[aria-pressed=true]{background:#edf3ff;color:#173767;border-color:#2563eb}footer{justify-content:flex-end}.status{color:#52647d}ul{padding-left:20px;max-height:150px;overflow:auto}li{margin:8px 0;overflow-wrap:anywhere}li button{padding:2px 6px;margin-left:6px;font-size:13px}
     </style><section role="dialog" aria-label="KeyPilot 填表字段绑定">
-      <header><h3>校准漏填字段</h3><button type="button" data-action="cancel" aria-label="取消绑定">×</button></header>
+      <header><button type="button" class="move" aria-label="移动校准面板" title="拖动移动，也可聚焦后按方向键">⠿</button><h3>校准漏填字段</h3><button type="button" data-action="collapse" aria-expanded="${!state.collapsed}">${state.collapsed?'展开':'收起'}</button><button type="button" data-action="cancel" aria-label="取消绑定">×</button></header>
+      <p class="compact" ${state.collapsed?'':'hidden'}>点击网页上要对应的输入框<small>已绑定 ${state.bindings.length} 项 · 展开可检查和保存</small></p>
+      <div class="binding-body" ${state.collapsed?'hidden':''}>
       <p>${state.target ? '已选网页字段：'+escapeHtml(controlLabel(state.target)||'未命名字段') : '先点击网页上漏填的输入框、下拉框或文本框。'}</p>
       <label>对应的资料字段<select data-fill-binding-field aria-label="选择要绑定的资料字段" ${!state.target||state.saving?'disabled':''}>
         <option value="">请选择资料字段</option>${fields.map(field=>`<option value="${escapeHtml(field.key)}">${escapeHtml(field.label)}</option>`).join('')}
       </select></label>
-      <div class="scope" role="group" aria-label="规则应用范围">
-        <button type="button" data-scope="path" aria-pressed="${state.scope==='path'}" ${!pathPattern||state.saving?'disabled':''}>当前路径</button>
+      <div class="scope" role="group" aria-label="规则应用范围" ${clearing?'hidden':''}>
+        <button type="button" data-scope="path" aria-pressed="${state.scope==='path'}" ${!pathPattern||state.saving?'disabled':''}>${pathPattern===currentRulePathPattern()?'当前路径':'原绑定路径'}</button>
         <button type="button" data-scope="domain" aria-pressed="${state.scope==='domain'}" ${state.saving?'disabled':''}>整个域名</button>
-      </div><p><small>${escapeHtml(location.hostname+(state.scope==='path'?pathPattern??'':''))}</small></p>
+      </div><p ${clearing?'hidden':''}><small>${escapeHtml(location.hostname+(state.scope==='path'?pathPattern??'':''))}</small></p>
       <small>已绑定 ${state.bindings.length} 个字段</small><ul>${state.bindings.map(binding=>`<li>${escapeHtml(fields.find(field=>field.key===binding.key)?.label??binding.key)} → ${escapeHtml(binding.controlLabel||binding.name||binding.id||'网页字段')}<button type="button" data-remove="${escapeHtml(binding.key)}" ${state.saving?'disabled':''}>移除</button></li>`).join('')}</ul>
+      ${clearing?`<p class="danger">保存后将删除 ${escapeHtml(original!.domain+(original!.pathPattern??'（整个域名）'))} 的这组绑定，恢复自动识别。</p>`:''}
+      <button type="button" class="pick" data-action="pick" ${state.saving?'disabled':''}>${state.target?'重新选择网页字段':'继续选取网页字段'}</button>
       <p class="status" role="status">${escapeHtml(state.status??'选择后可继续点击其他漏填框。按 Esc 取消。')}</p>
-      <footer><button type="button" class="primary" data-fill-binding-action="save" ${!state.bindings.length||state.saving||state.target?'disabled':''}>保存绑定</button></footer>
+      </div><footer ${state.collapsed?'hidden':''}><button type="button" class="primary" data-fill-binding-action="save" ${(!state.bindings.length&&!clearing)||state.saving||state.target?'disabled':''}>${clearing?'清除这组绑定':'保存绑定'}</button></footer>
     </section>`;
   bindingRoot.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.onclick=()=>stopFillProfileBinding();
+  bindingRoot.querySelector<HTMLButtonElement>('[data-action="collapse"]')!.onclick=()=>{
+    state.collapsed=!state.collapsed;renderFillProfileBinding();bindingRoot?.querySelector<HTMLButtonElement>('[data-action="collapse"]')?.focus();
+  };
+  bindingRoot.querySelector<HTMLButtonElement>('[data-action="pick"]')!.onclick=()=>{
+    state.target=undefined;state.collapsed=true;setBindingHighlight(null);renderFillProfileBinding();
+  };
+  const handle=bindingRoot.querySelector<HTMLButtonElement>('.move')!;
+  handle.onpointerdown=event=>{
+    if(event.button!==0)return;
+    event.preventDefault();handle.focus();handle.setPointerCapture(event.pointerId);
+    const start=state.position!,x=event.clientX,y=event.clientY;
+    handle.onpointermove=move=>positionFillProfileBinding(start.x+move.clientX-x,start.y+move.clientY-y);
+    handle.onlostpointercapture=()=>{handle.onpointermove=null;};
+    handle.onpointerup=()=>{handle.releasePointerCapture(event.pointerId);};
+  };
+  handle.onkeydown=event=>{
+    const directions:Record<string,number[]>={ArrowLeft:[-20,0],ArrowRight:[20,0],ArrowUp:[0,-20],ArrowDown:[0,20]};
+    const delta=directions[event.key];if(!delta)return;event.preventDefault();
+    positionFillProfileBinding(state.position!.x+delta[0],state.position!.y+delta[1]);
+  };
   bindingRoot.querySelector<HTMLButtonElement>('[data-fill-binding-action="save"]')!.onclick=()=>{void saveFillProfileBinding();};
   bindingRoot.querySelector<HTMLSelectElement>('select')!.onchange=event=>{
     if(fillProfileBinding!==state || state.saving || state.url!==location.href || state.epoch!==credentialFillEpoch)return;
@@ -3718,6 +3760,7 @@ function renderFillProfileBinding() {
   bindingRoot.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(button=>{button.onclick=()=>{
     if(state.saving)return;state.bindings=state.bindings.filter(item=>item.key!==button.dataset.remove);renderFillProfileBinding();
   };});
+  positionFillProfileBinding();
 }
 
 function getFillProfileBindingTarget(event: Event): FillControl | null {
@@ -3741,17 +3784,20 @@ function startFillProfileBinding(profile: FillProfilePayload, allowed?: Set<Fill
     profile,
     allowed,retry,url:location.href,epoch:credentialFillEpoch,
     bindings: [...(profile.siteBinding?.fields ?? [])],
-    scope: currentRulePathPattern() ? 'path' : 'domain',
+    scope: profile.siteBinding ? (profile.siteBinding.pathPattern ? 'path' : 'domain') : currentRulePathPattern() ? 'path' : 'domain',
+    pathPattern: profile.siteBinding?.pathPattern ?? currentRulePathPattern(),collapsed:true,
     status: '先点击网页上的漏填框，再选择它对应的资料字段。'
   };
 
   document.addEventListener('click', handleFillProfileBindingClick, true);
   document.addEventListener('mouseover', handleFillProfileBindingHover, true);
   document.addEventListener('keydown', handleFillProfileBindingKeydown, true);
+  window.addEventListener('resize', handleFillProfileBindingResize);
   renderFillProfileBinding();
 }
 
 function stopFillProfileBinding(status?: string) {
+  window.removeEventListener('resize', handleFillProfileBindingResize);
   document.removeEventListener('click', handleFillProfileBindingClick, true);
   document.removeEventListener('mouseover', handleFillProfileBindingHover, true);
   document.removeEventListener('keydown', handleFillProfileBindingKeydown, true);
@@ -3789,7 +3835,7 @@ function handleFillProfileBindingClick(event: MouseEvent) {
   event.preventDefault();
   event.stopImmediatePropagation();
 
-  fillProfileBinding.target=target;fillProfileBinding.lastTarget=target;
+  fillProfileBinding.target=target;fillProfileBinding.lastTarget=target;fillProfileBinding.collapsed=false;
   fillProfileBinding.status='已选中网页字段，请选择对应的资料。';
   setBindingHighlight(target);renderFillProfileBinding();
   bindingRoot?.querySelector<HTMLSelectElement>('select')?.focus();
@@ -3799,11 +3845,8 @@ async function saveFillProfileBinding() {
   const state=fillProfileBinding;
   if (!state || state.saving || state.target || state.url!==location.href || state.epoch!==credentialFillEpoch) return;
 
-  if (!state.bindings.length) {
-    state.status = '至少绑定一个字段后再保存。';
-    renderFillProfileBinding();
-    return;
-  }
+  const clearing=!state.bindings.length;
+  if(clearing && (!state.profile.siteBinding || !window.confirm('清除 '+state.profile.siteBinding.domain+(state.profile.siteBinding.pathPattern??'（整个域名）')+' 的这组字段绑定？资料内容和其他规则会保留。')))return;
 
   state.saving=true;
   state.status = '正在保存绑定规则...';
@@ -3811,9 +3854,10 @@ async function saveFillProfileBinding() {
 
   const binding: FillProfileBindingResult = {
     profileId: state.profile.id,
+    bindingId: state.profile.siteBinding?.id,
     url: window.location.href,
     domain: window.location.hostname.toLowerCase(),
-    pathPattern: state.scope === 'path' ? currentRulePathPattern() : undefined,
+    pathPattern: state.scope === 'path' ? state.pathPattern : undefined,
     fields: state.bindings
   };
 
@@ -3833,12 +3877,12 @@ async function saveFillProfileBinding() {
       renderFillProfileBinding();
     }
 
-    stopFillProfileBinding('已保存填表字段绑定。');
+    stopFillProfileBinding(clearing?'已清除这组字段绑定，恢复自动识别。':'已保存填表字段绑定。');
     showRepairReady(() => {
       if(state.url!==location.href || state.epoch!==credentialFillEpoch)return;
       state.lastTarget?.focus({preventScroll:true});
       if(state.retry)state.retry();else void handleInlineFillProfile(binding.profileId);
-    });
+    },clearing);
   } catch (error) {
     if (fillProfileBinding===state) {
       state.saving=false;
@@ -10754,7 +10798,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       credentialFillEpoch++;
       clearTotpProbe();
       repairTarget=null;clearFillReview();closeInlineCredentialEditor();clearSaveCandidateState();clearBindingTestOverlay();
-      stagedFill=null;stagedObserver?.disconnect();stagedObserver=null;manualBinding=null;fillProfileBinding=null;bindingHost?.remove();bindingHost=null;bindingRoot=null;bindingHighlight?.remove();bindingHighlight=null;
+      stagedFill=null;stagedObserver?.disconnect();stagedObserver=null;stopManualBinding();stopFillProfileBinding();
       clearTimeout(submitOutcomeTimer ?? undefined);lastSubmitOutcome=null;clearLoginFeedback();
       inlineMatches=[];inlineFillProfiles=[];inlineLocked=true;inlineMenuOpen=false;inlineStatus='密码库已锁定。';
       passwordGeneratorValue='';passwordGeneratorOpen=false;passwordGeneratorHost?.remove();passwordGeneratorHost=null;passwordGeneratorRoot=null;inlineStateLoaded=false; renderInlineWidget(); sendResponse({ok:true}); return true;

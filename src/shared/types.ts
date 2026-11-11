@@ -275,6 +275,7 @@ export interface FillProfileFillResult {
 
 export interface FillProfileBindingResult {
   profileId: string;
+  bindingId?: string;
   url: string;
   domain: string;
   pathPattern?: string;

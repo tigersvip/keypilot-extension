@@ -12,6 +12,8 @@ function same(left: unknown, right: unknown): boolean {
   return keys.length === Object.keys(b).filter(key => b[key] !== undefined).length && keys.every(key => same(a[key],b[key]));
 }
 
+export { same as sameVaultValue };
+
 // Three-way merge: unrelated changes survive; competing edits are never silently lost.
 function mergeValue(base: unknown, next: unknown, current: unknown): unknown {
   if (same(base, next)) return current;

@@ -10,9 +10,47 @@ import { clearVaultSessionCache, createVaultSession, deleteFillProfileFromVault,
 import { getEncryptedVault, getRecoverySnapshots, VAULT_STORAGE_KEY } from '../src/shared/storage';
 import { generateTotp } from '../src/shared/totp';
 import { completeBackupFixture } from './fixtures/completeBackup';
+import { clearProfileBinding, clearSiteFillPreferences } from '../src/shared/siteFillSettings';
 
 const master = 'Synthetic-backup!42';
 const incomingPassword = 'Synthetic-incoming!42';
+
+test('clearing a binding removes only its profile/rule ID and survives encrypted backup roundtrip',async()=>{
+  const vault=completeBackupFixture(),profile=vault.fillProfiles![0];
+  const binding={id:'selected',domain:'backup.example.test',fields:[{key:'dob',selector:'#birthday'}],createdAt:1,updatedAt:1};
+  profile.siteBindings=[binding,{...binding,id:'other-path',pathPattern:'/other'},{...binding,id:'subdomain',domain:'sub.backup.example.test'}];
+  vault.fillProfiles!.push({...structuredClone(profile),id:'second-profile'});
+  const changed=clearProfileBinding(vault,profile.id,'selected');
+  assert.deepEqual(changed.fillProfiles![0].siteBindings!.map(item=>item.id),['other-path','subdomain']);
+  assert.equal(changed.fillProfiles![1].siteBindings!.length,3);
+  assert.equal(profile.siteBindings.length,3);
+  assert.deepEqual(changed.settings,vault.settings);assert.deepEqual(changed.fillProfiles![0].fields,profile.fields);
+  assert.throws(()=>clearProfileBinding(changed,profile.id,'selected'),/绑定已变化/);
+  const {encryptedVault}=await createEncryptedVault(master,changed);
+  const preview=await previewBackup(new File([JSON.stringify(encryptedVault)],'synthetic.json'),master);
+  assert.deepEqual(preview.vault.fillProfiles,changed.fillProfiles);
+  assert.deepEqual(preview.vault.settings.siteLoginSettings,changed.settings.siteLoginSettings);
+});
+
+test('resetting site preferences is exact-origin and keeps credentials, TOTP secrets and bindings',async()=>{
+  const vault=completeBackupFixture(),origin='https://backup.example.test';
+  vault.settings.siteLoginSettings![origin].totpAccountByCredential={account:'backup-totp'};
+  const otherOrigins=['http://backup.example.test','https://backup.example.test:8443','https://sub.backup.example.test'];
+  for(const other of otherOrigins)vault.settings.siteLoginSettings![other]={defaultFillProfileId:'backup-profile',fillEnabled:false};
+  vault.settings.captchaSiteRules={[origin]:{mode:'auto',disabled:true},[otherOrigins[0]]:{mode:'auto',expectedLength:4}};
+  vault.settings.autoTotpOrigins=[origin,otherOrigins[1]];
+  const changed=clearSiteFillPreferences(vault,origin);
+  assert.equal(changed.settings.siteLoginSettings![origin],undefined);
+  assert.equal(changed.settings.captchaSiteRules![origin],undefined);
+  assert.deepEqual(changed.settings.autoTotpOrigins,[otherOrigins[1]]);
+  for(const other of otherOrigins)assert.deepEqual(changed.settings.siteLoginSettings![other],vault.settings.siteLoginSettings![other]);
+  for(const key of ['credentials','fillProfiles','totpAccounts'] as const)assert.deepEqual(changed[key],vault[key]);
+  assert.deepEqual(changed.settings.siteRules,vault.settings.siteRules);
+  const {encryptedVault}=await createEncryptedVault(master,changed);
+  const preview=await previewBackup(new File([JSON.stringify(encryptedVault)],'synthetic.json'),master);
+  assert.deepEqual(preview.vault.settings.siteLoginSettings,changed.settings.siteLoginSettings);
+  assert.deepEqual(preview.vault.totpAccounts,changed.totpAccounts);
+});
 
 test('profile defaults validate IDs and are removed when their profile is deleted',()=>{
   const vault=completeBackupFixture(),origin='https://backup.example.test';

@@ -200,9 +200,9 @@ export function showFillResult(count:number,repair?:()=>void){
   expiry=setTimeout(clearFillReview,120000);
 }
 
-export function showRepairReady(retry: () => void) {
+export function showRepairReady(retry: () => void, cleared = false) {
   clearFillReview();
-  const root=createPanel('字段绑定已保存');
+  const root=createPanel(cleared ? '字段绑定已清除' : '字段绑定已保存');
   root.querySelector('.body')!.textContent='现在可重新测试。登录账号只填写，不会自动提交；资料填写会重新显示预览。';
   const button=document.createElement('button');button.textContent='重新测试';button.className='primary';
   button.onclick=()=>{clearFillReview();retry();};

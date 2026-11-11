@@ -1,4 +1,5 @@
 import { siteLoginSettings, siteAllowsSubmit } from '../shared/loginSettings';
+import { clearProfileBinding } from '../shared/siteFillSettings';
 import { setSavePromptBadge } from './reminders';
 import { setupLoginJobs, type ManagedLoginGuard } from './loginJobs';
 import { setupCaptcha } from './captcha';
@@ -1361,7 +1362,7 @@ async function saveFillProfileBinding(
   senderUrl: string | undefined,
   binding: FillProfileBindingResult | undefined, revision?:number
 ): Promise<{ ok?: boolean; error?: string }> {
-  if (!binding?.profileId || !binding.fields?.length) return { ok: false, error: 'INVALID_BINDING' };
+  if (!binding?.profileId || !Array.isArray(binding.fields)) return { ok: false, error: 'INVALID_BINDING' };
 
   const session = await restoreCachedVaultSession();
   if (!session) throw new Error('VAULT_LOCKED');
@@ -1372,7 +1373,16 @@ async function saveFillProfileBinding(
   if(revision!==undefined && revision!==profile.updatedAt)return {ok:false,error:'资料已变化，请重新打开校准。'};
   if(!senderUrl || binding.url!==senderUrl)return {ok:false,error:'页面已变化，请重新打开校准。'};
   const url=new URL(senderUrl),domain=url.hostname.toLowerCase();
-  if(!['https:','http:'].includes(url.protocol) || binding.domain!==domain || (binding.pathPattern && binding.pathPattern!==normalizedPathPatternFromUrl(senderUrl)))return {ok:false,error:'INVALID_BINDING_DOMAIN'};
+  if(!['https:','http:'].includes(url.protocol) || binding.domain!==domain)return {ok:false,error:'INVALID_BINDING_DOMAIN'};
+  const original = selectFillProfileSiteBinding(profile, senderUrl);
+  if (!binding.fields.length) {
+    // Empty mappings delete an explicitly selected existing rule, never all rules for a site.
+    if (revision === undefined || !binding.bindingId || original?.id !== binding.bindingId) return {ok:false,error:'绑定已变化，请重新打开校准。'};
+    await persistVaultSession(session, clearProfileBinding(session.vault, profile.id, binding.bindingId));
+    return {ok:true};
+  }
+  if (binding.pathPattern && binding.pathPattern !== normalizedPathPatternFromUrl(senderUrl)
+    && !(original && original.id === binding.bindingId && original.pathPattern === binding.pathPattern)) return {ok:false,error:'INVALID_BINDING_DOMAIN'};
   const pathPattern = binding.pathPattern || undefined;
 
   const now = Date.now();
