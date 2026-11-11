@@ -18,7 +18,7 @@ test.beforeEach(async () => {
   await mockSyntheticIcons(context);
   worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
   base = 'chrome-extension://'+new URL(worker.url()).host;
-  await worker.evaluate(async()=>{await chrome.storage.local.clear();await chrome.storage.session.clear();});
+  await worker.evaluate(async()=>navigator.locks.request('keypilot-vault-write',async()=>{await chrome.storage.local.clear();await chrome.storage.session.clear();}));
   await mkdir(evidence,{recursive:true});
 });
 test.afterEach(async()=>{await context?.close();});
@@ -27,10 +27,10 @@ async function seed(vault: VaultPlain, password = currentMaster) {
   vault.saveInboxKeyPair ??= await generateSaveInboxKeyPair();
   const {encryptedVault,key} = await createEncryptedVault(password,vault);
   const cache = {vault,encryptedVault,exportedKey:await exportVaultKey(key),cachedAt:Date.now(),sessionId:'backup-browser-session'};
-  await worker.evaluate(async({encryptedVault,cache})=>{
+  await worker.evaluate(async({encryptedVault,cache})=>navigator.locks.request('keypilot-vault-write',async()=>{
     await chrome.storage.local.set({'keypilot.encryptedVault':encryptedVault});
     await chrome.storage.session.set({'keypilot.unlockedSession':cache,'keypilot.sessionState':{id:cache.sessionId,expiresAt:0,highSecurity:false}});
-  },{encryptedVault,cache});
+  }),{encryptedVault,cache});
 }
 async function stored() { return worker.evaluate(async()=>(await chrome.storage.local.get('keypilot.encryptedVault'))['keypilot.encryptedVault']); }
 async function selectBackup(page: Page, vault = completeBackupFixture()) {

@@ -112,7 +112,7 @@ test('locked vault pauses the continuation, then unlocking resumes it', async ()
   await page.goto(url);
   await expect.poll(async () => (await jobs())['synthetic-wait']?.phase).toBe('locked');
   await expect(page.locator('#password')).toHaveValue('');
-  await worker.evaluate(async cache => {await chrome.storage.session.set({'keypilot.unlockedSession':cache,'keypilot.sessionState':{id:cache.sessionId,expiresAt:0,highSecurity:false}});},cache);
+  await worker.evaluate(async cache => navigator.locks.request('keypilot-vault-write',async()=>{await chrome.storage.session.set({'keypilot.unlockedSession':cache,'keypilot.sessionState':{id:cache.sessionId,expiresAt:0,highSecurity:false}});}),cache);
   await expect.poll(async () => (await jobs())['synthetic-wait']?.phase).toBe('done');
   await expect(page.locator('#result')).toHaveText('1');
 });

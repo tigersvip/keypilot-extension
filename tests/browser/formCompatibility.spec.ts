@@ -14,7 +14,7 @@ test.beforeEach(async()=>{
   worker=context.serviceWorkers()[0]??await context.waitForEvent('serviceworker');
   const vault=createEmptyVault(),{encryptedVault,key}=await createEncryptedVault('Synthetic-forms!42',vault);
   const cache={vault,encryptedVault,exportedKey:await exportVaultKey(key),cachedAt:Date.now(),sessionId:'form-comparison'};
-  await worker.evaluate(async cache=>{await chrome.storage.local.set({'keypilot.encryptedVault':cache.encryptedVault});await chrome.storage.session.set({'keypilot.unlockedSession':cache,'keypilot.sessionState':{id:cache.sessionId,expiresAt:0,highSecurity:false}});},cache);
+  await worker.evaluate(async cache=>navigator.locks.request('keypilot-vault-write',async()=>{await chrome.storage.local.set({'keypilot.encryptedVault':cache.encryptedVault});await chrome.storage.session.set({'keypilot.unlockedSession':cache,'keypilot.sessionState':{id:cache.sessionId,expiresAt:0,highSecurity:false}});}),cache);
 });
 test.afterEach(async()=>{await context?.close();});
 test.afterAll(async()=>{
