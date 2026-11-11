@@ -137,6 +137,46 @@ test('shared offscreen audio preserves a clipboard clear deadline longer than th
   await expect.poll(() => page.evaluate(()=>navigator.clipboard.readText()),{timeout:40000,intervals:[1000]}).toBe('');
 });
 
+test('pasted reminders suggest unique accounts, allow correction and never retain pasted passwords', async () => {
+  const vault=createEmptyVault();vault.settings.remindersEnabled=true;
+  vault.credentials=['10','20','30','30'].map((ip,index)=>({id:'server-'+index,title:'Server '+index,domain:'192.0.2.'+ip,url:'https://192.0.2.'+ip,username:'synthetic-'+index,password:'Synthetic-only!42',iconType:'default' as const,createdAt:1,updatedAt:1}));
+  await seed(vault);const page=await open(),errors=errorsOn(page);
+  await page.getByRole('button',{name:'粘贴文字识别'}).click();
+  await page.getByLabel('粘贴待办或到期信息').fill('IP Address 192.0.2.10\n密码 Synthetic-pasted-secret!\n到期时间 2099-11-17\n----------\nIP Address 192.0.2.20\n到期时间 2099-12.1\n----------\nIP Address 192.0.2.30\n到期时间 2099-12.2');
+  await page.getByRole('button',{name:'识别并预览'}).click();
+  await expect(page.getByLabel('事项 1 关联账号')).toHaveValue('server-0');await expect(page.getByLabel('事项 2 关联账号')).toHaveValue('server-1');await expect(page.getByLabel('事项 3 关联账号')).toHaveValue('');
+  await page.getByLabel('事项 3 关联账号').selectOption('server-3');
+  await page.getByRole('button',{name:'保存选中 3 条'}).click();await expect(page.locator('.reminder-row')).toHaveCount(3);
+  const saved=await decrypted();expect(saved.reminders?.map(item=>item.credentialId)).toEqual(['server-0','server-1','server-3']);expect(JSON.stringify(saved.reminders)).not.toContain('Synthetic-pasted-secret');
+  const index=await worker.evaluate(async()=> (await chrome.storage.local.get('keypilot.reminderIndex'))['keypilot.reminderIndex']);expect(JSON.stringify(index)).not.toContain('192.0.2.');
+  await page.getByLabel('搜索提醒').fill('Server 1');await expect(page.locator('.reminder-row')).toHaveCount(1);
+  await page.getByLabel('搜索提醒').fill('');
+  for(const width of [1280,390]){await page.setViewportSize({width,height:800});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:resolve(evidence,`linked-reminders-${width}.png`)});}
+  await page.locator('.reminder-row').last().scrollIntoViewIfNeeded();await expect(page.locator('.reminder-row').last()).toBeInViewport();await page.screenshot({path:resolve(evidence,'linked-reminders-scrolled-390.png')});
+  expect(errors).toEqual([]);
+});
+
+test('account reminders link both ways, scope the list and preselect new reminders without launching login',async()=>{
+  const vault=createEmptyVault();vault.settings.remindersEnabled=true;
+  vault.credentials=[{id:'linked-login',title:'Synthetic linked account',domain:'example.test',url:'https://example.test',username:'example',password:'Synthetic!42',iconType:'default',createdAt:1,updatedAt:1}];
+  vault.reminders=[{...item('renewal',Date.UTC(2099,10,17)),credentialId:'linked-login'},{...item('finished',Date.UTC(2099,10,18)),credentialId:'linked-login',completedAt:Date.now()},item('other',Date.UTC(2099,10,19))];
+  await seed(vault);const page=await open('/vault.html?loginFor=linked-login#logins'),errors=errorsOn(page);
+  const section=page.getByRole('region',{name:'账号到期提醒'});await expect(section).toContainText('1 条未完成提醒');await expect(section).toContainText('Synthetic renewal');await expect(section).not.toContainText('Synthetic finished');
+  await page.setViewportSize({width:390,height:800});await section.scrollIntoViewIfNeeded();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:resolve(evidence,'account-reminders-390.png')});
+  await section.getByRole('link',{name:'查看 2 条提醒'}).click();await expect(page.getByLabel('按关联账号筛选提醒')).toHaveValue('linked-login');await expect(page.locator('.reminder-row')).toHaveCount(2);
+  await page.getByRole('button',{name:'新建提醒',exact:true}).click();await expect(page.getByLabel('关联账号（可选）')).toHaveValue('linked-login');await expect(page.getByLabel('提醒标题')).toHaveValue('Synthetic linked account · 到期');await page.getByRole('button',{name:'取消',exact:true}).click();
+  await page.getByRole('link',{name:'查看账号：Synthetic linked account · example.test'}).first().click();await expect(page.getByRole('region',{name:'账号到期提醒'})).toContainText('1 条未完成提醒');
+  expect(context.pages().every(page=>!page.url().startsWith('https://example.test'))).toBe(true);expect(errors).toEqual([]);
+});
+
+test('orphaned reminders remain editable and can be unlinked',async()=>{
+  const vault=createEmptyVault();vault.settings.remindersEnabled=true;vault.reminders=[{...item('orphan',Date.UTC(2099,10,17)),credentialId:'deleted-login'}];await seed(vault);
+  const page=await open('/vault.html?reminderAccount=deleted-login#reminders');await expect(page.locator('.reminder-row')).toContainText('原关联账号已不可用');await expect(page.locator('.reminder-row a')).toHaveCount(0);
+  await page.getByRole('button',{name:'编辑 Synthetic orphan'}).click();await expect(page.getByLabel('关联账号（可选）')).toHaveValue('deleted-login');await page.getByRole('button',{name:'保存提醒',exact:true}).click();await expect(page.getByRole('alert')).toContainText('关联账号已不可用');
+  await page.getByLabel('关联账号（可选）').selectOption('');await page.getByRole('button',{name:'保存提醒',exact:true}).click();await expect.poll(async()=>(await decrypted()).reminders?.[0].credentialId).toBeUndefined();
+  await page.getByLabel('按关联账号筛选提醒').selectOption('');await expect(page.locator('.reminder-row')).toHaveCount(1);
+});
+
 test('account shortcut supports editing, completion, encrypted backup and removal', async () => {
   const vault = createEmptyVault(); vault.settings.remindersEnabled = true;
   vault.credentials = [{id:'linked-login',title:'Synthetic linked account',domain:'example.test',url:'https://example.test',username:'example',password:'Synthetic!42',iconType:'default',createdAt:1,updatedAt:1}];

@@ -258,6 +258,7 @@ export interface FillProfileDiagnostic {
   key: string;
   label: string;
   status: 'filled' | 'matched' | 'skipped' | 'missing';
+  reason?: string;
   controlLabel?: string;
   score?: number;
   binding?: boolean;

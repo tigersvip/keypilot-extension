@@ -4,7 +4,8 @@ export type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectEle
 export interface ReviewRow {
   label: string;
   target?: string;
-  action: 'fill' | 'replace' | 'skip' | 'missing';
+  note?: string;
+  action: 'fill' | 'replace' | 'skip' | 'missing' | 'blocked';
   value: string;
   secret: boolean;
 }
@@ -141,10 +142,11 @@ export function reviewFill(rows: ReviewRow[], apply: (isCurrent: () => boolean, 
     const table=document.createElement('table');
     const head=document.createElement('tr');
     for(const value of ['资料字段','网页字段','内容','操作']){const th=document.createElement('th');th.textContent=value;head.append(th);}table.append(head);
-    const labels={fill:'填写',replace:'覆盖',skip:'跳过已有值',missing:'未匹配'};
+    const labels={fill:'填写',replace:'覆盖',skip:'跳过已有值',missing:'未匹配',blocked:'需检查'};
     for(const row of rows){
       const tr=document.createElement('tr');
       for(const text of [row.label,row.target||'—',row.secret?'••••••':row.value,labels[row.action]]){const td=document.createElement('td');td.textContent=text;tr.append(td);}
+      if(row.note){const note=document.createElement('small');note.textContent=row.note;note.style.cssText='display:block;color:#a33b13;line-height:1.5;margin-top:4px';tr.firstElementChild!.append(note);}
       table.append(tr);
     }
     body.append(table);

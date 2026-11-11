@@ -67,6 +67,8 @@
 
 ### 功能亮点
 
+1.16 加强了下拉选项、日期格式和网站改版后的字段校准检查，并打通账号详情与到期提醒。[填表兼容性与固定对照样例](docs/form-compatibility.md)说明当前范围及复现方法；尚未获得与 RoboForm 的实测比较结果。
+
 | 模块 | KeyPilot 支持 |
 | --- | --- |
 | 本地加密 Vault | 使用主密码保护本地 Vault，账号和资料加密保存。 |
@@ -113,7 +115,7 @@ npm run build
 下载后解压，在浏览器扩展管理页选择“加载已解压的扩展程序”，加载解压目录。
 
 <!-- current-release:start -->
-当前源码版本：**1.15.3**。安装包：`keypilot-extension-v1.15.3.zip`。
+当前源码版本：**1.16.0**。安装包：`keypilot-extension-v1.16.0.zip`。
 
 在 [Releases](https://github.com/tigersvip/keypilot-extension/releases) 查看已发布的安装包、更新说明与 SHA-256 校验文件；开发分支版本不一定已经发布。
 <!-- current-release:end -->

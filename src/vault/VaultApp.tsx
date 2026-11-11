@@ -1,3 +1,4 @@
+import { AccountReminders } from '../shared/AccountReminders';
 import { CopyButton } from '../shared/CopyButton';
 import { navigateAccountList } from '../shared/listNavigation';
 import { CredentialSecurityPanel } from '../shared/CredentialSecurityPanel';
@@ -4030,15 +4031,7 @@ function CredentialDetailPane({
 
       <CredentialSecurityPanel key={credential.id} credential={credential} session={session} onChange={onSessionChange} />
       {session.vault.settings.remindersEnabled && (
-        <section className="detail-reminder" aria-label="账号到期提醒">
-          <div>
-            <h3><Bell size={18} aria-hidden="true" />到期提醒</h3>
-            <p>为这个账号设置续费或到期提醒。</p>
-          </div>
-          <button type="button" onClick={() => { window.location.href = `vault.html?reminderFor=${encodeURIComponent(credential.id)}#reminders`; }}>
-            <Plus size={17} aria-hidden="true" />添加到期提醒
-          </button>
-        </section>
+        <AccountReminders credential={credential} reminders={session.vault.reminders??[]} />
       )}
       <section className="detail-notes">
         <div className="detail-notes-label">

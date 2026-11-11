@@ -1,3 +1,4 @@
+import { selectFillOption, parseFillDate, formatFillDate } from '../shared/fillValues';
 import { beginLoginFeedback, showLoginFeedback, clearLoginFeedback } from './loginFeedback';
 import { probeTotpFields, fillTotpFields, installLoginTotpWatcher, clearTotpProbe, samePageTotpFields, writeSamePageTotp, hasVerificationFields } from './totpFill';
 import { installCaptchaAssist, fillCaptchaForLogin, offerCaptchaLoginContinuation } from './captchaAssist';
@@ -2357,130 +2358,6 @@ function countryNameFromCode(countryCode: string): string {
   return countries[countryCode.toUpperCase()] ?? countryCode.toUpperCase();
 }
 
-function normalizedSelectValueCandidates(value: string): string[] {
-  const normalized = normalizeFillText(value);
-  const countryAliases: Record<string, string[]> = {
-    us: ['us', 'usa', 'u s a', 'united states', 'united states of america', 'america', '美国'],
-    usa: ['us', 'usa', 'u s a', 'united states', 'united states of america', 'america', '美国'],
-    'u s a': ['us', 'usa', 'u s a', 'united states', 'united states of america', 'america', '美国'],
-    'united states': ['us', 'usa', 'u s a', 'united states', 'united states of america', 'america', '美国'],
-    'united states of america': ['us', 'usa', 'u s a', 'united states', 'united states of america', 'america', '美国'],
-    '美国': ['us', 'usa', 'u s a', 'united states', 'united states of america', 'america', '美国'],
-    cn: ['cn', 'china', '中国'],
-    china: ['cn', 'china', '中国'],
-    '中国': ['cn', 'china', '中国']
-  };
-  const monthAliases: Record<string, string[]> = {
-    '1': ['1', '01', 'jan', 'january', '一月', '1月'],
-    '01': ['1', '01', 'jan', 'january', '一月', '1月'],
-    jan: ['1', '01', 'jan', 'january'],
-    january: ['1', '01', 'jan', 'january'],
-    '2': ['2', '02', 'feb', 'february', '二月', '2月'],
-    '02': ['2', '02', 'feb', 'february', '二月', '2月'],
-    feb: ['2', '02', 'feb', 'february'],
-    february: ['2', '02', 'feb', 'february'],
-    '3': ['3', '03', 'mar', 'march', '三月', '3月'],
-    '03': ['3', '03', 'mar', 'march', '三月', '3月'],
-    mar: ['3', '03', 'mar', 'march'],
-    march: ['3', '03', 'mar', 'march'],
-    '4': ['4', '04', 'apr', 'april', '四月', '4月'],
-    '04': ['4', '04', 'apr', 'april', '四月', '4月'],
-    apr: ['4', '04', 'apr', 'april'],
-    april: ['4', '04', 'apr', 'april'],
-    '5': ['5', '05', 'may', '五月', '5月'],
-    '05': ['5', '05', 'may', '五月', '5月'],
-    may: ['5', '05', 'may'],
-    '6': ['6', '06', 'jun', 'june', '六月', '6月'],
-    '06': ['6', '06', 'jun', 'june', '六月', '6月'],
-    jun: ['6', '06', 'jun', 'june'],
-    june: ['6', '06', 'jun', 'june'],
-    '7': ['7', '07', 'jul', 'july', '七月', '7月'],
-    '07': ['7', '07', 'jul', 'july', '七月', '7月'],
-    jul: ['7', '07', 'jul', 'july'],
-    july: ['7', '07', 'jul', 'july'],
-    '8': ['8', '08', 'aug', 'august', '八月', '8月'],
-    '08': ['8', '08', 'aug', 'august', '八月', '8月'],
-    aug: ['8', '08', 'aug', 'august'],
-    august: ['8', '08', 'aug', 'august'],
-    '9': ['9', '09', 'sep', 'sept', 'september', '九月', '9月'],
-    '09': ['9', '09', 'sep', 'sept', 'september', '九月', '9月'],
-    sep: ['9', '09', 'sep', 'sept', 'september'],
-    sept: ['9', '09', 'sep', 'sept', 'september'],
-    september: ['9', '09', 'sep', 'sept', 'september'],
-    '10': ['10', 'oct', 'october', '十月', '10月'],
-    oct: ['10', 'oct', 'october'],
-    october: ['10', 'oct', 'october'],
-    '11': ['11', 'nov', 'november', '十一月', '11月'],
-    nov: ['11', 'nov', 'november'],
-    november: ['11', 'nov', 'november'],
-    '12': ['12', 'dec', 'december', '十二月', '12月'],
-    dec: ['12', 'dec', 'december'],
-    december: ['12', 'dec', 'december']
-  };
-  const stateAliases: Record<string, string[]> = {
-    al: ['al', 'alabama'],
-    ak: ['ak', 'alaska'],
-    az: ['az', 'arizona'],
-    ar: ['ar', 'arkansas'],
-    ca: ['ca', 'california'],
-    co: ['co', 'colorado'],
-    ct: ['ct', 'connecticut'],
-    de: ['de', 'delaware'],
-    fl: ['fl', 'florida'],
-    ga: ['ga', 'georgia'],
-    hi: ['hi', 'hawaii'],
-    id: ['id', 'idaho'],
-    il: ['il', 'illinois'],
-    in: ['in', 'indiana'],
-    ia: ['ia', 'iowa'],
-    ks: ['ks', 'kansas'],
-    ky: ['ky', 'kentucky'],
-    la: ['la', 'louisiana'],
-    me: ['me', 'maine'],
-    md: ['md', 'maryland'],
-    ma: ['ma', 'massachusetts'],
-    mi: ['mi', 'michigan'],
-    mn: ['mn', 'minnesota'],
-    ms: ['ms', 'mississippi'],
-    mo: ['mo', 'missouri'],
-    mt: ['mt', 'montana'],
-    ne: ['ne', 'nebraska'],
-    nv: ['nv', 'nevada'],
-    nh: ['nh', 'new hampshire'],
-    nj: ['nj', 'new jersey'],
-    nm: ['nm', 'new mexico'],
-    ny: ['ny', 'new york'],
-    nc: ['nc', 'north carolina'],
-    nd: ['nd', 'north dakota'],
-    oh: ['oh', 'ohio'],
-    ok: ['ok', 'oklahoma'],
-    or: ['or', 'oregon'],
-    pa: ['pa', 'pennsylvania'],
-    ri: ['ri', 'rhode island'],
-    sc: ['sc', 'south carolina'],
-    sd: ['sd', 'south dakota'],
-    tn: ['tn', 'tennessee'],
-    tx: ['tx', 'texas'],
-    ut: ['ut', 'utah'],
-    vt: ['vt', 'vermont'],
-    va: ['va', 'virginia'],
-    wa: ['wa', 'washington'],
-    wv: ['wv', 'west virginia'],
-    wi: ['wi', 'wisconsin'],
-    wy: ['wy', 'wyoming'],
-    dc: ['dc', 'district of columbia', 'washington dc']
-  };
-  const stateMatch = Object.entries(stateAliases).find(([, aliases]) => aliases.includes(normalized));
-  const yearAliases = /^\d{4}$/.test(normalized) ? [normalized.slice(-2)] : /^\d{2}$/.test(normalized) ? [`20${normalized}`, `19${normalized}`] : [];
-  return Array.from(new Set([
-    normalized,
-    ...(countryAliases[normalized] ?? []).map(normalizeFillText),
-    ...(monthAliases[normalized] ?? []).map(normalizeFillText),
-    ...(stateMatch?.[1] ?? []).map(normalizeFillText),
-    ...yearAliases.map(normalizeFillText)
-  ]));
-}
-
 function fillFieldAliases(field: FillField): string[] {
   const base = [field.key, field.label, field.sourceColumn ?? '', ...(field.aliases ?? [])].filter(Boolean);
   const extra: Record<string, string[]> = {
@@ -2697,17 +2574,12 @@ function typeScore(field: FillField, control: FillControl): number {
   return 0;
 }
 
+function selectFillIndex(control:HTMLSelectElement,field:FillField):number {
+  if(control.multiple)return -1;
+  return selectFillOption(Array.from(control.options).map(option=>({value:option.value,text:option.textContent??'',disabled:option.disabled||(option.parentElement instanceof HTMLOptGroupElement&&option.parentElement.disabled)})),field.value,field.key);
+}
 function selectOptionScore(field: FillField, control: FillControl): number {
-  if (!(control instanceof HTMLSelectElement)) return 0;
-  const values = normalizedSelectValueCandidates(field.value);
-  if (!values.length) return 0;
-  return Array.from(control.options).some((option) => {
-    const optionValue = normalizeFillText(option.value);
-    const optionText = normalizeFillText(option.textContent ?? '');
-    return values.some((value) => optionValue === value || optionText === value || optionText.includes(value) || value.includes(optionText));
-  })
-    ? 36
-    : 0;
+  return control instanceof HTMLSelectElement && selectFillIndex(control,field)>=0 ? 20 : 0;
 }
 
 function fieldSemanticScore(field: FillField, text: string, label: string): number {
@@ -2859,12 +2731,12 @@ function scoreFillProfileControl(field: FillField, control: FillControl, usedCon
   const label = normalizeFillText(controlLabel(control));
   const aliases = fillFieldAliases(field);
   const normalizedText = normalizeFillText(text);
-  let score = autocompleteScore(field, control) + typeScore(field, control) + selectOptionScore(field, control) + fieldSemanticScore(field, text, label);
+  let score = autocompleteScore(field, control) + typeScore(field, control) + fieldSemanticScore(field, text, label);
 
   aliases.forEach((alias) => {
     if (!alias) return;
     if (label === alias) score += 86;
-    if (label.includes(alias) || alias.includes(label)) score += 44;
+    if (label && (label.includes(alias) || alias.includes(label))) score += 44;
     if (text.includes(alias) || normalizedText.includes(alias)) score += 28;
   });
 
@@ -2883,6 +2755,7 @@ function scoreFillProfileControl(field: FillField, control: FillControl, usedCon
   if (field.group === 'finance' && /(income|revenue|sales|credit|fico|bank|routing|account|rent|mortgage|收入|营业额|信用|银行|账号)/i.test(text)) score += 10;
   if (field.group === 'driver' && /(driver|driving|license|licensed|dl|dui|sr22|accident|claim|ticket|violation|驾照|驾驶证|违章|事故)/i.test(text)) score += 12;
   if (field.group === 'sensitive' && /(ssn|social security|taxpayer|passport|identity|national id|government id|身份证|证件|护照)/i.test(text)) score += 12;
+  if(score>=20)score+=selectOptionScore(field,control);
   if (field.sensitivity !== 'secret' && /password|current-password|密码/.test(text)) score -= 120;
 
   return score;
@@ -2905,23 +2778,12 @@ function setTextControlValue(control: HTMLInputElement | HTMLTextAreaElement, va
   control.blur();
 }
 
-function setSelectControlValue(control: HTMLSelectElement, value: string): boolean {
-  const values = normalizedSelectValueCandidates(value);
-  const option = Array.from(control.options).find((candidate) => {
-    const optionValue = normalizeFillText(candidate.value);
-    const optionText = normalizeFillText(candidate.textContent ?? '');
-    return values.some((normalized) => optionValue === normalized || optionText === normalized || optionText.includes(normalized) || normalized.includes(optionText));
-  });
-
-  if (!option) return false;
-
-  control.focus({ preventScroll: true });
-  control.value = option.value;
-  option.selected = true;
-  control.dispatchEvent(new Event('input', { bubbles: true }));
-  control.dispatchEvent(new Event('change', { bubbles: true }));
-  control.blur();
-  return true;
+function setSelectControlValue(control: HTMLSelectElement, field: FillField): boolean {
+  const index=selectFillIndex(control,field),option=control.options[index];
+  if(!option)return false;
+  control.focus({preventScroll:true});control.selectedIndex=index;
+  control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));control.blur();
+  return control.value===option.value;
 }
 
 function setCheckboxOrRadioValue(control: HTMLInputElement, value: string): boolean {
@@ -2939,9 +2801,9 @@ function setCheckboxOrRadioValue(control: HTMLInputElement, value: string): bool
   return true;
 }
 
-function fillProfileControl(control: FillControl, value: string): boolean {
+function fillProfileControl(control: FillControl, field: FillField, value: string): boolean {
   if (control instanceof HTMLSelectElement) {
-    return setSelectControlValue(control, value);
+    return setSelectControlValue(control, field);
   }
 
   if (control instanceof HTMLInputElement && ['checkbox', 'radio'].includes(control.type.toLowerCase())) {
@@ -2949,52 +2811,7 @@ function fillProfileControl(control: FillControl, value: string): boolean {
   }
 
   setTextControlValue(control, value);
-  return true;
-}
-
-interface ParsedDateParts {
-  month?: string;
-  day?: string;
-  year?: string;
-}
-
-function normalizeDateYear(value: string): string {
-  if (/^\d{2}$/.test(value)) {
-    const number = Number(value);
-    return `${number >= 35 ? '19' : '20'}${value}`;
-  }
-  return value;
-}
-
-function parseDateParts(value: string): ParsedDateParts {
-  const trimmed = value.trim();
-  if (!trimmed) return {};
-
-  const iso = trimmed.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
-  if (iso) {
-    return { year: iso[1], month: String(Number(iso[2])), day: String(Number(iso[3])) };
-  }
-
-  const us = trimmed.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
-  if (us) {
-    return { month: String(Number(us[1])), day: String(Number(us[2])), year: normalizeDateYear(us[3]) };
-  }
-
-  const monthYear = trimmed.match(/^(\d{1,2})[-/.](\d{2,4})$/);
-  if (monthYear) {
-    return { month: String(Number(monthYear[1])), year: normalizeDateYear(monthYear[2]) };
-  }
-
-  const parsed = new Date(trimmed);
-  if (!Number.isNaN(parsed.getTime()) && /\d/.test(trimmed)) {
-    return {
-      month: String(parsed.getUTCMonth() + 1),
-      day: String(parsed.getUTCDate()),
-      year: String(parsed.getUTCFullYear())
-    };
-  }
-
-  return {};
+  return control.value===value;
 }
 
 function addDerivedFillField(
@@ -3024,9 +2841,9 @@ function expandFillProfileFields(profile: FillProfilePayload): FillField[] {
   const address2 = byKey.get('address2') ?? '';
   const businessAddress1 = byKey.get('businessAddress1') ?? '';
   const businessAddress2 = byKey.get('businessAddress2') ?? '';
-  const dobParts = parseDateParts(byKey.get('dob') ?? '');
-  const cardExpiryParts = parseDateParts(byKey.get('cardExpiry') ?? '');
-  const businessStartParts = parseDateParts(byKey.get('businessStartDate') ?? '');
+  const dobParts = parseFillDate(byKey.get('dob') ?? '');
+  const cardExpiryParts = parseFillDate(byKey.get('cardExpiry') ?? '',true);
+  const businessStartParts = parseFillDate(byKey.get('businessStartDate') ?? '');
   const hasAddressSignal = fields.some((field) =>
     field.group === 'address' ||
     ['address1', 'address2', 'city', 'state', 'postalCode', 'licensedState', 'businessState', 'businessPostalCode'].includes(field.key)
@@ -3059,9 +2876,9 @@ function expandFillProfileFields(profile: FillProfilePayload): FillField[] {
     addDerivedFillField(fields, byKey, 'businessAddress', '公司完整地址', `${businessAddress1} ${businessAddress2}`.trim(), 'business', ['business address', 'company address', 'business street address', 'company street address']);
   }
 
-  addDerivedFillField(fields, byKey, 'dobMonth', '出生月份', dobParts.month, 'personal', ['birth month', 'dob month', 'birthday month', 'month of birth'], 'private');
-  addDerivedFillField(fields, byKey, 'dobDay', '出生日', dobParts.day, 'personal', ['birth day', 'dob day', 'birthday day', 'day of birth'], 'private');
-  addDerivedFillField(fields, byKey, 'dobYear', '出生年份', dobParts.year, 'personal', ['birth year', 'dob year', 'birthday year', 'year of birth'], 'private');
+  addDerivedFillField(fields, byKey, 'dobMonth', '出生月份', dobParts.month, 'personal', ['birth month', 'dob month', 'birthday month', 'month of birth']);
+  addDerivedFillField(fields, byKey, 'dobDay', '出生日', dobParts.day, 'personal', ['birth day', 'dob day', 'birthday day', 'day of birth']);
+  addDerivedFillField(fields, byKey, 'dobYear', '出生年份', dobParts.year, 'personal', ['birth year', 'dob year', 'birthday year', 'year of birth']);
   addDerivedFillField(fields, byKey, 'cardExpiryMonth', '卡有效期月', cardExpiryParts.month, 'payment', ['exp month', 'expiry month', 'expiration month', 'cc month'], 'secret');
   addDerivedFillField(fields, byKey, 'cardExpiryYear', '卡有效期年', cardExpiryParts.year, 'payment', ['exp year', 'expiry year', 'expiration year', 'cc year'], 'secret');
   addDerivedFillField(fields, byKey, 'businessStartMonth', '成立月份', businessStartParts.month, 'business', ['business start month', 'established month', 'incorporation month']);
@@ -3100,30 +2917,28 @@ function createFillFieldBinding(control: FillControl, field: FillField): FillFie
   };
 }
 
-function findBoundFillControl(binding: FillFieldBinding | undefined, usedControls: Set<FillControl>, allowed?: Set<FillControl>): FillControl | null {
-  if (!binding) return null;
-
-  const candidates: FillControl[] = [];
-  const selectorControl = safeQuerySelector<FillControl>(binding.selector);
-  if (selectorControl) candidates.push(selectorControl);
-
-  if (binding.id) {
-    const byId = document.getElementById(binding.id);
-    if (byId instanceof HTMLInputElement || byId instanceof HTMLSelectElement || byId instanceof HTMLTextAreaElement) {
-      candidates.push(byId);
-    }
-  }
-
-  if (binding.name) {
-    candidates.push(...Array.from(document.querySelectorAll<FillControl>(`input[name="${cssAttr(binding.name)}"], select[name="${cssAttr(binding.name)}"], textarea[name="${cssAttr(binding.name)}"]`)));
-  }
-
-  if (typeof binding.index === 'number') {
-    const indexed = getAllFillControls(document)[binding.index];
-    if (indexed) candidates.push(indexed);
-  }
-
-  return candidates.find((control) => isFillableControl(control) && !usedControls.has(control) && (!allowed || allowed.has(control))) ?? null;
+function boundControlStillMatches(control:FillControl,binding:FillFieldBinding,field:FillField):boolean {
+  if(binding.tagName&&binding.tagName!==control.tagName.toLowerCase())return false;
+  const type=control instanceof HTMLInputElement?control.type:control.tagName.toLowerCase();
+  if(binding.type&&binding.type!==type)return false;
+  if(binding.autocomplete&&normalizeFillText(binding.autocomplete)!==normalizeFillText(control.autocomplete))return false;
+  if(binding.controlLabel)return normalizeFillText(binding.controlLabel)===normalizeFillText(controlLabel(control));
+  if(binding.placeholder&&control instanceof HTMLInputElement&&binding.placeholder!==control.placeholder)return false;
+  // Legacy selectors without a semantic snapshot must still describe the field.
+  return scoreFillProfileControl(field,control,new Set())>=34;
+}
+function findBoundFillControl(binding: FillFieldBinding | undefined, field:FillField, usedControls: Set<FillControl>, allowed?: Set<FillControl>): FillControl | null {
+  if(!binding)return null;
+  const eligible=(control:FillControl)=>isFillableControl(control)&&!usedControls.has(control)&&(!allowed||allowed.has(control))&&boundControlStillMatches(control,binding,field);
+  const controls=getAllFillControls(document).filter(eligible);
+  const selector=safeQuerySelector<FillControl>(binding.selector);
+  if(selector&&binding.selector&&controls.includes(selector)&&document.querySelectorAll(binding.selector).length===1)return selector;
+  const identified=controls.filter(control=>binding.id&&control.id===binding.id||binding.name&&control.name===binding.name);
+  if(identified.length===1)return identified[0];
+  // Position alone is not identity. A moved field can be recovered only by a
+  // unique saved label, with its original type/autocomplete still intact.
+  const labelled=binding.controlLabel?controls.filter(control=>normalizeFillText(controlLabel(control))===normalizeFillText(binding.controlLabel!)):[];
+  return labelled.length===1?labelled[0]:null;
 }
 
 function bindingForField(profile: FillProfilePayload, field: FillField): FillFieldBinding | undefined {
@@ -3131,25 +2946,42 @@ function bindingForField(profile: FillProfilePayload, field: FillField): FillFie
 }
 
 function matchFillProfileField(profile: FillProfilePayload, field: FillField, usedControls: Set<FillControl>, allowed?: Set<FillControl>): { control: FillControl; score: number; binding: boolean } | null {
-  const boundControl = findBoundFillControl(bindingForField(profile, field), usedControls, allowed);
+  const binding=bindingForField(profile,field);
+  const boundControl = findBoundFillControl(binding,field,usedControls,allowed);
   if (boundControl) {
     return { control: boundControl, score: 999, binding: true };
   }
 
+  if(binding)return null;
   const automatic = findBestFillControl(field, usedControls, allowed);
   return automatic ? { ...automatic, binding: false } : null;
 }
 
+function fillControlStamp(control:FillControl):string {
+  return JSON.stringify([control.tagName,control.getAttribute('type'),control.id,control.name,control.autocomplete,controlLabel(control),control.getAttribute('placeholder'),
+    control instanceof HTMLSelectElement?Array.from(control.options).map(option=>[option.value,option.text,option.disabled,option.parentElement instanceof HTMLOptGroupElement&&option.parentElement.disabled]):null]);
+}
+function preparedFillValue(field:FillField,control:FillControl):{value:string;display?:string;issue?:string} {
+  if(control instanceof HTMLSelectElement){
+    const index=selectFillIndex(control,field),option=control.options[index];
+    return option?{value:option.value,display:option.text}:{value:field.value,issue:'选项不匹配或存在歧义，请手动选择'};
+  }
+  const type=control instanceof HTMLInputElement?control.type:'';
+  if(['date','month'].includes(type)||['dob','cardExpiry','businessStartDate','passportExpiry','driverLicenseExpiry','insuranceExpirationDate','insuredSinceDate'].includes(field.key)){
+    const value=formatFillDate(field.value,type,control.getAttribute('placeholder')??'',field.key==='cardExpiry');
+    return value!==undefined?{value}:{value:field.value,issue:'日期无效或顺序不明确，请将资料改为 YYYY-MM-DD'};
+  }
+  return {value:field.value};
+}
 function planFillProfile(profile: FillProfilePayload, allowed?: Set<FillControl>) {
   const usedControls = new Set<FillControl>();
   return expandFillProfileFields(profile).map(field => {
-    const match = matchFillProfileField(profile, field, usedControls, allowed);
-    if (match) usedControls.add(match.control);
-    const control = match?.control;
-    const current = control instanceof HTMLInputElement && ['checkbox','radio'].includes(control.type)
-      ? control.checked : Boolean(control?.value.trim());
-    const action = !match ? 'missing' : profile.onlyEmpty && current ? 'skip' : current ? 'replace' : 'fill';
-    return {field,match,action,oldValue:control?.value,oldChecked:control instanceof HTMLInputElement ? control.checked : undefined};
+    const match=matchFillProfileField(profile,field,usedControls,allowed);
+    if(match)usedControls.add(match.control);
+    const control=match?.control,prepared=control?preparedFillValue(field,control):{value:field.value,issue:bindingForField(profile,field)?'原绑定已变化，请重新校准':undefined};
+    const current=control instanceof HTMLInputElement&&['checkbox','radio'].includes(control.type)?control.checked:Boolean(control?.value.trim());
+    const action=profile.onlyEmpty&&current?'skip':prepared.issue?'blocked':!match?'missing':current?'replace':'fill';
+    return {field,match,action,...prepared,stamp:control?fillControlStamp(control):undefined,oldValue:control?.value,oldChecked:control instanceof HTMLInputElement?control.checked:undefined};
   });
 }
 
@@ -3159,14 +2991,14 @@ async function reviewedFillProfile(profile: FillProfilePayload, allowed?: Set<Fi
   const repair = () => startFillProfileBinding(profile,allowed,preference ? () => {void sendRuntimeMessage({type:'KEYPILOT_RETRY_QUICK_FILL'});} : undefined);
   let result: FillProfileFillResult & {rememberForSite?:boolean} = {ok:false,error:'FILL_CANCELLED',filledCount:0,matchedCount:0,skippedCount:0,totalFields:plan.length};
   const confirmed = await reviewFill(plan.map(row => ({
-    label:row.field.label,target:row.match ? controlLabel(row.match.control) : undefined,
-    action:row.action as ReviewRow['action'],value:row.field.value,secret:row.field.sensitivity !== 'normal'
+    label:row.field.label,target:row.match?controlLabel(row.match.control):undefined,note:row.issue,
+    action:row.action as ReviewRow['action'],value:row.display??row.value,secret:row.field.sensitivity !== 'normal'
   })), async (isCurrent,rememberForSite) => {
     if(authorize && !await authorize())throw new Error('页面或密码库状态已变化，请取消后重新使用快捷键。');
     if(!isCurrent() || epoch!==credentialFillEpoch || location.href!==url)throw new Error('页面或密码库状态已变化，请重新预览。');
     for(const row of plan) {
       const control=row.match?.control;
-      if(control && (!control.isConnected || !isFillableControl(control) || control.value!==row.oldValue || (control instanceof HTMLInputElement && control.checked!==row.oldChecked))) {
+      if(control && (!control.isConnected || !isFillableControl(control) || control.value!==row.oldValue || fillControlStamp(control)!==row.stamp || (control instanceof HTMLInputElement && control.checked!==row.oldChecked))) {
         throw new Error('网页字段已变化，请取消后重新预览。');
       }
     }
@@ -3174,11 +3006,12 @@ async function reviewedFillProfile(profile: FillProfilePayload, allowed?: Set<Fi
     let filledCount=0,matchedCount=0,skippedCount=0;
     const diagnostics:FillProfileDiagnostic[]=[];
     for(const row of plan){
-      if(!row.match){diagnostics.push({key:row.field.key,label:row.field.label,status:'missing'});continue;}
+      if(!row.match||row.action==='blocked'){diagnostics.push({key:row.field.key,label:row.field.label,status:'missing',reason:row.issue});continue;}
+      if(!row.match.control.isConnected||!isFillableControl(row.match.control)||fillControlStamp(row.match.control)!==row.stamp||row.match.control.value!==row.oldValue||(row.match.control instanceof HTMLInputElement&&row.match.control.checked!==row.oldChecked)){diagnostics.push({key:row.field.key,label:row.field.label,status:'missing',reason:'网页字段在填写期间变化，请重新预览'});continue;}
       matchedCount++;
       const skipped=row.action==='skip';
       if(skipped)skippedCount++;
-      const filled=!skipped && fillProfileControl(row.match.control,row.field.value);
+      const filled=!skipped && fillProfileControl(row.match.control,row.field,row.value);
       if(filled)filledCount++;
       diagnostics.push({key:row.field.key,label:row.field.label,status:skipped?'skipped':filled?'filled':'matched',controlLabel:controlLabel(row.match.control),score:row.match.score,binding:row.match.binding});
     }
@@ -3199,12 +3032,14 @@ function diagnoseFillProfile(profile: FillProfilePayload): FillProfileFillResult
   for (const field of fields) {
     const match = matchFillProfileField(profile, field, usedControls);
     if (!match) {
-      diagnostics.push({ key: field.key, label: field.label, status: 'missing' });
+      diagnostics.push({ key: field.key, label: field.label, status: 'missing',reason:bindingForField(profile,field)?'原绑定已变化，请重新校准':undefined });
       continue;
     }
 
-    matchedCount += 1;
     usedControls.add(match.control);
+    const prepared=preparedFillValue(field,match.control);
+    if(prepared.issue){diagnostics.push({key:field.key,label:field.label,status:'missing',reason:prepared.issue});continue;}
+    matchedCount += 1;
     diagnostics.push({
       key: field.key,
       label: field.label,
