@@ -12,6 +12,8 @@
 
 `test:regression` 和 `test:e2e` 均执行全部 `tests/browser/*.spec.ts`。验证码识别、验证码检测、验证码登录、完整备份、基础扩展、登录延续、登录任务、快捷填写、提醒、安全和界面一致性都属于发布必检项；不要通过指定少数文件或跳过失败用例来发布。失败时查看工作流中的测试证据 artifact。
 
+CI 遇到首个失败会提前停止并阻止发布，以缩短修复等待；只有零失败并跑完全部用例才会生成发布包。
+
 校验下载包：Windows 使用 `Get-FileHash .\keypilot-extension-v1.14.1.zip -Algorithm SHA256`，macOS/Linux 使用 `shasum -a 256 keypilot-extension-v1.14.1.zip`，与同版本 `.sha256` 文件比较。
 
 流水线只上传安装包、说明、校验文件和失败测试证据，不上传本机密码库、备份或用户浏览器资料。普通验证任务仅有仓库读取权限；标签发布任务才使用 GitHub 提供的临时写入令牌。无需新增个人访问令牌。

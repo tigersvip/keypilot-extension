@@ -41,6 +41,26 @@ async function complexImages(group:'joined'|'held') {
  const labels=JSON.parse(await readFile(resolve(directory,'labels.json'),'utf8')) as Record<string,Array<{file:string;text:string}>>;
  return Promise.all(labels[group].map(async item=>({...item,image:'data:image/png;base64,'+(await readFile(resolve(directory,item.file))).toString('base64')})));
 }
+async function traceOcr(page:Page) {
+ await page.addInitScript(()=>{
+  const Native=window.Worker,readings:unknown[]=[];(window as any).ocrTestReadings=readings;
+  window.Worker=class extends Native {
+   constructor(url:string|URL,options?:WorkerOptions){
+    super(url,options);const neural=String(url).includes('captchaNeuralWorker');
+    this.addEventListener('message',event=>{
+     if(neural&&event.data?.reading)readings.push({source:'neural',...event.data.reading});
+     else if(event.data?.action==='recognize'&&event.data?.status==='resolve'){
+      const data=event.data.data;readings.push({source:'text',text:data?.text,confidence:data?.confidence,characters:data?.blocks?.flatMap((b:any)=>b.paragraphs.flatMap((p:any)=>p.lines.flatMap((l:any)=>l.words.flatMap((w:any)=>w.symbols.map((s:any)=>({text:s.text,confidence:s.confidence}))))))});
+     }
+    });
+   }
+   postMessage(message:any,transfer:Transferable[]=[]){
+    if(message.pixels instanceof Float32Array){let hash=2166136261;for(const byte of new Uint8Array(message.pixels.buffer))hash=Math.imul(hash^byte,16777619);readings.push({source:'input',width:message.width,hash:hash>>>0});}
+    super.postMessage(message,transfer);
+   }
+  };
+ });
+}
 
 test('OCR is disabled by default; changing settings updates an already open webpage',async()=>{
  await seed(false);const page=await open();await expect(page.getByRole('button',{name:'识别验证码',exact:true})).toBeHidden();
@@ -277,11 +297,12 @@ test('OCR workers are released after idle time and initialize again for another 
 });
 
 test('joined and warped regression images retain complete candidates offline',async()=>{
- const page=await context.newPage();await page.goto(base+'/offscreen.html');await context.setOffline(true);
+ const page=await context.newPage();await traceOcr(page);await page.goto(base+'/offscreen.html');await context.setOffline(true);
  for(const fixture of await complexImages('joined')){
+  await page.evaluate(()=>{(window as any).ocrTestReadings.length=0;});
   const image=fixture.image;
   const result=await worker.evaluate(image=>chrome.runtime.sendMessage({target:'keypilot-captcha-ocr',image,mode:'auto'}),image);
-  expect(result.ok).toBe(true);expect(result.candidates[0].text).toBe(fixture.text);
+  expect(result.ok).toBe(true);expect(result.candidates[0].text,JSON.stringify({file:fixture.file,result,readings:await page.evaluate(()=>(window as any).ocrTestReadings)})).toBe(fixture.text);
   expect(result.uncertain).toBe(true);expect(result.candidates.length).toBeLessThanOrEqual(4);
  }
 });
