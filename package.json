@@ -1,6 +1,6 @@
 {
   "name": "keypilot-extension",
-  "version": "1.15.1",
+  "version": "1.15.2",
   "description": "Local-first browser password manager, autofill, and one-click login extension.",
   "license": "MIT",
   "keywords": [

@@ -113,7 +113,7 @@ npm run build
 下载后解压，在浏览器扩展管理页选择“加载已解压的扩展程序”，加载解压目录。
 
 <!-- current-release:start -->
-当前源码版本：**1.15.1**。安装包：`keypilot-extension-v1.15.1.zip`。
+当前源码版本：**1.15.2**。安装包：`keypilot-extension-v1.15.2.zip`。
 
 在 [Releases](https://github.com/tigersvip/keypilot-extension/releases) 查看已发布的安装包、更新说明与 SHA-256 校验文件；开发分支版本不一定已经发布。
 <!-- current-release:end -->

@@ -79,6 +79,7 @@ for (const entry of ['popup','vault','options']) test(`fresh ${entry} restores a
   const original = (await unlockEncryptedVault(master,incoming)).vault;
   for (const {key} of backupCollections) expect(restored[key]).toEqual(original[key]);
   expect(restored.settings).toEqual(original.settings);
+  if (entry !== 'options') await expect(page.locator('.site-icon img').first()).toHaveJSProperty('naturalWidth',16);
   await page.clock.install({time:new Date(59000)});await page.clock.pauseAt(new Date(59000));
   await page.goto(base+'/vault.html#authenticator');
   await expect(page.getByRole('article',{name:'Backup example synthetic@example.test'}).getByLabel('动态验证码')).toHaveText('9428 7082');
