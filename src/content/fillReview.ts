@@ -1,5 +1,5 @@
 import { UI_FONT } from '../shared/uiTypography';
-import type { FillChoice } from '../shared/quickFill';
+import type { FillChoice, QuickFillProfileOptions } from '../shared/quickFill';
 export type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 export interface ReviewRow {
   label: string;
@@ -127,7 +127,7 @@ export function chooseFillOption(title: string, description: string, choices: Fi
   });
 }
 
-export function reviewFill(rows: ReviewRow[], apply: (isCurrent: () => boolean) => void | Promise<void>, repair?: () => void): Promise<boolean> {
+export function reviewFill(rows: ReviewRow[], apply: (isCurrent: () => boolean, remember: boolean) => void | Promise<void>, repair?: () => void, profile?: QuickFillProfileOptions & {switchProfile:()=>void}): Promise<boolean> {
   clearFillReview();
   return new Promise(resolve => {
     const previous=document.activeElement;
@@ -151,16 +151,31 @@ export function reviewFill(rows: ReviewRow[], apply: (isCurrent: () => boolean) 
     const footer=root.querySelector('footer')!;
     const finish=(ok:boolean) => {if(settled)return;settled=true;cancelPending=undefined;clearTimeout(expiry);host.remove();if(panel===host)panel=null;if(previous instanceof HTMLElement && previous.isConnected)previous.focus({preventScroll:true});resolve(ok);};
     cancelPending=()=>finish(false);
+    const remember=document.createElement('input');remember.type='checkbox';remember.checked=profile?.remember??false;
+    if(profile){
+      const style=document.createElement('style');
+      style.textContent='.profile{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.profile strong{overflow-wrap:anywhere;flex:1}.preference{display:flex;align-items:flex-start;gap:8px;margin:12px 0;line-height:1.5;overflow-wrap:anywhere}input,button{font:inherit}.preference input{margin:5px 0;accent-color:#2563eb}button:focus-visible,input:focus-visible{outline:2px solid #2563eb;outline-offset:2px}section{box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden}.body{overflow:auto;min-height:0}h2,footer{flex-shrink:0}footer{border-top:1px solid #e5eaf0;padding-top:12px;margin-top:12px}@media(max-width:480px){section{padding:16px;max-height:90vh}th:nth-child(2),td:nth-child(2){display:none}td:first-child,th:first-child{min-width:58px}td:last-child,th:last-child{min-width:56px}footer{gap:6px}footer button{padding:8px;font-size:14px}}';root.append(style);
+      const heading=document.createElement('div');heading.className='profile';
+      const title=document.createElement('strong');title.textContent=profile.title;heading.append(title);
+      if(profile.canSwitch){const change=document.createElement('button');change.textContent='切换资料';change.onclick=()=>{finish(false);profile.switchProfile();};heading.append(change);}
+      body.prepend(heading);
+      const label=document.createElement('label');label.className='preference';
+      const text=document.createElement('span');text.textContent='设为此网站默认资料 · '+profile.origin;
+      label.append(remember,text);body.append(label);
+    }
     const cancel=document.createElement('button');cancel.textContent='取消';cancel.onclick=()=>finish(false);footer.append(cancel);
     if(repair){const button=document.createElement('button');button.textContent='校准未匹配字段';button.onclick=()=>{finish(false);repair();};footer.append(button);}
-    const confirm=document.createElement('button');confirm.textContent='确认填写';confirm.className='primary';confirm.disabled=!rows.some(row=>row.action==='fill'||row.action==='replace');
-    confirm.onclick=async()=>{confirm.disabled=true;cancel.focus();try{await apply(isCurrent);finish(true);}catch(error){intro.textContent=error instanceof Error?error.message:'网页已变化，请重新预览。';confirm.disabled=true;if(isCurrent())cancel.focus();}};
+    const confirm=document.createElement('button');confirm.className='primary';
+    const hasFill=rows.some(row=>row.action==='fill'||row.action==='replace');
+    const updateConfirm=()=>{confirm.textContent=hasFill?'确认填写':'保存默认设置';confirm.disabled=!hasFill && (!profile || remember.checked===profile.remember);};
+    remember.onchange=updateConfirm;updateConfirm();
+    confirm.onclick=async()=>{confirm.disabled=true;cancel.focus();try{await apply(isCurrent,remember.checked);finish(true);}catch(error){intro.textContent=error instanceof Error?error.message:'网页已变化，请重新预览。';confirm.disabled=true;if(isCurrent())cancel.focus();}};
     footer.append(confirm);
     root.addEventListener('keydown',event=>{
       const key=event as KeyboardEvent;
       if(key.key==='Escape'){key.preventDefault();key.stopPropagation();finish(false);}
       if(key.key==='Tab'){
-        const buttons=Array.from(root.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+        const buttons=Array.from(root.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled)'));
         const first=buttons[0],last=buttons[buttons.length-1];
         if(key.shiftKey && root.activeElement===first){key.preventDefault();last?.focus();}
         else if(!key.shiftKey && root.activeElement===last){key.preventDefault();first?.focus();}
@@ -175,7 +190,7 @@ export function showFillResult(count:number,repair?:()=>void){
   const root=createPanel('填写完成');
   panel!.style.cssText='position:fixed;right:20px;bottom:20px;z-index:2147483647';
   root.querySelector('section')!.removeAttribute('aria-modal');
-  root.querySelector('.body')!.textContent='已填写 '+count+' 个字段。可以撤销本次填写，或校准后重新预览。';
+  root.querySelector('.body')!.textContent=count?'已填写 '+count+' 个字段。可以撤销本次填写，或校准后重新预览。':'网页内容未改动。默认资料设置将在密码库中保存。';
   const footer=root.querySelector('footer')!;
   const undo=document.createElement('button');undo.textContent='撤销本次填写';
   undo.onclick=()=>{const result=undoLastFill();root.querySelector('.body')!.textContent='已撤销 '+result.restored+' 个字段，保留 '+result.skipped+' 个已被修改的字段。';undo.disabled=true;};

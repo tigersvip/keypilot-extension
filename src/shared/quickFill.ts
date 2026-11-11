@@ -13,3 +13,9 @@ export interface QuickFillProbe {
   targets: QuickFillTarget[];
 }
 export interface FillChoice { id: string; label: string; detail?: string }
+export interface QuickFillProfileOptions {
+  title: string;
+  origin: string;
+  remember: boolean;
+  canSwitch: boolean;
+}

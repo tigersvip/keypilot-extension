@@ -28,8 +28,10 @@ function plan(current:VaultPlain,incoming:VaultPlain,selected:BackupSettingsSele
   const conflicts:BackupConflict[]=[];
   const credentialIds=new Map<string,string>();
   const totpIds=new Map<string,string>();
+  const profileIds=new Map<string,string>();
   const occupiedCredentialIds=new Set([...current.credentials.map(item=>item.id),...(current.deletedItems ?? []).flatMap(item=>item.kind==='credential'?[item.item.id]:[])]);
   function mapCredential(source:RecordItem,target:RecordItem) {
+    if('fields' in source && 'countryCode' in source && 'fields' in target && 'countryCode' in target)profileIds.set(source.id,target.id);
     if('secret' in source && 'secret' in target)totpIds.set(source.id,target.id);
     if('username' in source && 'username' in target)credentialIds.set(source.id,target.id);
     if('kind' in source && source.kind==='credential' && 'kind' in target && target.kind==='credential' && !credentialIds.has(source.item.id))credentialIds.set(source.item.id,target.item.id);
@@ -89,6 +91,10 @@ function plan(current:VaultPlain,incoming:VaultPlain,selected:BackupSettingsSele
   if(selected.siteRules && vault.settings.siteLoginSettings){
     vault.settings.siteLoginSettings=Object.fromEntries(Object.entries(vault.settings.siteLoginSettings).map(([origin,rule])=>{
       const next={...rule};
+      if(rule.defaultFillProfileId){
+        const id=profileIds.get(rule.defaultFillProfileId);
+        if(id)next.defaultFillProfileId=id;else delete next.defaultFillProfileId;
+      }
       if(rule.defaultCredentialId){
         const id=credentialIds.get(rule.defaultCredentialId);
         if(id)next.defaultCredentialId=id;else delete next.defaultCredentialId;

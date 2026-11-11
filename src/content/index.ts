@@ -5,7 +5,7 @@ import { findCaptchaTarget } from './captchaTarget';
 import { UI_FONT, MONO_FONT } from '../shared/uiTypography';
 import { createPageUuid } from './randomId';
 import { chooseFillOption, focusFillReview, showRepairReady, reviewFill, snapshotControls, rememberFill, showFillResult, clearFillReview, type ReviewRow } from './fillReview';
-import type { QuickFillProbe, QuickFillTarget } from '../shared/quickFill';
+import type { QuickFillProbe, QuickFillTarget, QuickFillProfileOptions } from '../shared/quickFill';
 import type {
   Credential,
   CredentialIconType,
@@ -357,7 +357,13 @@ interface ManualBindingSession {
 
 interface FillProfileBindingSession {
   profile: FillProfilePayload;
-  selectedKey: string;
+  target?: FillControl;
+  lastTarget?: FillControl;
+  allowed?: Set<FillControl>;
+  retry?: () => void;
+  url: string;
+  epoch: number;
+  saving?: boolean;
   bindings: FillFieldBinding[];
   scope: 'path' | 'domain';
   status?: string;
@@ -3144,15 +3150,15 @@ function planFillProfile(profile: FillProfilePayload, allowed?: Set<FillControl>
   });
 }
 
-async function reviewedFillProfile(profile: FillProfilePayload, allowed?: Set<FillControl>, authorize?: () => Promise<boolean>): Promise<FillProfileFillResult> {
+async function reviewedFillProfile(profile: FillProfilePayload, allowed?: Set<FillControl>, authorize?: () => Promise<boolean>, preference?: QuickFillProfileOptions): Promise<FillProfileFillResult & {rememberForSite?:boolean}> {
   const plan = planFillProfile(profile, allowed);
   const epoch=credentialFillEpoch, url=location.href;
-  const repair = () => startFillProfileBinding(profile);
-  let result: FillProfileFillResult = {ok:false,error:'FILL_CANCELLED',filledCount:0,matchedCount:0,skippedCount:0,totalFields:plan.length};
+  const repair = () => startFillProfileBinding(profile,allowed,preference ? () => {void sendRuntimeMessage({type:'KEYPILOT_RETRY_QUICK_FILL'});} : undefined);
+  let result: FillProfileFillResult & {rememberForSite?:boolean} = {ok:false,error:'FILL_CANCELLED',filledCount:0,matchedCount:0,skippedCount:0,totalFields:plan.length};
   const confirmed = await reviewFill(plan.map(row => ({
     label:row.field.label,target:row.match ? controlLabel(row.match.control) : undefined,
     action:row.action as ReviewRow['action'],value:row.field.value,secret:row.field.sensitivity !== 'normal'
-  })), async (isCurrent) => {
+  })), async (isCurrent,rememberForSite) => {
     if(authorize && !await authorize())throw new Error('页面或密码库状态已变化，请取消后重新使用快捷键。');
     if(!isCurrent() || epoch!==credentialFillEpoch || location.href!==url)throw new Error('页面或密码库状态已变化，请重新预览。');
     for(const row of plan) {
@@ -3174,8 +3180,9 @@ async function reviewedFillProfile(profile: FillProfilePayload, allowed?: Set<Fi
       diagnostics.push({key:row.field.key,label:row.field.label,status:skipped?'skipped':filled?'filled':'matched',controlLabel:controlLabel(row.match.control),score:row.match.score,binding:row.match.binding});
     }
     rememberFill(before);
-    result={ok:filledCount>0,error:filledCount?undefined:'NO_FILL_PROFILE_FIELDS',filledCount,matchedCount,skippedCount,totalFields:plan.length,diagnostics};
-  }, repair);
+    const ok=filledCount>0 || Boolean(preference && rememberForSite!==preference.remember);
+    result={ok,error:ok?undefined:'NO_FILL_PROFILE_FIELDS',filledCount,matchedCount,skippedCount,totalFields:plan.length,diagnostics,rememberForSite};
+  }, repair,preference ? {...preference,switchProfile:()=>{result.error='FILL_SWITCH_PROFILE';}} : undefined);
   if(confirmed)showFillResult(result.filledCount,repair);
   return result;
 }
@@ -3667,246 +3674,56 @@ async function applyLoginRecognitionRule() {
 }
 
 function renderFillProfileBinding() {
-  if (!fillProfileBinding) return;
+  const state=fillProfileBinding;
+  if(!state)return;
   ensureBindingUi();
-  if (!bindingRoot) return;
-
-  const fields = expandFillProfileFields(fillProfileBinding.profile);
-  const selectedField = fields.find((field) => field.key === fillProfileBinding?.selectedKey) ?? fields[0];
-  const boundKeys = new Set(fillProfileBinding.bindings.map((binding) => binding.key));
-  const pathPattern = currentRulePathPattern();
-  const scopeText = fillProfileBinding.scope === 'path' && pathPattern
-    ? `仅当前路径：${pathPattern}`
-    : `整个域名：${window.location.hostname.toLowerCase()}`;
-  const options = fields
-    .map((field) => `<option value="${escapeHtml(field.key)}" ${field.key === selectedField?.key ? 'selected' : ''}>${escapeHtml(field.label)}${boundKeys.has(field.key) ? ' · 已绑定' : ''}</option>`)
-    .join('');
-
-  bindingRoot.innerHTML = `
-    <style>
-      :host { all: initial; }
-      * { box-sizing: border-box; }
-      .panel {
-        border: 1px solid #d7e4f7;
-        border-radius: 14px;
-        background: #ffffff;
-        box-shadow: 0 18px 48px rgba(16, 24, 40, 0.2);
-        color: #101828;
-        font-family: ${UI_FONT};
-        overflow: hidden;
-        animation: keypilot-bind-in 160ms ease-out both;
-      }
-      header {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 28px;
-        align-items: center;
-        gap: 10px;
-        border-bottom: 1px solid #edf2f8;
-        background: #fbfdff;
-        padding: 12px 12px 10px;
-      }
-      h3 {
-        margin: 0;
-        color: #111827;
-        font-size: 15px;
-        font-weight: 800;
-      }
-      button, select { font: inherit; }
-      .close {
-        display: grid;
-        width: 28px;
-        height: 28px;
-        place-items: center;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        color: #667085;
-        cursor: pointer;
-        font-size: 18px;
-      }
-      .close:hover { background: #f2f4f7; color: #344054; }
-      .body {
-        display: grid;
-        gap: 10px;
-        padding: 11px 12px 12px;
-      }
-      .current {
-        border: 1px solid #cfe0ff;
-        border-radius: 10px;
-        background: #f5f8ff;
-        padding: 9px 10px;
-      }
-      .current strong {
-        display: block;
-        color: #175cd3;
-        font-size: 13px;
-        font-weight: 850;
-      }
-      .current span {
-        display: block;
-        margin-top: 4px;
-        color: #475467;
-        font-size: 12px;
-        line-height: 1.4;
-      }
-      select {
-        width: 100%;
-        height: 36px;
-        border: 1px solid #d0d5dd;
-        border-radius: 9px;
-        background: #ffffff;
-        color: #111827;
-        padding: 0 10px;
-        font-size: 13px;
-        outline: none;
-      }
-      select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
-      .status {
-        margin: 0;
-        color: #475467;
-        font-size: 12px;
-        line-height: 1.45;
-      }
-      .actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-      .actions button {
-        min-height: 34px;
-        border: 1px solid #d0d5dd;
-        border-radius: 9px;
-        background: #ffffff;
-        color: #344054;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 760;
-      }
-      .actions .primary {
-        border-color: #2563eb;
-        background: #2563eb;
-        color: #ffffff;
-      }
-      .actions button:hover { transform: translateY(-1px); }
-      .scope {
-        display: grid;
-        gap: 7px;
-      }
-      .scope-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        border: 1px solid #d7e4f7;
-        border-radius: 10px;
-        background: #f8fbff;
-        padding: 4px;
-      }
-      .scope-row button {
-        height: 30px;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        color: #475467;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 800;
-      }
-      .scope-row button.active {
-        background: #ffffff;
-        color: #175cd3;
-        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.1);
-      }
-      .scope small {
-        color: #667085;
-        font-size: 11px;
-        line-height: 1.35;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .count {
-        display: inline-flex;
-        width: fit-content;
-        border: 1px solid #bbf7d0;
-        border-radius: 999px;
-        background: #f0fdf4;
-        color: #166534;
-        padding: 5px 9px;
-        font-size: 11px;
-        font-weight: 800;
-      }
-      @keyframes keypilot-bind-in {
-        from { opacity: 0; transform: translateY(-8px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .panel { animation-duration: 1ms; }
-        .actions button:hover { transform: none; }
-      }
-    </style>
-    <section class="panel" role="dialog" aria-label="KeyPilot 填表字段绑定">
-      <header>
-        <h3>绑定填表字段</h3>
-        <button class="close" type="button" data-fill-binding-action="cancel" aria-label="取消绑定">×</button>
-      </header>
-      <div class="body">
-        <div class="current">
-          <strong>${escapeHtml(selectedField ? `点击网页中的“${selectedField.label}”输入框` : '选择字段')}</strong>
-          <span>先在下方选择资料字段，再点击网页上对应的输入框、下拉框或文本框。</span>
-        </div>
-        <select data-fill-binding-field aria-label="选择要绑定的资料字段">${options}</select>
-        <div class="scope">
-          <div class="scope-row" role="group" aria-label="规则应用范围">
-            <button class="${fillProfileBinding.scope === 'path' ? 'active' : ''}" type="button" data-fill-binding-scope="path" ${pathPattern ? '' : 'disabled'}>当前路径</button>
-            <button class="${fillProfileBinding.scope === 'domain' ? 'active' : ''}" type="button" data-fill-binding-scope="domain">整个域名</button>
-          </div>
-          <small title="${escapeHtml(scopeText)}">${escapeHtml(scopeText)}</small>
-        </div>
-        <span class="count">已绑定 ${fillProfileBinding.bindings.length} 个字段</span>
-        <p class="status">${escapeHtml(fillProfileBinding.status || '点击页面里的对应表单字段。按 Esc 可取消。')}</p>
-        <div class="actions">
-          <button type="button" data-fill-binding-action="skip">跳过此字段</button>
-          <button class="primary" type="button" data-fill-binding-action="save">保存绑定</button>
-        </div>
-      </div>
-    </section>
-  `;
-
-  bindingRoot.querySelector<HTMLElement>('[data-fill-binding-action="cancel"]')?.addEventListener('click', (event) => {
-    event.preventDefault();
-    stopFillProfileBinding('已取消填表字段绑定。');
-  });
-  bindingRoot.querySelector<HTMLElement>('[data-fill-binding-action="skip"]')?.addEventListener('click', (event) => {
-    event.preventDefault();
-    selectNextFillBindingField();
-  });
-  bindingRoot.querySelector<HTMLElement>('[data-fill-binding-action="save"]')?.addEventListener('click', (event) => {
-    event.preventDefault();
-    void saveFillProfileBinding();
-  });
-  bindingRoot.querySelector<HTMLSelectElement>('[data-fill-binding-field]')?.addEventListener('change', (event) => {
-    const select = event.currentTarget as HTMLSelectElement | null;
-    if (!fillProfileBinding) return;
-    fillProfileBinding.selectedKey = select?.value ?? fillProfileBinding.selectedKey;
-    fillProfileBinding.status = '现在点击网页上对应的表单字段。';
-    renderFillProfileBinding();
-  });
-  bindingRoot.querySelectorAll<HTMLElement>('[data-fill-binding-scope]').forEach((button) => {
-    button.addEventListener('click', (event) => {
-      event.preventDefault();
-      if (!fillProfileBinding) return;
-      const nextScope = button.dataset.fillBindingScope === 'domain' ? 'domain' : 'path';
-      fillProfileBinding.scope = nextScope;
-      fillProfileBinding.status = nextScope === 'path' ? '规则将只应用到当前路径。' : '规则将应用到整个域名。';
-      renderFillProfileBinding();
-    });
-  });
+  if(!bindingRoot || !bindingHost)return;
+  bindingHost.style.width='min(340px, calc(100vw - 40px))';
+  const fields=expandFillProfileFields(state.profile), pathPattern=currentRulePathPattern();
+  bindingRoot.innerHTML=`<style>
+    :host{all:initial;font:15px ${UI_FONT};color:#172338}*{box-sizing:border-box}
+    section{background:white;border:1px solid #dbe3ee;border-radius:12px;box-shadow:0 12px 36px #0002;padding:16px;max-height:calc(100vh - 40px);overflow:auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}h3{font-size:17px;margin:0}p{line-height:1.5;margin:12px 0}small{font-size:13px;color:#52647d;overflow-wrap:anywhere}
+    button,select{font:inherit;color:inherit;border:1px solid #cbd5e1;border-radius:6px;background:white;padding:8px;cursor:pointer}select{width:100%;margin:8px 0}button:disabled,select:disabled{opacity:.5;cursor:default}
+    button:hover:not(:disabled){background:#edf3ff}button:focus-visible,select:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.primary{background:#2563eb;color:white}.primary:hover:not(:disabled){background:#1d4ed8}
+    .scope,footer{display:flex;gap:8px;margin-top:12px}.scope button{flex:1}.scope button[aria-pressed=true]{background:#edf3ff;color:#173767;border-color:#2563eb}footer{justify-content:flex-end}.status{color:#52647d}ul{padding-left:20px;max-height:150px;overflow:auto}li{margin:8px 0;overflow-wrap:anywhere}li button{padding:2px 6px;margin-left:6px;font-size:13px}
+    </style><section role="dialog" aria-label="KeyPilot 填表字段绑定">
+      <header><h3>校准漏填字段</h3><button type="button" data-action="cancel" aria-label="取消绑定">×</button></header>
+      <p>${state.target ? '已选网页字段：'+escapeHtml(controlLabel(state.target)||'未命名字段') : '先点击网页上漏填的输入框、下拉框或文本框。'}</p>
+      <label>对应的资料字段<select data-fill-binding-field aria-label="选择要绑定的资料字段" ${!state.target||state.saving?'disabled':''}>
+        <option value="">请选择资料字段</option>${fields.map(field=>`<option value="${escapeHtml(field.key)}">${escapeHtml(field.label)}</option>`).join('')}
+      </select></label>
+      <div class="scope" role="group" aria-label="规则应用范围">
+        <button type="button" data-scope="path" aria-pressed="${state.scope==='path'}" ${!pathPattern||state.saving?'disabled':''}>当前路径</button>
+        <button type="button" data-scope="domain" aria-pressed="${state.scope==='domain'}" ${state.saving?'disabled':''}>整个域名</button>
+      </div><p><small>${escapeHtml(location.hostname+(state.scope==='path'?pathPattern??'':''))}</small></p>
+      <small>已绑定 ${state.bindings.length} 个字段</small><ul>${state.bindings.map(binding=>`<li>${escapeHtml(fields.find(field=>field.key===binding.key)?.label??binding.key)} → ${escapeHtml(binding.controlLabel||binding.name||binding.id||'网页字段')}<button type="button" data-remove="${escapeHtml(binding.key)}" ${state.saving?'disabled':''}>移除</button></li>`).join('')}</ul>
+      <p class="status" role="status">${escapeHtml(state.status??'选择后可继续点击其他漏填框。按 Esc 取消。')}</p>
+      <footer><button type="button" class="primary" data-fill-binding-action="save" ${!state.bindings.length||state.saving||state.target?'disabled':''}>保存绑定</button></footer>
+    </section>`;
+  bindingRoot.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.onclick=()=>stopFillProfileBinding();
+  bindingRoot.querySelector<HTMLButtonElement>('[data-fill-binding-action="save"]')!.onclick=()=>{void saveFillProfileBinding();};
+  bindingRoot.querySelector<HTMLSelectElement>('select')!.onchange=event=>{
+    if(fillProfileBinding!==state || state.saving || state.url!==location.href || state.epoch!==credentialFillEpoch)return;
+    const field=fields.find(field=>field.key===(event.target as HTMLSelectElement).value),target=state.target;
+    if(!field || !target?.isConnected || !isFillableControl(target))return;
+    const binding=createFillFieldBinding(target,field);
+    state.bindings=[binding,...state.bindings.filter(item=>item.key!==field.key && (!binding.selector || item.selector!==binding.selector))];
+    state.target=undefined;state.status='已对应“'+field.label+'”。可以继续点击其他漏填框，或保存绑定。';
+    renderFillProfileBinding();bindingRoot?.querySelector<HTMLButtonElement>('[data-fill-binding-action="save"]')?.focus();
+  };
+  bindingRoot.querySelectorAll<HTMLButtonElement>('[data-scope]').forEach(button=>{button.onclick=()=>{
+    if(state.saving)return;state.scope=button.dataset.scope==='domain'?'domain':'path';renderFillProfileBinding();
+  };});
+  bindingRoot.querySelectorAll<HTMLButtonElement>('[data-remove]').forEach(button=>{button.onclick=()=>{
+    if(state.saving)return;state.bindings=state.bindings.filter(item=>item.key!==button.dataset.remove);renderFillProfileBinding();
+  };});
 }
 
 function getFillProfileBindingTarget(event: Event): FillControl | null {
   if (!fillProfileBinding || bindingEventHitsPanel(event)) return null;
   const target = event.target instanceof HTMLElement ? targetAsFillControl(event.target) : null;
-  return target && isFillableControl(target) ? target : null;
+  return target && !fillProfileBinding.saving && fillProfileBinding.url===location.href && fillProfileBinding.epoch===credentialFillEpoch && (!fillProfileBinding.allowed || fillProfileBinding.allowed.has(target)) && isFillableControl(target) && !(target instanceof HTMLInputElement && (isPasswordInput(target)||isUnsafeField(target))) ? target : null;
 }
 
 function targetAsFillControl(target: HTMLElement): FillControl | null {
@@ -3917,33 +3734,15 @@ function targetAsFillControl(target: HTMLElement): FillControl | null {
   return null;
 }
 
-function selectNextFillBindingField() {
-  if (!fillProfileBinding) return;
-  const fields = expandFillProfileFields(fillProfileBinding.profile);
-  const boundKeys = new Set(fillProfileBinding.bindings.map((binding) => binding.key));
-  const currentIndex = Math.max(0, fields.findIndex((field) => field.key === fillProfileBinding?.selectedKey));
-  const next =
-    fields.slice(currentIndex + 1).find((field) => !boundKeys.has(field.key)) ??
-    fields.find((field) => !boundKeys.has(field.key)) ??
-    fields[(currentIndex + 1) % Math.max(1, fields.length)];
-
-  if (next) {
-    fillProfileBinding.selectedKey = next.key;
-    fillProfileBinding.status = `已切换到“${next.label}”。`;
-  }
-  renderFillProfileBinding();
-}
-
-function startFillProfileBinding(profile: FillProfilePayload) {
+function startFillProfileBinding(profile: FillProfilePayload, allowed?: Set<FillControl>, retry?:()=>void) {
   stopManualBinding();
   stopFillProfileBinding();
-  const fields = expandFillProfileFields(profile);
   fillProfileBinding = {
     profile,
-    selectedKey: fields[0]?.key ?? '',
+    allowed,retry,url:location.href,epoch:credentialFillEpoch,
     bindings: [...(profile.siteBinding?.fields ?? [])],
     scope: currentRulePathPattern() ? 'path' : 'domain',
-    status: '选择字段后，点击网页上对应的表单字段。'
+    status: '先点击网页上的漏填框，再选择它对应的资料字段。'
   };
 
   document.addEventListener('click', handleFillProfileBindingClick, true);
@@ -3990,59 +3789,59 @@ function handleFillProfileBindingClick(event: MouseEvent) {
   event.preventDefault();
   event.stopImmediatePropagation();
 
-  const field = expandFillProfileFields(fillProfileBinding.profile).find((item) => item.key === fillProfileBinding?.selectedKey);
-  if (!field) {
-    fillProfileBinding.status = '请先选择要绑定的资料字段。';
-    renderFillProfileBinding();
-    return;
-  }
-
-  const binding = createFillFieldBinding(target, field);
-  fillProfileBinding.bindings = [binding, ...fillProfileBinding.bindings.filter((item) => item.key !== field.key)];
-  fillProfileBinding.status = `已绑定“${field.label}”到“${binding.controlLabel || binding.name || binding.id || binding.selector || '字段'}”。`;
-  setBindingHighlight(target);
-  selectNextFillBindingField();
+  fillProfileBinding.target=target;fillProfileBinding.lastTarget=target;
+  fillProfileBinding.status='已选中网页字段，请选择对应的资料。';
+  setBindingHighlight(target);renderFillProfileBinding();
+  bindingRoot?.querySelector<HTMLSelectElement>('select')?.focus();
 }
 
 async function saveFillProfileBinding() {
-  if (!fillProfileBinding) return;
+  const state=fillProfileBinding;
+  if (!state || state.saving || state.target || state.url!==location.href || state.epoch!==credentialFillEpoch) return;
 
-  if (!fillProfileBinding.bindings.length) {
-    fillProfileBinding.status = '至少绑定一个字段后再保存。';
+  if (!state.bindings.length) {
+    state.status = '至少绑定一个字段后再保存。';
     renderFillProfileBinding();
     return;
   }
 
-  fillProfileBinding.status = '正在保存绑定规则...';
+  state.saving=true;
+  state.status = '正在保存绑定规则...';
   renderFillProfileBinding();
 
   const binding: FillProfileBindingResult = {
-    profileId: fillProfileBinding.profile.id,
+    profileId: state.profile.id,
     url: window.location.href,
     domain: window.location.hostname.toLowerCase(),
-    pathPattern: fillProfileBinding.scope === 'path' ? currentRulePathPattern() : undefined,
-    fields: fillProfileBinding.bindings
+    pathPattern: state.scope === 'path' ? currentRulePathPattern() : undefined,
+    fields: state.bindings
   };
 
   try {
     const response = await sendRuntimeMessage<{ ok: boolean; error?: string; locked?: boolean }>({
       type: 'KEYPILOT_SAVE_FILL_PROFILE_BINDING',
-      binding
+      binding,revision:state.profile.revision
     });
 
     if (!response.ok) {
       throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'FILL_BINDING_SAVE_FAILED'));
     }
 
+    if(fillProfileBinding!==state || state.url!==location.href || state.epoch!==credentialFillEpoch)return;
     if (fillProfileBinding) {
       fillProfileBinding.status = '已保存绑定。下次填写身份资料会优先使用这组字段。';
       renderFillProfileBinding();
     }
 
     stopFillProfileBinding('已保存填表字段绑定。');
-    showRepairReady(() => {void handleInlineFillProfile(binding.profileId);});
+    showRepairReady(() => {
+      if(state.url!==location.href || state.epoch!==credentialFillEpoch)return;
+      state.lastTarget?.focus({preventScroll:true});
+      if(state.retry)state.retry();else void handleInlineFillProfile(binding.profileId);
+    });
   } catch (error) {
-    if (fillProfileBinding) {
+    if (fillProfileBinding===state) {
+      state.saving=false;
       fillProfileBinding.status = inlineErrorMessage(error);
       renderFillProfileBinding();
     }
@@ -4482,6 +4281,7 @@ interface QuickFillScope {
 }
 let quickFillState: {probe:QuickFillProbe; scopes:Map<string,QuickFillScope>; epoch:number; expiresAt:number} | undefined;
 for(const event of ['pagehide','popstate','hashchange'])window.addEventListener(event,()=>{
+  if(fillProfileBinding)stopFillProfileBinding();
   if(!quickFillState)return;
   quickFillState=undefined;clearFillReview();
 });
@@ -4529,7 +4329,7 @@ function quickFillTarget(token:string,targetId:string): QuickFillScope | undefin
   return target;
 }
 
-async function applyQuickFill(message:{token:string;targetId:string;profile?:FillProfilePayload;credential?:FillCredentialPayload}) {
+async function applyQuickFill(message:{token:string;targetId:string;profile?:FillProfilePayload;credential?:FillCredentialPayload;preference?:QuickFillProfileOptions}) {
   const target=quickFillTarget(message.token,message.targetId);
   if(!target)return {ok:false,error:'QUICK_FILL_STALE'};
   const authorize=async()=>{
@@ -4537,7 +4337,7 @@ async function applyQuickFill(message:{token:string;targetId:string;profile?:Fil
     return result?.ok && quickFillTarget(message.token,message.targetId)===target;
   };
   if(!await authorize())return {ok:false,error:'QUICK_FILL_STALE'};
-  if(message.profile)return reviewedFillProfile({...message.profile,onlyEmpty:true},target.controls,authorize);
+  if(message.profile)return reviewedFillProfile({...message.profile,onlyEmpty:true},target.controls,authorize,message.preference);
   if(message.credential && target.login){
     return fillCredential({...message.credential,autoSubmit:false,loginRequested:false},false,target.login);
   }

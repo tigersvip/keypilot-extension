@@ -12,7 +12,7 @@ import type {FillProfile} from '../../src/shared/types';
 // an isolated extension copy; the packaged extension contains no test entry point.
 let extension:string,context:BrowserContext,worker:Worker;
 const site='https://shortcut.example.test';
-const evidence=resolve(process.env.TEMP??tmpdir(),'keypilot-v1.13.0');
+const evidence=resolve(process.env.TEMP??tmpdir(),'keypilot-v1.14.0');
 const fields='<label>Full name <input id="name" name="fullName" autocomplete="name"></label><label>Email <input id="email" type="email" autocomplete="email"></label><label>Street address <textarea id="address" autocomplete="street-address"></textarea></label><label>Country <select id="country" autocomplete="country-name"><option value="">Choose</option><option>United States</option></select></label>';
 const login='<label>Username <input id="username" autocomplete="username"></label><label>Password <input id="password" type="password" autocomplete="current-password"></label>';
 const profile=(id='one',name='Example Person'):FillProfile=>({id,title:name,countryCode:'US',category:'identity',createdAt:1,updatedAt:1,privacyVersion:1,fields:[
@@ -52,6 +52,99 @@ async function command(name='fill-current'){await worker.evaluate(name=>(globalT
 async function panel(page:Page,title:string){const node=page.locator('#keypilot-fill-review');await expect(node).toHaveAttribute('aria-label',title);return node;}
 async function confirm(page:Page){await panel(page,'预览填写内容');await page.keyboard.press('Enter');await panel(page,'填写完成');}
 async function getProbe(page:Page){return worker.evaluate(async url=>{const tab=(await chrome.tabs.query({})).find(tab=>tab.url===url)!;return chrome.tabs.sendMessage(tab.id!,{type:'KEYPILOT_PROBE_QUICK_FILL'},{frameId:0});},page.url());}
+
+async function defaultProfile(){return worker.evaluate(async()=>{
+  const cache=(await chrome.storage.session.get('keypilot.unlockedSession'))['keypilot.unlockedSession'];
+  return cache.vault.settings.siteLoginSettings?.['https://shortcut.example.test']?.defaultFillProfileId;
+});}
+async function toggleRemember(page:Page){
+  await panel(page,'预览填写内容');
+  for(let i=0;i<3;i++)await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Space');
+  for(let i=0;i<3;i++)await page.keyboard.press('Tab');
+}
+
+test('default identity persists across navigation, switches explicitly, and can be cleared',async()=>{
+  const vault=fixture();vault.fillProfiles=[profile(),profile('two','Second Person')];await seed(vault);
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');
+  await page.locator('#name').focus();await command();await panel(page,'选择填写资料');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+  await toggleRemember(page);await page.screenshot({path:resolve(evidence,'default-preview-desktop.png')});await confirm(page);
+  await expect.poll(defaultProfile).toBe('two');
+  await page.reload();await page.locator('#name').focus();await command();await panel(page,'预览填写内容');
+  await page.setViewportSize({width:400,height:650});await page.screenshot({path:resolve(evidence,'default-preview-400.png')});
+  // The default must still offer a keyboard-accessible profile switch.
+  for(let i=0;i<4;i++)await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  await panel(page,'选择填写资料');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await confirm(page);await expect(page.locator('#name')).toHaveValue('Example Person');
+  await expect.poll(defaultProfile).toBe('two');
+  await page.reload();await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await toggleRemember(page);await confirm(page);
+  await expect.poll(defaultProfile).toBeUndefined();
+  await page.reload();await page.locator('#name').focus();await command();await panel(page,'选择填写资料');
+});
+
+test('cancelled preference does not persist; missing default falls back to selection',async()=>{
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');await page.locator('#name').focus();await command();await toggleRemember(page);await page.keyboard.press('Escape');
+  expect(await defaultProfile()).toBeUndefined();await expect(page.locator('#name')).toHaveValue('');
+  const vault=fixture();vault.fillProfiles=[profile(),profile('two')];vault.settings.siteLoginSettings={[site]:{defaultFillProfileId:'deleted'}};await seed(vault);
+  await page.locator('#name').focus();await command();await panel(page,'选择填写资料');
+});
+
+test('default belongs only to the exact origin, and lock cancels a remembered preview',async()=>{
+  const vault=fixture();vault.fillProfiles=[profile(),profile('two')];vault.settings.siteLoginSettings={'http://shortcut.example.test':{defaultFillProfileId:'two'},'https://shortcut.example.test:8443':{defaultFillProfileId:'two'}};await seed(vault);
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');await page.locator('#name').focus();await command();await panel(page,'选择填写资料');await page.keyboard.press('Enter');await toggleRemember(page);
+  await command('lock-vault');await expect(page.locator('#keypilot-fill-review')).toHaveCount(0);await expect(page.locator('#name')).toHaveValue('');
+});
+
+test('click-first repair saves a missing field, retries scoped preview and works after reload',async()=>{
+  const vault=fixture();vault.fillProfiles![0].fields.push({key:'projectCode',label:'项目编号',value:'PROJECT-42',group:'custom',sensitivity:'normal'} as any);await seed(vault);
+  const page=await pageWith('<form id="main"><h2>Personal information</h2>'+fields+'<label>Internal field<input id="opaque" name="zqxv"></label></form><form><h2>Other form</h2><input id="other" name="fullName"></form>');
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  const repair=page.locator('#keypilot-binding-root');await expect(repair.getByRole('heading',{name:'校准漏填字段'})).toBeVisible();
+  await expect(repair.getByLabel('选择要绑定的资料字段')).toBeDisabled();await page.locator('#other').click();await expect(repair.getByLabel('选择要绑定的资料字段')).toBeDisabled();
+  await page.locator('#opaque').click();await expect(repair.getByLabel('选择要绑定的资料字段')).toBeEnabled();await repair.getByLabel('选择要绑定的资料字段').selectOption('projectCode');
+  await expect(repair).toContainText('项目编号 →');await page.setViewportSize({width:400,height:650});
+  await page.screenshot({path:resolve(evidence,'repair-400.png')});await repair.getByRole('button',{name:'保存绑定'}).click();
+  await panel(page,'字段绑定已保存');await page.keyboard.press('Enter');await confirm(page);await expect(page.locator('#opaque')).toHaveValue('PROJECT-42');await expect(page.locator('#other')).toHaveValue('');
+  await page.reload();await page.locator('#name').focus();await command();await confirm(page);await expect(page.locator('#opaque')).toHaveValue('PROJECT-42');expect(errors).toEqual([]);
+});
+
+test('repair excludes passwords and cancels on navigation or lock',async()=>{
+  const page=await pageWith('<form><h2>Create account</h2>'+fields+'<input id="password" type="password" autocomplete="new-password"></form>');
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  const repair=page.locator('#keypilot-binding-root');await expect(repair).toBeVisible();await page.locator('#password').click();await expect(repair.getByLabel('选择要绑定的资料字段')).toBeDisabled();
+  await page.evaluate(()=>{location.hash='changed';});await expect(repair).toHaveCount(0);
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');await expect(repair).toBeVisible();await command('lock-vault');await expect(repair).toHaveCount(0);
+});
+
+test('profile changes while calibrating cannot be overwritten by stale bindings',async()=>{
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  const repair=page.locator('#keypilot-binding-root');await expect(repair).toBeVisible();await page.locator('#name').click();await repair.getByLabel('选择要绑定的资料字段').selectOption('fullName');
+  const vault=fixture();vault.fillProfiles![0].updatedAt=2;vault.fillProfiles![0].fields[0].value='New value';await seed(vault);
+  await repair.getByRole('button',{name:'保存绑定'}).click();await expect(repair.getByRole('status')).toContainText('资料已变化');
+  await expect(page.locator('#name')).toHaveValue('');
+  expect(await worker.evaluate(async()=>{const cache=(await chrome.storage.session.get('keypilot.unlockedSession'))['keypilot.unlockedSession'];return cache.vault.fillProfiles[0].siteBindings??[];})).toEqual([]);
+});
+
+test('default can be cleared when the form already has values, without changing those values',async()=>{
+  const vault=fixture();vault.settings.siteLoginSettings={[site]:{defaultFillProfileId:'one'}};await seed(vault);
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');
+  await page.locator('#name').fill('Keep name');await page.locator('#email').fill('keep@example.test');await page.locator('#address').fill('Keep address');await page.locator('#country').selectOption({label:'United States'});
+  await page.locator('#name').focus();await command();await panel(page,'预览填写内容');
+  // With no empty fields, focus starts on Cancel; changing the preference enables Save.
+  await page.keyboard.press('Shift+Tab');await page.keyboard.press('Space');for(let i=0;i<3;i++)await page.keyboard.press('Tab');await page.keyboard.press('Enter');
+  await panel(page,'填写完成');await expect.poll(defaultProfile).toBeUndefined();
+  await expect(page.locator('#name')).toHaveValue('Keep name');await expect(page.locator('#email')).toHaveValue('keep@example.test');await expect(page.locator('#address')).toHaveValue('Keep address');
+});
+
+test('recording a successful fill does not invalidate its immediate repair action',async()=>{
+  const page=await pageWith('<form><h2>Personal information</h2>'+fields+'</form>');
+  await page.locator('#name').focus();await command();await confirm(page);
+  await expect.poll(()=>worker.evaluate(async()=>{const cache=(await chrome.storage.session.get('keypilot.unlockedSession'))['keypilot.unlockedSession'];return cache.vault.fillProfiles[0].lastUsedAt??0;})).toBeGreaterThan(0);
+  await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');
+  const repair=page.locator('#keypilot-binding-root');await expect(repair).toBeVisible();await page.locator('#name').click();await repair.getByLabel('选择要绑定的资料字段').selectOption('fullName');
+  await repair.getByRole('button',{name:'保存绑定'}).click();await panel(page,'字段绑定已保存');
+});
 
 test('single identity previews English form, keeps existing values, fills select/textarea and can undo',async()=>{
   const page=await pageWith('<form><h2>Personal information</h2>'+fields+'<button>Save</button></form>');

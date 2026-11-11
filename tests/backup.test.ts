@@ -6,13 +6,39 @@ import { backupSettingsChanges, backupSettingsSnapshot, mergeBackupSettings } fr
 import { backupCollections } from '../src/shared/backupInventory';
 import { createEncryptedVault, unlockEncryptedVault, unlockEncryptedVaultWithRecoveryCode } from '../src/shared/crypto';
 import { createEmptyVault } from '../src/shared/defaults';
-import { clearVaultSessionCache, createVaultSession, persistVaultSession, unlockVaultSession, upsertVaultSettings } from '../src/shared/vault';
+import { clearVaultSessionCache, createVaultSession, deleteFillProfileFromVault, persistVaultSession, unlockVaultSession, upsertVaultSettings } from '../src/shared/vault';
 import { getEncryptedVault, getRecoverySnapshots, VAULT_STORAGE_KEY } from '../src/shared/storage';
 import { generateTotp } from '../src/shared/totp';
 import { completeBackupFixture } from './fixtures/completeBackup';
 
 const master = 'Synthetic-backup!42';
 const incomingPassword = 'Synthetic-incoming!42';
+
+test('profile defaults validate IDs and are removed when their profile is deleted',()=>{
+  const vault=completeBackupFixture(),origin='https://backup.example.test';
+  const deleted=deleteFillProfileFromVault(vault,'backup-profile');
+  assert.equal(deleted.settings.siteLoginSettings![origin].defaultFillProfileId,undefined);
+  assert.equal(deleted.settings.siteLoginSettings![origin].autoSubmit,false);
+  assert.equal(vault.settings.siteLoginSettings![origin].defaultFillProfileId,'backup-profile');
+  for(const value of ['',42,'x'.repeat(201),{}]){
+    const invalid=structuredClone(vault);invalid.settings.siteLoginSettings![origin].defaultFillProfileId=value as string;
+    assert.throws(()=>validateBackup(invalid),/网站登录设置/);
+  }
+});
+
+test('profile defaults follow imported profiles for every backup conflict choice',()=>{
+  const current=completeBackupFixture(),incoming=structuredClone(current),origin='https://backup.example.test',id='backup-profile';
+  incoming.fillProfiles![0].title='Imported profile';
+  for(const choice of ['both','current','incoming'] as const){
+    const merged=mergeBackup(current,incoming,{siteRules:true},{[JSON.stringify(['fillProfiles',id])]:choice});
+    const preferred=merged.fillProfiles!.find(item=>item.id===merged.settings.siteLoginSettings![origin].defaultFillProfileId)!;
+    assert.equal(preferred.title,choice==='current'?'Synthetic profile':'Imported profile');
+    assert.equal(preferred.id===id,choice!=='both');
+  }
+  assert.equal(mergeBackup(current,incoming,{preferences:true}).settings.siteLoginSettings![origin].defaultFillProfileId,id);
+  incoming.fillProfiles=[];
+  assert.equal(mergeBackup(current,incoming,{siteRules:true}).settings.siteLoginSettings![origin].defaultFillProfileId,undefined);
+});
 
 test('site preferences validate exact origins and restore with the site settings group',()=>{
   const current=createEmptyVault().settings,incoming={...current,siteLoginSettings:{'https://site.example.test':{fillEnabled:false,autoSubmit:false,defaultCredentialId:'login',totpAccountByCredential:{login:'otp'}}}};

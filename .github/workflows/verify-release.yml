@@ -1,0 +1,75 @@
+name: Verify and release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TEMP: /tmp/keypilot-ci
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: mkdir -p "$TEMP"
+      - run: npm ci
+      - run: npm run release:check
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:regression
+      - run: npx tsx tools/package.mts
+      - run: npm run release:notes
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-package
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            keypilot-extension-v*.zip
+            output/release/*
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: browser-failure-evidence
+          retention-days: 7
+          path: output/playwright/
+
+  publish:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-package
+          path: release
+      - name: Publish verified package
+        working-directory: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          sha256sum --check "output/release/keypilot-extension-${RELEASE_TAG}.sha256"
+          gh release create "$RELEASE_TAG" --verify-tag --title "KeyPilot $RELEASE_TAG" --notes-file output/release/notes.md "keypilot-extension-${RELEASE_TAG}.zip" "output/release/keypilot-extension-${RELEASE_TAG}.sha256"

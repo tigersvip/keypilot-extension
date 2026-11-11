@@ -725,12 +725,23 @@ export function updateFillProfileInVault(vault: VaultPlain, profile: FillProfile
   };
 }
 
+export function touchFillProfileInVault(vault:VaultPlain,profileId:string):VaultPlain {
+  return {...vault,fillProfiles:(vault.fillProfiles??[]).map(profile=>profile.id===profileId?{...profile,lastUsedAt:Date.now()}:profile)};
+}
+
 export function deleteFillProfileFromVault(vault: VaultPlain, profileId: string): VaultPlain {
   const profile = (vault.fillProfiles ?? []).find((item) => item.id === profileId);
   if (!profile) return vault;
 
   return {
     ...vault,
+    settings: {...vault.settings, ...(vault.settings.siteLoginSettings ? {
+      siteLoginSettings: Object.fromEntries(Object.entries(vault.settings.siteLoginSettings).map(([origin,rule])=>{
+        const next={...rule};
+        if(next.defaultFillProfileId===profileId)delete next.defaultFillProfileId;
+        return [origin,next];
+      }))
+    } : {})},
     fillProfiles: (vault.fillProfiles ?? []).filter((item) => item.id !== profileId),
     deletedItems: addDeletedItem(vault.deletedItems, {
       id: crypto.randomUUID(),

@@ -1,4 +1,4 @@
-import {readdir,readFile,writeFile} from 'node:fs/promises';
+import {readdir,readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
 import {Script} from 'node:vm';
@@ -29,4 +29,7 @@ const unpacked=unzipSync(bytes);
 for(const [name,file] of Object.entries(files))if(!Buffer.from(unpacked[name]).equals(Buffer.from((file as [Uint8Array,unknown])[0])))throw new Error('ZIP verification failed: '+name);
 const output=resolve(root,`keypilot-extension-v${manifest.version}.zip`);
 await writeFile(output,bytes);
-console.log(JSON.stringify({output,zipBytes:bytes.length,installedBytes:expanded,files:Object.keys(files).length,sha256:createHash('sha256').update(bytes).digest('hex')},null,2));
+const sha256=createHash('sha256').update(bytes).digest('hex');
+const release=resolve(root,'output/release');await mkdir(release,{recursive:true});
+await writeFile(resolve(release,`keypilot-extension-v${manifest.version}.sha256`),`${sha256}  keypilot-extension-v${manifest.version}.zip\n`);
+console.log(JSON.stringify({output,zipBytes:bytes.length,installedBytes:expanded,files:Object.keys(files).length,sha256},null,2));

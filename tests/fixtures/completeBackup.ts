@@ -16,7 +16,7 @@ export function completeBackupFixture(): VaultPlain {
     blacklist:['blocked.example.test'],inlineBlacklist:['inline.example.test'],
     inlineSilentRules:[{id:'silent-1',domain:'silent.example.test',reason:'manual-hide',source:'manual',confidence:1,matchCount:1,createdAt:1,updatedAt:1}],
     autoTotpOrigins:['https://backup.example.test'],
-    siteLoginSettings:{'https://backup.example.test':{autoSubmit:false,fillEnabled:true}},
+    siteLoginSettings:{'https://backup.example.test':{autoSubmit:false,fillEnabled:true,defaultFillProfileId:'backup-profile'}},
     siteRules:[{id:'backup-rule',domain:'backup.example.test',source:'manual-binding',pageMode:'login',createdAt:1,updatedAt:1}],
     fillImportMappingTemplates:[{id:'backup-template',name:'Synthetic mapping',sourceType:'csv',category:'identity',countryCode:'US',headerSignature:'Name',columns:['Name'],overrides:[{column:'Name',key:'fullName'}],useCount:1,createdAt:1,updatedAt:1}],
     fillImportBatches:[{sourceKey:'synthetic-batch',sourceName:'synthetic.csv',sourceType:'csv',category:'identity',countryCode:'US',totalRows:20,importedCount:10,nextOffset:10,prefix:'Example',numberStart:1,numberPadding:2,order:'source',createdAt:1,updatedAt:1}]};

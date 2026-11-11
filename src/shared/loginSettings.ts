@@ -22,7 +22,7 @@ export function validateSiteLoginSettings(value:unknown):void {
     try{const url=new URL(origin);validOrigin=['https:','http:'].includes(url.protocol)&&url.origin===origin&&origin.length<=2048;}catch{}
     if(!validOrigin || !object(rule) || Object.entries(rule).some(([key,item])=>{
       if(key==='fillEnabled'||key==='autoSubmit')return typeof item!=='boolean';
-      if(key==='defaultCredentialId')return !id(item);
+      if(key==='defaultCredentialId'||key==='defaultFillProfileId')return !id(item);
       if(key==='totpAccountByCredential')return !object(item)||Object.keys(item).length>500||Object.entries(item).some(([key,value])=>!id(key)||!id(value));
       return true;
     }))throw new Error('网站登录设置格式不正确。');

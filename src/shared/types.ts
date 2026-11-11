@@ -245,6 +245,7 @@ export interface FillProfile {
 
 export interface FillProfilePayload {
   id: string;
+  revision?: number;
   title: string;
   countryCode: string;
   category: FillProfileCategory;
@@ -385,6 +386,8 @@ export interface VaultSettings {
     fillEnabled?: boolean;
     autoSubmit?: boolean;
     defaultCredentialId?: string;
+    /** Profile selection only; filling still requires preview confirmation. */
+    defaultFillProfileId?: string;
     totpAccountByCredential?: Record<string, string>;
   }>;
   clearClipboardSeconds: number;

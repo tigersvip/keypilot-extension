@@ -1,6 +1,6 @@
 {
   "name": "keypilot-extension",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "description": "Local-first browser password manager, autofill, and one-click login extension.",
   "license": "MIT",
   "keywords": [
@@ -23,7 +23,12 @@
     "ocr:build": "tsc -p tools/ocr-lite/tsconfig.json && vite build --config tools/ocr-lite/vite.config.ts && tsx tools/ocr-lite/package.mts",
     "ocr:templates": "tsx tools/ocr-lite/generate.mts",
     "ocr:benchmark": "tsx tools/ocr-lite/benchmark.mts",
-    "package": "npm run build && tsx tools/package.mts"
+    "version": "tsx tools/release.mts sync",
+    "version:sync": "tsx tools/release.mts sync",
+    "release:check": "tsx tools/release.mts check",
+    "release:notes": "tsx tools/release.mts notes",
+    "test:regression": "playwright test tests/browser/extension.spec.ts tests/browser/loginContinuation.spec.ts tests/browser/quickFill.spec.ts tests/browser/uiConsistency.spec.ts",
+    "package": "npm run release:check && npm run build && tsx tools/package.mts"
   },
   "dependencies": {
     "fflate": "^0.8.2",

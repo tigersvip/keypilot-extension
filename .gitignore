@@ -46,6 +46,7 @@ Thumbs.db
 output/playwright/
 playwright-report/
 test-results/
+output/release/
 
 # Local Python build caches
 __pycache__/

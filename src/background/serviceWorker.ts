@@ -23,6 +23,7 @@ import {
   touchCredentialInVault,
   updateCredentialInVault,
   updateFillProfileInVault,
+  touchFillProfileInVault,
   upsertVaultSettings
 } from '../shared/vault';
 import type {
@@ -736,6 +737,7 @@ function selectFillProfileSiteBinding(profile: FillProfile, targetUrl?: string):
 function fillProfileToPayload(profile: FillProfile, targetUrl?: string, onlyEmpty = true): FillProfilePayload {
   return {
     id: profile.id,
+    revision: profile.updatedAt,
     title: profile.title,
     countryCode: profile.countryCode,
     category: profile.category,
@@ -1357,7 +1359,7 @@ async function startFillProfileBinding(tabId: number, profileId: string | undefi
 
 async function saveFillProfileBinding(
   senderUrl: string | undefined,
-  binding: FillProfileBindingResult | undefined
+  binding: FillProfileBindingResult | undefined, revision?:number
 ): Promise<{ ok?: boolean; error?: string }> {
   if (!binding?.profileId || !binding.fields?.length) return { ok: false, error: 'INVALID_BINDING' };
 
@@ -1367,8 +1369,10 @@ async function saveFillProfileBinding(
   const profile = session.vault.fillProfiles?.find((item) => item.id === binding.profileId);
   if (!profile) return { ok: false, error: 'INVALID_FILL_PROFILE' };
 
-  const domain = binding.domain || getTabDomain(binding.url || senderUrl);
-  if (!domain) return { ok: false, error: 'INVALID_BINDING_DOMAIN' };
+  if(revision!==undefined && revision!==profile.updatedAt)return {ok:false,error:'资料已变化，请重新打开校准。'};
+  if(!senderUrl || binding.url!==senderUrl)return {ok:false,error:'页面已变化，请重新打开校准。'};
+  const url=new URL(senderUrl),domain=url.hostname.toLowerCase();
+  if(!['https:','http:'].includes(url.protocol) || binding.domain!==domain || (binding.pathPattern && binding.pathPattern!==normalizedPathPatternFromUrl(senderUrl)))return {ok:false,error:'INVALID_BINDING_DOMAIN'};
   const pathPattern = binding.pathPattern || undefined;
 
   const now = Date.now();
@@ -1464,14 +1468,9 @@ async function fillInlineProfile(tabId: number, frameUrl: string | undefined, fr
   const response = await sendFillProfileMessage(tabId, frameId, payload);
 
   if (response.ok && request.recordUse !== false) {
-    const now = Date.now();
     await persistVaultSession(
       session,
-      updateFillProfileInVault(session.vault, {
-        ...profile,
-        lastUsedAt: now,
-        updatedAt: now
-      })
+      touchFillProfileInVault(session.vault,profile.id)
     );
   }
 
@@ -2463,6 +2462,15 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if(message?.type==='KEYPILOT_RETRY_QUICK_FILL'){
+    void (async()=>{
+      if(sender.id!==chrome.runtime.id || sender.tab?.id===undefined || sender.frameId===undefined || !sender.documentId)return {ok:false};
+      const frame=await chrome.webNavigation.getFrame({tabId:sender.tab.id,frameId:sender.frameId});
+      const session=await restoreCachedVaultSession();
+      if(!session || frame?.documentId!==sender.documentId)return {ok:false};
+      return {ok:await quickFillTab(await chrome.tabs.get(sender.tab.id),session)};
+    })().then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
+  }
   if(message?.type==='KEYPILOT_VALIDATE_QUICK_FILL'){
     const job=sender.tab?.id ? quickFillJobs.get(sender.tab.id) : undefined;
     void (async()=>({ok:Boolean(job && sender.id===chrome.runtime.id && sender.frameId===job.frameId && sender.documentId && sender.documentId===job.documentId && message.token===job.token && message.targetId===job.targetId && await quickFillIsCurrent(sender.tab!.id!,job))}))()
@@ -2819,7 +2827,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === 'KEYPILOT_SAVE_FILL_PROFILE_BINDING') {
-    void saveFillProfileBinding(sender.url ?? sender.tab?.url, message.binding as FillProfileBindingResult | undefined)
+    void (async()=>{
+      if(sender.id!==chrome.runtime.id || sender.tab?.id===undefined || sender.frameId===undefined || !sender.documentId)return {ok:false};
+      const frame=await chrome.webNavigation.getFrame({tabId:sender.tab.id,frameId:sender.frameId});
+      if(!frame || frame.documentId!==sender.documentId)return {ok:false};
+      return saveFillProfileBinding(frame.url,message.binding as FillProfileBindingResult | undefined,message.revision);
+    })()
       .then((response) => sendResponse(response))
       .catch((error) => {
         const errorMessage = toErrorMessage(error);
@@ -3190,8 +3203,12 @@ async function quickFillTab(tab:chrome.tabs.Tab,session:UnlockedVaultSession):Pr
       const id=await choose(profile?'还没有填写资料':'没有匹配的账号',profile?'先在个人信息中添加姓名、联系方式、地址等资料，就可以用快捷键填写。':'此网站没有保存的登录账号。',[{id:'manage',label:profile?'添加填写资料':'打开密码库'}]);
       if(id==='manage')await chrome.tabs.create({url:chrome.runtime.getURL(profile?'vault.html#identities':'vault.html')});return true;
     }
-    let item=items[0];
-    if(items.length>1){
+    const frameOrigin=new URL(selected.frame.url).origin;
+    const preferred=job.kind==='profile'?siteLoginSettings(session.vault.settings,frameOrigin).defaultFillProfileId:undefined;
+    let item=items.find(item=>item.id===preferred)??items[0];
+    let needsChoice=items.length>1 && item.id!==preferred;
+    while(true){
+    if(needsChoice){
       const id=await choose(job.kind==='profile'?'选择填写资料':'选择登录账号',job.kind==='profile'?'选好后预览填写内容；已有值会保留。':'仅填写账号信息，不会自动点击登录。',items.map(item=>({id:item.id,label:item.title,detail:'fields' in item?`${item.fields.filter(field=>field.value.trim()).length} 个资料字段`:item.username})));
       if(id===null)return true;
       const found=items.find(item=>item.id===id);if(!found)return true;item=found;
@@ -3199,17 +3216,26 @@ async function quickFillTab(tab:chrome.tabs.Tab,session:UnlockedVaultSession):Pr
     job.itemId=item.id;job.revision=JSON.stringify(item);
     if(!await quickFillIsCurrent(tabId,job))return true;
     const payload='fields' in item?{profile:fillProfileToPayload(item,job.frameUrl,true)}:{credential:credentialToFillPayload(item,false,session.vault,job.frameUrl)};
-    const result=await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_APPLY_QUICK_FILL',token:job.token,targetId:job.targetId,...payload},{frameId:job.frameId});
+    const preference=job.kind==='profile'?{title:item.title,origin:frameOrigin,remember:item.id===preferred,canSwitch:items.length>1}:undefined;
+    const result=await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_APPLY_QUICK_FILL',token:job.token,targetId:job.targetId,...payload,preference},{frameId:job.frameId});
+    if(result?.error==='FILL_SWITCH_PROFILE' && job.kind==='profile'){needsChoice=true;continue;}
     if(result?.ok && job.kind==='profile' && await quickFillIsCurrent(tabId,job)){
       const latest=await restoreCachedVaultSession(), profile=latest?.vault.fillProfiles?.find(profile=>profile.id===job.itemId);
       if(latest && profile && latest.sessionId===job.sessionId && JSON.stringify(profile)===job.revision){
-        await persistVaultSession(latest,updateFillProfileInVault(latest.vault,{...profile,lastUsedAt:Date.now()})).catch(()=>undefined);
+        const next=touchFillProfileInVault(latest.vault,profile.id);
+        const rules={...next.settings.siteLoginSettings},rule={...rules[frameOrigin]};
+        if(result.rememberForSite===true)rule.defaultFillProfileId=profile.id;
+        else if(result.rememberForSite===false && rule.defaultFillProfileId===profile.id)delete rule.defaultFillProfileId;
+        if(Object.keys(rule).length)rules[frameOrigin]=rule;else delete rules[frameOrigin];
+        if(Object.keys(rules).length || next.settings.siteLoginSettings)next.settings={...next.settings,siteLoginSettings:rules};
+        try{await persistVaultSession(latest,next);}catch{await choose('资料已填写，偏好未保存','保存默认资料时密码库发生变化。请重新使用快捷键设置默认资料。',[]);}
       }
     }
     if(!result?.ok && result?.error!=='FILL_CANCELLED'){
       await choose('暂未填写','表单或密码库状态可能已变化。请关闭提示，点击要填写的输入框后重试。',[]);
     }
     return true;
+    }
   }finally{if(quickFillJobs.get(tabId)===job)quickFillJobs.delete(tabId);}
 }
 
