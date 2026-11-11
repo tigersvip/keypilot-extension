@@ -302,7 +302,9 @@ test('joined and warped regression images retain complete candidates offline',as
   await page.evaluate(()=>{(window as any).ocrTestReadings.length=0;});
   const image=fixture.image;
   const result=await worker.evaluate(image=>chrome.runtime.sendMessage({target:'keypilot-captcha-ocr',image,mode:'auto'}),image);
-  expect(result.ok).toBe(true);expect(result.candidates[0].text,JSON.stringify({file:fixture.file,result,readings:await page.evaluate(()=>(window as any).ocrTestReadings)})).toBe(fixture.text);
+  const diagnostics=JSON.stringify({file:fixture.file,result,readings:await page.evaluate(()=>(window as any).ocrTestReadings)});
+  await test.info().attach('ocr-'+fixture.file,{body:Buffer.from(diagnostics),contentType:'application/json'});
+  expect(result.ok).toBe(true);expect(result.candidates[0].text,diagnostics).toBe(fixture.text);
   expect(result.uncertain).toBe(true);expect(result.candidates.length).toBeLessThanOrEqual(4);
  }
 });

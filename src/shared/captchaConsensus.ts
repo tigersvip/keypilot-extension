@@ -132,8 +132,21 @@ export function combineCaptchaReadings(neural:NeuralReading,general:CaptchaResul
     neural.alternatives?.some(beam=>beam.score>=.08&&beam.text.toLowerCase()===item.text.toLowerCase())&&
     readings.filter(reading=>reading.text===item.text&&reading.confidence>=80&&Number.isFinite(reading.confidence)&&reading.characters?.length===item.text.length&&
       reading.characters.every((char,i)=>char.text===item.text[i]&&Number.isFinite(char.confidence)&&char.confidence>=90)).length>=2);
+  // A review head can retain a joined glyph that the greedy path drops. Use
+  // repeated, aligned text evidence only where that head is itself unsure;
+  // a word-average confidence crossing a threshold must not erase the glyph.
+  const refinement=neural.refinement;
+  const reviewedComplete=refinement&&Number.isFinite(refinement.confidence)&&refinement.confidence>=80&&refinement.characters?.length===refinement.text.length
+    ?alternatives.find(item=>item.text.length>text.length&&item.text.length===refinement.text.length&&
+      refinement.characters!.every((char,i)=>char.text===refinement.text[i]&&Number.isFinite(char.confidence)&&
+        (char.text.toLowerCase()===item.text[i].toLowerCase()||char.confidence<85))&&
+      readings.filter(reading=>reading.text===item.text&&Number.isFinite(reading.confidence)&&reading.confidence>=65&&
+        reading.characters?.length===item.text.length&&reading.characters.every((char,i)=>char.text===item.text[i]&&Number.isFinite(char.confidence)&&char.confidence>=90)).length>=2&&
+      !readings.some(reading=>reading.text===text&&reading.confidence>=80&&reading.characters?.length===text.length&&
+        reading.characters.every((char,i)=>char.text===text[i]&&Number.isFinite(char.confidence)&&char.confidence>=90)))
+    :undefined;
   const beamSupported=!strong?alternatives.find(item=>item.confidence>=65&&item.text.length>=text.length&&neural.alternatives?.some(beam=>beam.score>=.15&&beam.text.toLowerCase()===item.text.toLowerCase())):undefined;
-  const initial=!text?alternatives[0]?.text:complete?.text??extended?.text??numeric?.text??sameCase?.text??beamSupported?.text??(!strong?(near?.text??fallback):text);
+  const initial=!text?alternatives[0]?.text:complete?.text??extended?.text??reviewedComplete?.text??numeric?.text??sameCase?.text??beamSupported?.text??(!strong?(near?.text??fallback):text);
   const preferred=reviewCandidate(initial,neural,readings.filter(item=>validCaptchaText(item.text,'auto',expectedLength)),digit);
   const texts=[preferred,text,...alternatives.map(item=>item.text)].filter(Boolean);
   const candidates:CaptchaCandidate[]=[...new Set(texts)].slice(0,4).map(value=>({text:value,confidence:value===text?Math.round(neural.confidence):alternatives.find(item=>item.text===value)?.confidence??0}));

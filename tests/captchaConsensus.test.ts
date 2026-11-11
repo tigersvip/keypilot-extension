@@ -141,6 +141,28 @@ test('a confident short greedy sequence requires a real path and two aligned rea
   assert.equal(combine(neural,texts,4).candidates?.[0].text,'3281');
 });
 
+test('aligned review and repeated character evidence retain a joined glyph across confidence changes',()=>{
+  const refinement={...reading('48gt32',88,56),characters:detailed('48gt32',88,[99,99,56,83,99,99]).characters};
+  const neural={...reading('48g32',91,81),refinement};
+  const texts=[detailed('489132',74,[97,98,96,96,98,98]),detailed('489132',84,[98,98,98,98,98,97])];
+  const combine=(n=neural,t=texts,length?:number)=>combineCaptchaReadings(n,general(['489132',84]),undefined,length,undefined,t);
+  assert.equal(combine().candidates?.[0].text,'489132');assert.equal(combine().uncertain,true);
+  assert.ok(combine().candidates?.some(item=>item.text==='48g32'));
+  const result=combine();
+  assert.equal(chooseNeuralReading(neural,[reading('48932',100,100),reading('48932',99,99)],texts,undefined,result.candidates?.[0].text),neural);
+  for(const t of [texts.slice(0,1),[texts[0],detailed('489132',64,[99,99,99,99,99,99])],
+    [texts[0],detailed('489132',84,[98,98,89,98,98,97])],
+    [texts[0],{...texts[1],characters:undefined}],
+    [texts[0],detailed('489132',Infinity,[99,99,99,99,99,99])],
+    [...texts,detailed('48g32',90,[98,98,98,98,98])]])assert.equal(combine(neural,t).candidates?.[0].text,'48g32');
+  for(const review of [undefined,{...refinement,confidence:79},{...refinement,characters:undefined},
+    {...refinement,characters:detailed('48gt32',88,[99,99,86,83,99,99]).characters},
+    {...refinement,characters:detailed('48gt32',88,[99,99,NaN,83,99,99]).characters}]){
+    assert.equal(combine({...neural,refinement:review!}).candidates?.[0].text,'48g32');
+  }
+  assert.equal(combine(neural,texts,5).candidates?.[0].text,'48g32');
+});
+
 test('enhanced full-line case evidence can review a neural match without losing the previous choice',()=>{
   const original=general(['mVpx',75],['mvpx',98]);
   const result=reviewEnhancedCase(original,reading('mvpx'),[detailed('mVpx',75,[95,80,93,92])],
