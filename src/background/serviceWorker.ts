@@ -2472,6 +2472,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === 'KEYPILOT_LANGUAGE') {
+    if (sender.id !== chrome.runtime.id) { sendResponse({ok:false}); return; }
+    void loadLanguageSnapshot(true).then(snapshot => sendResponse({ok:true,...snapshot})).catch(() => sendResponse({ok:false}));
+    return true;
+  }
   if(message?.type==='KEYPILOT_RETRY_QUICK_FILL'){
     void (async()=>{
       if(sender.id!==chrome.runtime.id || sender.tab?.id===undefined || sender.frameId===undefined || !sender.documentId)return {ok:false};
@@ -3264,22 +3269,25 @@ async function executeUserCommand(command: string, targetTab?: chrome.tabs.Tab) 
 chrome.commands.onCommand.addListener(command => { void executeUserCommand(command).catch(() => undefined); });
 
 let menuEnabled: boolean | undefined;
+let menuLanguage: string | undefined;
 let menuQueue = Promise.resolve();
 function refreshContextMenus() {
   menuQueue = menuQueue.then(async () => {
     const session = await restoreCachedVaultSession();
     const enabled = Boolean(session?.vault.settings.showContextMenuCommands);
-    if (enabled === menuEnabled) return;
+    const locale = await loadLanguageSnapshot().catch(() => ({language: 'zh-CN', messages: {} as Record<string, string>}));
+    if (enabled === menuEnabled && locale.language === menuLanguage) return;
     await chrome.contextMenus.removeAll();
     if (enabled) {
       for (const [id, title] of [['fill-current', 'KeyPilot：填写当前网站'], ['search-vault', 'KeyPilot：搜索密码库'], ['lock-vault', 'KeyPilot：锁定密码库']]) {
-        await new Promise<void>((resolve, reject) => chrome.contextMenus.create({id, title, contexts: ['page', 'editable']}, () => {
+        await new Promise<void>((resolve, reject) => chrome.contextMenus.create({id, title: locale.messages[title] ?? title, contexts: ['page', 'editable']}, () => {
           const error = chrome.runtime.lastError;
           if (error) reject(new Error(error.message)); else resolve();
         }));
       }
     }
     menuEnabled = enabled;
+    menuLanguage = locale.language;
   }).catch(() => { menuEnabled = undefined; });
 }
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -3289,8 +3297,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 chrome.storage.onChanged.addListener((changes, area) => {
   if ((area === 'session' && ('keypilot.sessionState' in changes || 'keypilot.unlockedSession' in changes)) ||
-      (area === 'local' && 'keypilot.encryptedVault' in changes)) refreshContextMenus();
+      (area === 'local' && ('keypilot.encryptedVault' in changes || 'keypilot.language' in changes))) refreshContextMenus();
 });
 chrome.runtime.onInstalled.addListener(refreshContextMenus);
 chrome.runtime.onStartup.addListener(refreshContextMenus);
 refreshContextMenus();
+import { loadLanguageSnapshot } from '../shared/i18n';

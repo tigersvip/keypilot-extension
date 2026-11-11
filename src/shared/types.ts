@@ -367,7 +367,7 @@ export interface VaultSettings {
   reminderVolume?: number;
   backupReminderEnabled?: boolean;
   backupExport?: { requestedAt: number; recordIds: string[]; settingsSnapshot?: string };
-  language: 'zh-CN' | 'en-US';
+  language: import('./language').LanguagePreference;
   defaultHomeSort: 'favorite' | 'recent' | 'az';
   openStartPageOnLogin: boolean;
   openStartPageOnToolbarClick: boolean;

@@ -2,7 +2,8 @@ import {readdir,readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
 import {Script} from 'node:vm';
-import {zipSync,unzipSync,type Zippable} from 'fflate';
+import {deflateRawSync} from 'node:zlib';
+import {Zip,ZipPassThrough,unzipSync,type Zippable} from 'fflate';
 
 const root=resolve(import.meta.dirname,'..'),dist=resolve(root,'dist');
 const metadata=JSON.parse(await readFile(resolve(root,'package.json'),'utf8'));
@@ -23,7 +24,19 @@ async function collect(directory:string){
  }
 }
 await collect(dist);
-const bytes=zipSync(files,{level:9});
+// Native DEFLATE reduces the download without changing any installed file.
+// Each input is deliberately pushed once; ZipPassThrough computes its CRC/size.
+const chunks: Uint8Array[]=[];
+let finished=false;
+const archive=new Zip((error,chunk,final)=>{if(error)throw error;chunks.push(chunk);finished=final;});
+for(const [name,file] of Object.entries(files)){
+ const input=new ZipPassThrough(name);
+ input.mtime=new Date('2026-01-01T00:00:00Z');input.compression=8;
+ input.process=(data,final)=>input.ondata(null,deflateRawSync(data,{level:9}),final);
+ archive.add(input);input.push((file as [Uint8Array,unknown])[0],true);
+}
+archive.end();if(!finished)throw new Error('ZIP did not finish.');
+const bytes=Buffer.concat(chunks);
 if(bytes.length>10_000_000||expanded>15_000_000)throw new Error(`Package exceeds size budget: ZIP ${bytes.length}/10000000, installed ${expanded}/15000000 bytes.`);
 const unpacked=unzipSync(bytes);
 for(const [name,file] of Object.entries(files))if(!Buffer.from(unpacked[name]).equals(Buffer.from((file as [Uint8Array,unknown])[0])))throw new Error('ZIP verification failed: '+name);

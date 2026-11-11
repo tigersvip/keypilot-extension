@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../shared/i18n';
 import { CopyButton } from '../shared/CopyButton';
 import { navigateAccountList } from '../shared/listNavigation';
 import { siteLoginSettings } from '../shared/loginSettings';
@@ -172,42 +173,42 @@ interface InlinePageState {
 }
 
 function getErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? t(error.message) : String(error);
 
-  if (message === 'CSV_FORMAT_ERROR') return 'CSV 格式错误，请检查表头和分隔符。';
-  if (message === 'VAULT_NOT_FOUND') return '未找到本地密码库，请重新创建 Vault。';
-  if (message === 'UNSUPPORTED_VAULT') return 'Vault 版本暂不兼容。';
-  if (message === 'RECOVERY_NOT_ENABLED') return '这个 Vault 还没有启用恢复码，只能使用主密码解锁或重置。';
-  if (message === 'UNSUPPORTED_RECOVERY') return '恢复码版本暂不兼容。';
-  if (message === 'INVALID_RECOVERY_CODE') return '恢复码不正确，请检查后重新输入。';
-  if (message === 'CORRUPTED_VAULT') return 'Vault 数据损坏，无法读取。';
-  if (message === 'NO_LOGIN_FORM') return '当前页面没有检测到登录表单。';
-  if (message === 'NO_USERNAME_FIELD') return '当前页面没有检测到用户名输入框。';
-  if (message === 'NO_PASSWORD_FIELD') return '当前页面没有检测到密码输入框。';
-  if (message === 'NO_FILL_PROFILE_FIELDS') return '当前页面没有匹配到可填写的身份资料字段。';
-  if (message === 'INVALID_FILL_PROFILE') return '这条填表资料为空，请重新导入或编辑。';
-  if (message === 'NO_ACTIVE_TAB') return '没有可填充的当前标签页。';
-  if (message === 'NO_RESPONSE') return '页面没有响应填充请求，请刷新页面后重试。';
-  if (message === 'INVALID_CREDENTIAL_URL') return '该账号没有有效网址，请先编辑账号并填写 http 或 https 开头的网站地址。';
-  if (message === 'INVALID_CREDENTIAL_ACTION') return '未知的账号操作，请刷新插件后重试。';
-  if (message === 'TAB_CREATE_FAILED') return '无法打开目标网站，请检查账号网址是否有效。';
-  if (message === 'BINDING_START_FAILED') return '无法启动字段绑定，请刷新网页后重试。';
-  if (message === 'FILL_BINDING_START_FAILED') return '无法启动身份字段绑定，请刷新网页后重试。';
-  if (message === 'FILL_BINDING_SAVE_FAILED') return '身份字段绑定保存失败，请重新绑定。';
-  if (message === 'BINDING_DOMAIN_MISMATCH') return '当前网页与该账号域名不匹配，不能保存绑定。';
-  if (message === 'INVALID_BINDING') return '绑定信息不完整，请重新绑定用户名框、密码框和登录按钮。';
-  if (message === 'INVALID_BINDING_DOMAIN') return '当前网页没有有效域名，不能保存身份字段绑定。';
-  if (message.includes('message port closed')) return '浏览器切换页面时通信被中断，请再试一次。若目标页已打开，可在该页面点击“浏览并填写”。';
-  if (message.includes('Receiving end does not exist')) return '当前页面无法注入填充脚本，请刷新页面或换一个普通网页测试。';
+  if (message === 'CSV_FORMAT_ERROR') return t("CSV 格式错误，请检查表头和分隔符。");
+  if (message === 'VAULT_NOT_FOUND') return t("未找到本地密码库，请重新创建 Vault。");
+  if (message === 'UNSUPPORTED_VAULT') return t("Vault 版本暂不兼容。");
+  if (message === 'RECOVERY_NOT_ENABLED') return t("这个 Vault 还没有启用恢复码，只能使用主密码解锁或重置。");
+  if (message === 'UNSUPPORTED_RECOVERY') return t("恢复码版本暂不兼容。");
+  if (message === 'INVALID_RECOVERY_CODE') return t("恢复码不正确，请检查后重新输入。");
+  if (message === 'CORRUPTED_VAULT') return t("Vault 数据损坏，无法读取。");
+  if (message === 'NO_LOGIN_FORM') return t("当前页面没有检测到登录表单。");
+  if (message === 'NO_USERNAME_FIELD') return t("当前页面没有检测到用户名输入框。");
+  if (message === 'NO_PASSWORD_FIELD') return t("当前页面没有检测到密码输入框。");
+  if (message === 'NO_FILL_PROFILE_FIELDS') return t("当前页面没有匹配到可填写的身份资料字段。");
+  if (message === 'INVALID_FILL_PROFILE') return t("这条填表资料为空，请重新导入或编辑。");
+  if (message === 'NO_ACTIVE_TAB') return t("没有可填充的当前标签页。");
+  if (message === 'NO_RESPONSE') return t("页面没有响应填充请求，请刷新页面后重试。");
+  if (message === 'INVALID_CREDENTIAL_URL') return t("该账号没有有效网址，请先编辑账号并填写 http 或 https 开头的网站地址。");
+  if (message === 'INVALID_CREDENTIAL_ACTION') return t("未知的账号操作，请刷新插件后重试。");
+  if (message === 'TAB_CREATE_FAILED') return t("无法打开目标网站，请检查账号网址是否有效。");
+  if (message === 'BINDING_START_FAILED') return t("无法启动字段绑定，请刷新网页后重试。");
+  if (message === 'FILL_BINDING_START_FAILED') return t("无法启动身份字段绑定，请刷新网页后重试。");
+  if (message === 'FILL_BINDING_SAVE_FAILED') return t("身份字段绑定保存失败，请重新绑定。");
+  if (message === 'BINDING_DOMAIN_MISMATCH') return t("当前网页与该账号域名不匹配，不能保存绑定。");
+  if (message === 'INVALID_BINDING') return t("绑定信息不完整，请重新绑定用户名框、密码框和登录按钮。");
+  if (message === 'INVALID_BINDING_DOMAIN') return t("当前网页没有有效域名，不能保存身份字段绑定。");
+  if (message.includes('message port closed')) return t("浏览器切换页面时通信被中断，请再试一次。若目标页已打开，可在该页面点击“浏览并填写”。");
+  if (message.includes('Receiving end does not exist')) return t("当前页面无法注入填充脚本，请刷新页面或换一个普通网页测试。");
   if (message === 'INVALID_MASTER_PASSWORD' || message === 'The operation failed for an operation-specific reason') {
-    return '主密码错误，请重新输入。';
+    return t("主密码错误，请重新输入。");
   }
 
-  if (message === 'VAULT_WRITE_CONFLICT') return '这条记录已在另一个页面修改，请重新打开记录后再保存。';
-  if (message === 'MASTER_PASSWORD_TOO_SHORT') return '主密码至少需要 8 位。';
-  if (message === 'FILL_CANCELLED') return '已取消填写，网页未改变。';
-  if (message === 'VAULT_LOCKED') return '密码库已锁定，请重新解锁。';
-  return message || '操作失败，请稍后重试。';
+  if (message === 'VAULT_WRITE_CONFLICT') return t("这条记录已在另一个页面修改，请重新打开记录后再保存。");
+  if (message === 'MASTER_PASSWORD_TOO_SHORT') return t("主密码至少需要 8 位。");
+  if (message === 'FILL_CANCELLED') return t("已取消填写，网页未改变。");
+  if (message === 'VAULT_LOCKED') return t("密码库已锁定，请重新解锁。");
+  return t(message) || t("操作失败，请稍后重试。");
 }
 
 function submitOutcomeNotice(outcome?: SubmitOutcome): Notice | null {
@@ -326,23 +327,23 @@ function refreshDuplicateCredential(vault: VaultPlain, existing: Credential, can
 }
 
 function formatTime(timestamp?: number): string {
-  if (!timestamp) return '未使用';
+  if (!timestamp) return t("未使用");
 
   const diff = Date.now() - timestamp;
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (minutes < 2) return '刚刚使用';
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (hours < 24) return `${hours} 小时前`;
-  if (days < 7) return `${days} 天前`;
-  return `${Math.floor(days / 7)} 周前`;
+  if (minutes < 2) return t("刚刚使用");
+  if (minutes < 60) return t("{0} 分钟前", [minutes]);
+  if (hours < 24) return t("{0} 小时前", [hours]);
+  if (days < 7) return t("{0} 天前", [days]);
+  return t("{0} 周前", [Math.floor(days / 7)]);
 }
 
 function formatDateTime(timestamp?: number): string {
-  if (!timestamp) return '未使用';
-  return new Intl.DateTimeFormat('zh-CN', {
+  if (!timestamp) return t("未使用");
+  return new Intl.DateTimeFormat(getLanguage(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -555,7 +556,7 @@ function fillProfileSummary(profile: FillProfile): string {
     .filter(Boolean)
     .join(' ');
 
-  return business || loanAmount || fullName || email || phone || vehicle || `${profile.fields.length} 个字段`;
+  return business || loanAmount || fullName || email || phone || vehicle || t("{0} 个字段", [profile.fields.length]);
 }
 
 type FillProfileTone = 'identity' | 'business' | 'payment' | 'tone-green' | 'tone-purple' | 'tone-amber' | 'tone-rose' | 'tone-blue' | 'tone-slate';
@@ -584,42 +585,42 @@ function fillProfileTone(profile: FillProfile): FillProfileTone {
 
 function fillProfileBadgeText(profile: FillProfile): string {
   if (profile.category === 'auto_insurance') {
-    return '车';
+    return t("车");
   }
-  if (profile.category === 'loan') return '贷';
-  if (profile.category === 'business') return '企';
-  if (profile.category === 'payment') return '卡';
+  if (profile.category === 'loan') return t("贷");
+  if (profile.category === 'business') return t("企");
+  if (profile.category === 'payment') return t("卡");
   return profile.title.trim().slice(0, 1).toUpperCase() || 'ID';
 }
 
 function fillProfileCategoryLabel(profile: FillProfile): string {
-  if (profile.category === 'auto_insurance') return '车险资料';
-  if (profile.category === 'shipping') return '地址资料';
-  if (profile.category === 'payment') return '付款资料';
-  if (profile.category === 'business') return '公司资料';
-  if (profile.category === 'loan') return '贷款资料';
-  if (profile.category === 'identity') return '身份资料';
-  return '填表资料';
+  if (profile.category === 'auto_insurance') return t("车险资料");
+  if (profile.category === 'shipping') return t("地址资料");
+  if (profile.category === 'payment') return t("付款资料");
+  if (profile.category === 'business') return t("公司资料");
+  if (profile.category === 'loan') return t("贷款资料");
+  if (profile.category === 'identity') return t("身份资料");
+  return t("填表资料");
 }
 
 function fillFieldGroupLabel(group: FillField['group']): string {
   const labels: Record<FillField['group'], string> = {
-    personal: '个人',
-    contact: '联系方式',
-    address: '所在地',
-    driver: '驾驶资料',
-    vehicle: '车辆',
-    insurance: '保险',
-    payment: '付款',
-    business: '公司',
-    loan: '贷款',
-    employment: '工作',
-    finance: '财务',
-    sensitive: '证件资料',
-    custom: '其他'
+    personal: t("个人"),
+    contact: t("联系方式"),
+    address: t("所在地"),
+    driver: t("驾驶资料"),
+    vehicle: t("车辆"),
+    insurance: t("保险"),
+    payment: t("付款"),
+    business: t("公司"),
+    loan: t("贷款"),
+    employment: t("工作"),
+    finance: t("财务"),
+    sensitive: t("证件资料"),
+    custom: t("其他")
   };
 
-  return labels[group] ?? '其他';
+  return labels[group] ?? t("其他");
 }
 
 function fillProfileCountryName(countryCode: string): string {
@@ -650,7 +651,7 @@ function withInferredCountryField(profile: FillProfile): FillField[] {
     ...fields,
     {
       key: 'country',
-      label: '国家',
+      label: t("国家"),
       value: fillProfileCountryName(profile.countryCode),
       group: 'address',
       sensitivity: 'normal',
@@ -719,7 +720,7 @@ function createDraft(credential?: Credential, password = ''): EditDraft {
 export function App() {
   const [status, setStatus] = useState<VaultStatus>('checking');
   const [session, setSession] = useState<UnlockedVaultSession | null>(null);
-  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice({kind:'info',text:'密码库已锁定，请重新解锁。'}); });
+  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice({kind:'info',text:t("密码库已锁定，请重新解锁。")}); });
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [recoveryCodeToShow, setRecoveryCodeToShow] = useState<string | null>(null);
@@ -748,7 +749,7 @@ export function App() {
       .catch(() => {
         if (!mounted) return;
         setStatus('setup');
-        setNotice({ kind: 'error', text: '读取本地 Vault 状态失败。' });
+        setNotice({ kind: 'error', text: t("读取本地 Vault 状态失败。") });
       });
 
     return () => {
@@ -763,10 +764,10 @@ export function App() {
     setNotice({
       kind: 'success',
       text: nextSession.pendingSaveImportCount
-        ? `Vault 已解锁，已自动保存 ${nextSession.pendingSaveImportCount} 条暂存账号。`
+        ? t("Vault 已解锁，已自动保存 {0} 条暂存账号。", [nextSession.pendingSaveImportCount])
         : nextSession.saveInboxJustEnabled
-          ? 'Vault 已解锁，锁定态保存已启用。以后保存登录信息不会再打开解锁页。'
-        : 'Vault 已解锁。'
+          ? t("Vault 已解锁，锁定态保存已启用。以后保存登录信息不会再打开解锁页。")
+        : t("Vault 已解锁。")
     });
     if (recoveryCode) {
       setRecoveryCodeToShow(recoveryCode);
@@ -783,21 +784,21 @@ export function App() {
       }
       setSession(null);
       setStatus('locked');
-      setNotice({ kind: 'info', text: 'Vault 已锁定。' });
+      setNotice({ kind: 'info', text: t("Vault 已锁定。") });
     })();
   }
 
   function requestResetVault() {
     setConfirmRequest({
-      title: '重置本地 Vault',
-      body: '这会删除本机保存的加密 Vault。忘记主密码时只能这样重新开始，此操作无法撤销。',
-      actionLabel: '重置 Vault',
+      title: t("重置本地 Vault"),
+      body: t("这会删除本机保存的加密 Vault。忘记主密码时只能这样重新开始，此操作无法撤销。"),
+      actionLabel: t("重置 Vault"),
       tone: 'danger',
       onConfirm: async () => {
         await clearEncryptedVault();
         setSession(null);
         setStatus('setup');
-        setNotice({ kind: 'info', text: '本地 Vault 已重置。' });
+        setNotice({ kind: 'info', text: t("本地 Vault 已重置。") });
       }
     });
   }
@@ -991,7 +992,7 @@ function PopupHome({
 
   async function handleToggleRecognitionDebug() {
     if (!currentTab?.id) {
-      onNotice({ kind: 'error', text: '当前标签页无法打开识别调试面板，请切换到普通网页后再试。' });
+      onNotice({ kind: 'error', text: t("当前标签页无法打开识别调试面板，请切换到普通网页后再试。") });
       return;
     }
 
@@ -1006,7 +1007,7 @@ function PopupHome({
 
       onNotice({
         kind: 'info',
-        text: response.open ? '已在网页右上角打开识别调试面板。' : '已关闭网页识别调试面板。'
+        text: response.open ? t("已在网页右上角打开识别调试面板。") : t("已关闭网页识别调试面板。")
       });
       void refreshCurrentTab();
     } catch (error) {
@@ -1024,7 +1025,7 @@ function PopupHome({
 
   async function handleRestoreInlineForPage() {
     if (!currentTab?.url) {
-      onNotice({ kind: 'error', text: '当前页没有可恢复的网页地址。' });
+      onNotice({ kind: 'error', text: t("当前页没有可恢复的网页地址。") });
       return;
     }
 
@@ -1041,7 +1042,7 @@ function PopupHome({
 
       await refreshInlineWidgetInTab();
       await refreshCurrentTab();
-      onNotice({ kind: 'success', text: response.removedCount ? '已恢复本页浮标。' : '本页没有自动静默规则。' });
+      onNotice({ kind: 'success', text: response.removedCount ? t("已恢复本页浮标。") : t("本页没有自动静默规则。") });
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error) });
     }
@@ -1049,7 +1050,7 @@ function PopupHome({
 
   async function handleMarkCurrentPageMode(pageMode: SiteRulePageMode) {
     if (!currentTab?.id || (!currentTab?.url && !currentTab?.domain)) {
-      onNotice({ kind: 'error', text: '当前页没有可保存的站点信息。' });
+      onNotice({ kind: 'error', text: t("当前页没有可保存的站点信息。") });
       return;
     }
 
@@ -1065,7 +1066,7 @@ function PopupHome({
 
       await refreshInlineWidgetInTab();
       await refreshCurrentTab();
-      onNotice({ kind: 'success', text: `已将本页标记为${siteRuleModeLabel(pageMode)}。` });
+      onNotice({ kind: 'success', text: t("已将本页标记为{0}。", [siteRuleModeLabel(pageMode)]) });
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error) });
     }
@@ -1086,14 +1087,14 @@ function PopupHome({
     }, delay);
   }
 
-  async function persist(vault = session.vault, message = '已保存。') {
+  async function persist(vault = session.vault, message = t("已保存。")) {
     const nextSession = await persistVaultSession(session, vault);
     await onSessionChange(nextSession, message);
     return nextSession;
   }
 
   async function handleDismissOnboarding() {
-    await persist(upsertVaultSettings(session.vault, { onboardingDismissed: true }), '快速开始已关闭。');
+    await persist(upsertVaultSettings(session.vault, { onboardingDismissed: true }), t("快速开始已关闭。"));
   }
 
   function go(view: ViewKey) {
@@ -1146,7 +1147,7 @@ function PopupHome({
     const credential: Credential = existing
       ? {
           ...existing,
-          title: draft.title.trim() || normalizedDomain || '未命名账号',
+          title: draft.title.trim() || normalizedDomain || t("未命名账号"),
           url: normalizedUrl,
           domain: normalizedDomain,
           matchUrl,
@@ -1176,7 +1177,7 @@ function PopupHome({
         });
 
     const nextVault = existing ? updateCredentialInVault(session.vault, credential) : addCredentialToVault(session.vault, credential);
-    await persist(nextVault, existing ? '账号已更新。' : '账号已加密保存。');
+    await persist(nextVault, existing ? t("账号已更新。") : t("账号已加密保存。"));
     setSelectedId(credential.id);
     setEditDraft(null);
     setPreviousView('home');
@@ -1185,28 +1186,28 @@ function PopupHome({
 
   function requestDelete(credential: Credential) {
     onConfirm({
-      title: '删除账号',
-      body: `将“${credential.title}”移到回收站？之后可以在主页回收站恢复。`,
-      actionLabel: '移到回收站',
+      title: t("删除账号"),
+      body: t("将“{0}”移到回收站？之后可以在主页回收站恢复。", [credential.title]),
+      actionLabel: t("移到回收站"),
       tone: 'danger',
       onConfirm: async () => {
-        await persist(deleteCredentialFromVault(session.vault, credential.id), '账号已移到回收站。');
+        await persist(deleteCredentialFromVault(session.vault, credential.id), t("账号已移到回收站。"));
         setActiveView('home');
       }
     });
   }
 
   async function handleTogglePin(credential: Credential) {
-    await persist(updateCredentialInVault(session.vault, { ...credential, pinned: !credential.pinned }), credential.pinned ? '已取消收藏。' : '已收藏。');
+    await persist(updateCredentialInVault(session.vault, { ...credential, pinned: !credential.pinned }), credential.pinned ? t("已取消收藏。") : t("已收藏。"));
   }
 
   async function handleCopy(label: string, value: string, clearLater = true) {
     try {
       if (!await copyProtectedText(value, clearLater)) return false;
-      onNotice({ kind: 'success', text: label.startsWith('已复制') ? label : `已复制${label}。` });
+      onNotice({ kind: 'success', text: label.startsWith('已复制') ? label : t("已复制{0}。", [label]) });
       return true;
     } catch {
-      onNotice({ kind: 'error', text: '复制失败，请确认密码库已解锁后重试。' });
+      onNotice({ kind: 'error', text: t("复制失败，请确认密码库已解锁后重试。") });
       return false;
     }
 
@@ -1216,7 +1217,7 @@ function PopupHome({
     const domain = currentTab?.domain;
 
     if (!domain) {
-      await persist(upsertVaultSettings(session.vault, { autoPromptSave: !session.vault.settings.autoPromptSave }), '自动保存设置已更新。');
+      await persist(upsertVaultSettings(session.vault, { autoPromptSave: !session.vault.settings.autoPromptSave }), t("自动保存设置已更新。"));
       return;
     }
 
@@ -1225,7 +1226,7 @@ function PopupHome({
       ? Array.from(new Set([...session.vault.settings.blacklist, domain]))
       : session.vault.settings.blacklist.filter((item) => !domainsMatch(item, domain));
 
-    await persist(upsertVaultSettings(session.vault, { autoPromptSave: true, blacklist }), enabled ? '已在此域关闭自动保存。' : '已在此域启用自动保存。');
+    await persist(upsertVaultSettings(session.vault, { autoPromptSave: true, blacklist }), enabled ? t("已在此域关闭自动保存。") : t("已在此域启用自动保存。"));
   }
 
   async function handleCredentialAction(action: CredentialAction, credential: Credential, activeTabOnly = false) {
@@ -1234,7 +1235,7 @@ function PopupHome({
     try {
       if (action === 'goto') {
         if (!isSupportedCredentialUrl(credential.url)) throw new Error('INVALID_CREDENTIAL_URL');
-        await persist(touchCredentialInVault(session.vault, credential.id), '已打开网站。');
+        await persist(touchCredentialInVault(session.vault, credential.id), t("已打开网站。"));
         const response = await sendRuntimeMessage<OpenTabResult>({ type: 'KEYPILOT_OPEN_TAB', action, credential: payload });
         if (!response.ok) throw new Error(response.error ?? 'TAB_CREATE_FAILED');
         return;
@@ -1255,12 +1256,12 @@ function PopupHome({
         } else if (response.stage === 'usernameOnly') {
           onNotice({
             kind: 'info',
-            text: response.submitted ? '已填写用户名并进入下一步，密码框出现后会继续填写。' : '已填写用户名。该页面可能是分步登录。'
+            text: response.submitted ? t("已填写用户名并进入下一步，密码框出现后会继续填写。") : t("已填写用户名。该页面可能是分步登录。")
           });
         } else if (response.skippedSubmit) {
-          onNotice({ kind: 'info', text: '已填充。检测到验证码或敏感字段，未自动提交。' });
+          onNotice({ kind: 'info', text: t("已填充。检测到验证码或敏感字段，未自动提交。") });
         } else if (response.submitButtonMissing && action === 'login') {
-          onNotice({ kind: 'info', text: '已填充账号密码，但没有找到可靠的登录按钮。可在网页诊断里点“手动绑定字段”。' });
+          onNotice({ kind: 'info', text: t("已填充账号密码，但没有找到可靠的登录按钮。可在网页诊断里点“手动绑定字段”。") });
         }
 
         const outcomeNotice = submitOutcomeNotice(response.submitOutcome);
@@ -1272,13 +1273,13 @@ function PopupHome({
         }
       } else {
         if (!isSupportedCredentialUrl(credential.url)) throw new Error('INVALID_CREDENTIAL_URL');
-        await persist(touchCredentialInVault(session.vault, credential.id), '已发送填充指令。');
+        await persist(touchCredentialInVault(session.vault, credential.id), t("已发送填充指令。"));
         const response = await sendRuntimeMessage<OpenTabResult>({ type: 'KEYPILOT_OPEN_TAB', action, credential: payload });
         if (!response.ok) throw new Error(response.error ?? 'TAB_CREATE_FAILED');
         return;
       }
 
-      await persist(touchCredentialInVault(session.vault, credential.id), '已发送填充指令。');
+      await persist(touchCredentialInVault(session.vault, credential.id), t("已发送填充指令。"));
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error).replace('EXTENSION_API_UNAVAILABLE', '请在已加载的浏览器插件中测试该功能。') });
     }
@@ -1301,8 +1302,8 @@ function PopupHome({
           kind: 'error',
           text:
             matched > 0
-              ? `检测到 ${matched}/${totalFields} 个候选字段，但没有成功填写。请点击资料右侧“绑定字段”校准这个网站。`
-              : '当前页面没有匹配到可填写的身份资料字段，请点击资料右侧“绑定字段”手动校准。'
+              ? t("检测到 {0}/{1} 个候选字段，但没有成功填写。请点击资料右侧“绑定字段”校准这个网站。", [matched, totalFields])
+              : t("当前页面没有匹配到可填写的身份资料字段，请点击资料右侧“绑定字段”手动校准。")
         });
         return;
       }
@@ -1316,7 +1317,7 @@ function PopupHome({
             item.id === profile.id ? { ...item, lastUsedAt: now, updatedAt: now } : item
           )
         },
-        missingCount > 0 ? `已填写 ${response.filledCount} 个字段，${missingCount} 个字段未匹配。` : `已填写 ${response.filledCount} 个字段。`
+        missingCount > 0 ? t("已填写 {0} 个字段，{1} 个字段未匹配。", [response.filledCount, missingCount]) : t("已填写 {0} 个字段。", [response.filledCount])
       );
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error).replace('EXTENSION_API_UNAVAILABLE', '请在已加载的浏览器插件中测试该功能。') });
@@ -1337,7 +1338,7 @@ function PopupHome({
         throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'FILL_BINDING_START_FAILED'));
       }
 
-      onNotice({ kind: 'info', text: '已启动身份字段绑定。请回到网页，选择资料字段后点击对应输入框。' });
+      onNotice({ kind: 'info', text: t("已启动身份字段绑定。请回到网页，选择资料字段后点击对应输入框。") });
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error).replace('EXTENSION_API_UNAVAILABLE', '请在已加载的浏览器插件中测试该功能。') });
     }
@@ -1355,22 +1356,22 @@ function PopupHome({
 
     if (!currentProfile) {
       setRenameFillProfileTarget(null);
-      onNotice({ kind: 'error', text: '这条身份资料已经不存在。' });
+      onNotice({ kind: 'error', text: t("这条身份资料已经不存在。") });
       return;
     }
 
-    await persist(updateFillProfileInVault(session.vault, { ...currentProfile, title: nextTitle }), '身份资料已重命名。');
+    await persist(updateFillProfileInVault(session.vault, { ...currentProfile, title: nextTitle }), t("身份资料已重命名。"));
     setRenameFillProfileTarget(null);
   }
 
   function requestDeleteFillProfile(profile: FillProfile) {
     onConfirm({
-      title: '删除身份资料',
-      body: `将“${profile.title}”移到回收站？之后可以在主页回收站恢复。`,
-      actionLabel: '移到回收站',
+      title: t("删除身份资料"),
+      body: t("将“{0}”移到回收站？之后可以在主页回收站恢复。", [profile.title]),
+      actionLabel: t("移到回收站"),
       tone: 'danger',
       onConfirm: async () => {
-        await persist(deleteFillProfileFromVault(session.vault, profile.id), '身份资料已移到回收站。');
+        await persist(deleteFillProfileFromVault(session.vault, profile.id), t("身份资料已移到回收站。"));
       }
     });
   }
@@ -1389,7 +1390,7 @@ function PopupHome({
         throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'BINDING_START_FAILED'));
       }
 
-      onNotice({ kind: 'info', text: '已启动字段绑定。请回到网页，依次点击用户名框、密码框和登录按钮。' });
+      onNotice({ kind: 'info', text: t("已启动字段绑定。请回到网页，依次点击用户名框、密码框和登录按钮。") });
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error) });
     }
@@ -1404,7 +1405,7 @@ function PopupHome({
 
     if (mode === 'blacklist') {
       const blacklist = Array.from(new Set([...session.vault.settings.blacklist, candidate.domain]));
-      await persist(upsertVaultSettings(session.vault, { blacklist }), '已加入不保存网站列表。');
+      await persist(upsertVaultSettings(session.vault, { blacklist }), t("已加入不保存网站列表。"));
       setPendingCandidate(null);
       await sendRuntimeMessage({ type: 'KEYPILOT_CLEAR_SAVE_CANDIDATE' }).catch(() => undefined);
       return;
@@ -1424,9 +1425,9 @@ function PopupHome({
       const refreshedVault = refreshDuplicateCredential(session.vault, exactDuplicate, candidate);
       const withRule = upsertSiteRuleFromCandidate(refreshedVault, candidate);
       if (withRule !== session.vault) {
-        await persist(withRule, '该登录信息已经存在，已刷新站点信息。');
+        await persist(withRule, t("该登录信息已经存在，已刷新站点信息。"));
       } else {
-        onNotice({ kind: 'info', text: '该登录信息已经存在，已跳过保存。' });
+        onNotice({ kind: 'info', text: t("该登录信息已经存在，已跳过保存。") });
       }
       setPendingCandidate(null);
       await sendRuntimeMessage({ type: 'KEYPILOT_CLEAR_SAVE_CANDIDATE' }).catch(() => undefined);
@@ -1467,11 +1468,11 @@ function PopupHome({
       withRule,
       shouldUpdate
         ? ruleRecorded
-          ? '已更新已存在账号的密码和站点规则。'
-          : '已更新已存在账号的密码。'
+          ? t("已更新已存在账号的密码和站点规则。")
+          : t("已更新已存在账号的密码。")
         : ruleRecorded
-          ? '登录信息已保存为新记录，并记录站点规则。'
-          : '登录信息已保存为新记录。'
+          ? t("登录信息已保存为新记录，并记录站点规则。")
+          : t("登录信息已保存为新记录。")
     );
     setSelectedId(credential.id);
     setPendingCandidate(null);
@@ -1483,7 +1484,7 @@ function PopupHome({
       return (
         <CredentialDetailPage
           session={session}
-          onSessionChange={next => void onSessionChange(next, "账号已更新。")}
+          onSessionChange={next => void onSessionChange(next, t("账号已更新。"))}
           credential={selectedCredential}
           settings={session.vault.settings}
           onBack={goBack}
@@ -1507,7 +1508,7 @@ function PopupHome({
     }
 
     if (activeView === 'totp') {
-      return <AuthenticatorPanel compact session={session} onChange={next => onSessionChange(next, '身份验证器已更新。')} />;
+      return <AuthenticatorPanel compact session={session} onChange={next => onSessionChange(next, t("身份验证器已更新。"))} />;
     }
 
     if (activeView === 'generator') {
@@ -1529,7 +1530,7 @@ function PopupHome({
             };
             await persist(
               nextVault,
-              `已新增 ${credentials.length} 条账号，更新 ${updates.length} 条账号。请删除原始 CSV 文件。`
+              t("已新增 {0} 条账号，更新 {1} 条账号。请删除原始 CSV 文件。", [credentials.length, updates.length])
             );
             setActiveView('vault');
           }}
@@ -1654,20 +1655,20 @@ function SecondaryHeader({
   onLock: () => void;
 }) {
   const menu = useRef<HTMLDetailsElement>(null);
-  const titles: Partial<Record<ViewKey, string>> = { vault: '全部账号', totp: '身份验证器', generator: '密码生成器', import: '导入账号', settings: '设置' };
+  const titles: Partial<Record<ViewKey, string>> = { vault: t("全部账号"), totp: t("身份验证器"), generator: t("密码生成器"), import: t("导入账号"), settings: t("设置") };
   return (
     <header className="kp-secondary-header">
-      <button type="button" aria-label="返回账号列表" title="返回账号列表" onClick={onBack}><ArrowLeft size={20} /></button>
+      <button type="button" aria-label={t("返回账号列表")} title={t("返回账号列表")} onClick={onBack}><ArrowLeft size={20} /></button>
       <h2>{titles[active] ?? 'KeyPilot'}</h2>
-      <button type="button" aria-label="打开 KeyPilot 主页" title="打开完整密码库" onClick={onOpenVaultHome}><Home size={20} /></button>
+      <button type="button" aria-label={t("打开 KeyPilot 主页")} title={t("打开完整密码库")} onClick={onOpenVaultHome}><Home size={20} /></button>
       <details ref={menu} className="kp-secondary-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }} onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }}>
-        <summary aria-label="更多功能" title="更多功能"><MoreVertical size={20} /></summary>
-        <nav aria-label="KeyPilot 导航">
-          {(['home', 'vault', 'totp', 'generator', 'import', 'settings'] as ViewKey[]).map(view => <button key={view} type="button" aria-current={view === active ? 'page' : undefined} onClick={() => { if (menu.current) menu.current.open = false; onNavigate(view); }}>{view === 'home' ? '返回账号列表' : titles[view]}</button>)}
-          <button type="button" onClick={onLock}><Lock size={16} />锁定密码库</button>
+        <summary aria-label={t("更多功能")} title={t("更多功能")}><MoreVertical size={20} /></summary>
+        <nav aria-label={t("KeyPilot 导航")}>
+          {(['home', 'vault', 'totp', 'generator', 'import', 'settings'] as ViewKey[]).map(view => <button key={view} type="button" aria-current={view === active ? 'page' : undefined} onClick={() => { if (menu.current) menu.current.open = false; onNavigate(view); }}>{view === 'home' ? t("返回账号列表") : titles[view]}</button>)}
+          <button type="button" onClick={onLock}><Lock size={16} />{t("锁定密码库")}</button>
         </nav>
       </details>
-      {active === 'vault' && <label className="kp-secondary-search"><Search size={18} /><input aria-label="搜索账号、网站或备注" value={query} onChange={event => onQuery(event.target.value)} placeholder="搜索账号、网站或备注" /></label>}
+      {active === 'vault' && <label className="kp-secondary-search"><Search size={18} /><input aria-label={t("搜索账号、网站或备注")} value={query} onChange={event => onQuery(event.target.value)} placeholder={t("搜索账号、网站或备注")} /></label>}
     </header>
   );
 }
@@ -1679,8 +1680,8 @@ function BrandHeader({ compact }: { compact: boolean }) {
         <img src="icons/icon128.png" alt="" />
       </div>
       <div>
-        <h1>钥航 <span>KeyPilot</span></h1>
-        {!compact ? <p>自动登录，但密码只在本地。</p> : null}
+        <h1>{t("钥航 ")}<span>KeyPilot</span></h1>
+        {!compact ? <p>{t("自动登录，但密码只在本地。")}</p> : null}
       </div>
     </div>
   );
@@ -1813,7 +1814,7 @@ function HomePage({
   const activeCredentials = mode === 'identity' ? [] : mode === 'username' ? loginNameCredentials : siteOnly ? matchedLoginNames : filteredCredentials;
   const sortCredentials = (items: Credential[]) =>
     [...items].sort((left, right) => {
-      if (sortMode === 'az') return left.title.localeCompare(right.title, 'zh-CN');
+      if (sortMode === 'az') return left.title.localeCompare(right.title, getLanguage());
       if (sortMode === 'recent') return (right.lastUsedAt ?? right.updatedAt) - (left.lastUsedAt ?? left.updatedAt);
       if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
       return (right.lastUsedAt ?? right.updatedAt) - (left.lastUsedAt ?? left.updatedAt);
@@ -1828,7 +1829,7 @@ function HomePage({
   }
   const sortFillProfiles = (items: FillProfile[], modeOverride = sortMode) =>
     [...items].sort((left, right) => {
-      if (modeOverride === 'az') return left.title.localeCompare(right.title, 'zh-CN');
+      if (modeOverride === 'az') return left.title.localeCompare(right.title, getLanguage());
       if (modeOverride === 'favorite') {
         if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
       }
@@ -1871,14 +1872,14 @@ function HomePage({
   useEffect(() => {
     setIdentityListExpanded(false);
   }, [identityScope, normalizedQuery]);
-  const sectionTitle = mode === 'identity' ? '身份ID' : mode === 'username' ? '登录名' : query ? '搜索结果' : '账号';
+  const sectionTitle = mode === 'identity' ? t("身份ID") : mode === 'username' ? t("登录名") : query ? t("搜索结果") : t("账号");
   const sectionCount = mode === 'identity'
-    ? `${filteredFillProfiles.length} 条资料`
+    ? t("{0} 条资料", [filteredFillProfiles.length])
     : query
-      ? `${activeCredentials.length} 条匹配`
+      ? t("{0} 条匹配", [activeCredentials.length])
       : mode === 'username'
-        ? `${activeCredentials.length} 条登录名`
-        : `${total} 条保存`;
+        ? t("{0} 条登录名", [activeCredentials.length])
+        : t("{0} 条保存", [total]);
   const primaryMatch = currentMatches[0];
   const shouldShowFirstUseGuide = !onboardingDismissed && total === 0 && fillProfiles.length === 0;
 
@@ -1886,23 +1887,23 @@ function HomePage({
     return (
       <div className={homeClassName} onKeyDown={event => { if (mode === "login") navigateAccountList(event, ".kp-search input", ".kp-account-main", () => onQuery("")); }}>
         <header className="kp-topbar">
-          <button className="kp-icon-button kp-home-button" type="button" aria-label="打开 KeyPilot 主页" title="打开密码库" onClick={onOpenVaultHome}>
+          <button className="kp-icon-button kp-home-button" type="button" aria-label={t("打开 KeyPilot 主页")} title={t("打开密码库")} onClick={onOpenVaultHome}>
             <Home size={24} aria-hidden="true" />
           </button>
           <label className="kp-search">
             <Search size={18} aria-hidden="true" />
-            <input aria-describedby={mode === "login" ? "popup-search-help" : undefined} aria-label={mode === 'identity' ? '搜索身份资料' : mode === 'username' ? '搜索登录名' : '搜索账号、网站或备注'} value={query} onChange={(event) => onQuery(event.target.value)} placeholder={mode === 'identity' ? '搜索身份资料' : mode === 'username' ? '搜索登录名' : '搜索 KeyPilot'} />
-            {query ? <button type="button" aria-label="清除搜索" onClick={() => onQuery('')}><X size={14} aria-hidden="true" /></button> : null}
+            <input aria-describedby={mode === "login" ? "popup-search-help" : undefined} aria-label={mode === 'identity' ? t("搜索身份资料") : mode === 'username' ? t("搜索登录名") : t("搜索账号、网站或备注")} value={query} onChange={(event) => onQuery(event.target.value)} placeholder={mode === 'identity' ? t("搜索身份资料") : mode === 'username' ? t("搜索登录名") : t("搜索 KeyPilot")} />
+            {query ? <button type="button" aria-label={t("清除搜索")} onClick={() => onQuery('')}><X size={14} aria-hidden="true" /></button> : null}
           </label>
-          <span id="popup-search-help" className="kp-sr-only">上下键选择账号，Enter 登录，Escape 返回搜索或清空搜索。</span>
+          <span id="popup-search-help" className="kp-sr-only">{t("上下键选择账号，Enter 登录，Escape 返回搜索或清空搜索。")}</span>
           <HomeToolsMenu>
-              <button type="button" onClick={onAuthenticator}><ShieldCheck size={17} />身份验证器</button>
-              {remindersEnabled && <button type="button" onClick={() => void chrome.tabs.create({url:chrome.runtime.getURL('vault.html#reminders')})}><Bell size={17} />提醒中心</button>}
-              {!showToolbar && <><button type="button" onClick={onAdd}>新建账号</button><button type="button" onClick={onImport}>导入账号</button><button type="button" onClick={onToggleAutoSave}>{autoSaveEnabled ? '关闭自动保存' : '开启自动保存'}</button><button type="button" onClick={onLock}>锁定密码库</button></>}
-            <button type="button" onClick={onSettings}><Settings size={16} aria-hidden="true" />设置</button>
-            <button type="button" onClick={onRefreshCurrentTab}><RefreshCw size={16} aria-hidden="true" />刷新当前网站</button>
-            <button type="button" disabled={!currentTab} onClick={onTogglePageDebug}><Bug size={16} aria-hidden="true" />网页识别与修复</button>
-            {currentTab ? <InlinePageTools currentTab={currentTab} state={inlinePageState} diagnostics={diagnostics} onRestore={onRestoreInlinePage} onMarkPageMode={onMarkPageMode} /> : <p>打开普通网页后，可匹配并填写账号。</p>}
+              <button type="button" onClick={onAuthenticator}><ShieldCheck size={17} />{t("身份验证器")}</button>
+              {remindersEnabled && <button type="button" onClick={() => void chrome.tabs.create({url:chrome.runtime.getURL('vault.html#reminders')})}><Bell size={17} />{t("提醒中心")}</button>}
+              {!showToolbar && <><button type="button" onClick={onAdd}>{t("新建账号")}</button><button type="button" onClick={onImport}>{t("导入账号")}</button><button type="button" onClick={onToggleAutoSave}>{autoSaveEnabled ? t("关闭自动保存") : t("开启自动保存")}</button><button type="button" onClick={onLock}>{t("锁定密码库")}</button></>}
+            <button type="button" onClick={onSettings}><Settings size={16} aria-hidden="true" />{t("设置")}</button>
+            <button type="button" onClick={onRefreshCurrentTab}><RefreshCw size={16} aria-hidden="true" />{t("刷新当前网站")}</button>
+            <button type="button" disabled={!currentTab} onClick={onTogglePageDebug}><Bug size={16} aria-hidden="true" />{t("网页识别与修复")}</button>
+            {currentTab ? <InlinePageTools currentTab={currentTab} state={inlinePageState} diagnostics={diagnostics} onRestore={onRestoreInlinePage} onMarkPageMode={onMarkPageMode} /> : <p>{t("打开普通网页后，可匹配并填写账号。")}</p>}
           </HomeToolsMenu>
         </header>
 
@@ -1920,9 +1921,9 @@ function HomePage({
             />
           ) : null}
           <div className="kp-tool-row">
-            <div className="kp-mode-chips" role="tablist" aria-label="填充模式">
-              <HomeModeButton active={mode === 'login'} icon={<Lock size={20} />} label="登录" onClick={() => setMode('login')} />
-              <HomeModeButton active={mode === 'username'} icon={<UserRound size={20} />} label="填写登录名" onClick={() => setMode('username')} />
+            <div className="kp-mode-chips" role="tablist" aria-label={t("填充模式")}>
+              <HomeModeButton active={mode === 'login'} icon={<Lock size={20} />} label={t("登录")} onClick={() => setMode('login')} />
+              <HomeModeButton active={mode === 'username'} icon={<UserRound size={20} />} label={t("填写登录名")} onClick={() => setMode('username')} />
               <IdentityProfilePicker
                 active={mode === 'identity'}
                 open={profilePickerOpen}
@@ -1951,13 +1952,13 @@ function HomePage({
         </div>
 
         {mode === 'login' && currentTab ? (
-          <section className="kp-site-context" aria-label="当前网站">
-            <span title={currentTab.url}>当前：{currentTab.domain}</span>
+          <section className="kp-site-context" aria-label={t("当前网站")}>
+            <span title={currentTab.url}>{t("当前：")}{currentTab.domain}</span>
             {currentMatches.length ? (
               <button type="button" aria-pressed={siteOnly} onClick={() => setSiteOnly((value) => !value)}>
-                {siteOnly ? '显示全部账号' : `本站 ${currentMatches.length} 条`}<ChevronRight size={13} aria-hidden="true" />
+                {siteOnly ? t("显示全部账号") : t("本站 {0} 条", [currentMatches.length])}<ChevronRight size={13} aria-hidden="true" />
               </button>
-            ) : <small>暂无匹配</small>}
+            ) : <small>{t("暂无匹配")}</small>}
           </section>
         ) : null}
 
@@ -1972,24 +1973,18 @@ function HomePage({
             onOpenDetail={onOpenDetail}
           />
         ) : (
-        <section className="kp-list-shell" aria-label={mode === 'identity' ? '身份资料列表' : '账号列表'}>
+        <section className="kp-list-shell" aria-label={mode === 'identity' ? t("身份资料列表") : t("账号列表")}>
           <div className="kp-list-head">
             {mode === 'login' ? (
-              <div className="kp-sort" role="group" aria-label="排序">
-                <button className={sortMode === 'favorite' ? 'active' : ''} type="button" aria-pressed={sortMode === 'favorite'} onClick={() => setSortMode('favorite')}>
-                  常用
-                </button>
-                <button className={sortMode === 'recent' ? 'active' : ''} type="button" aria-pressed={sortMode === 'recent'} onClick={() => setSortMode('recent')}>
-                  最近
-                </button>
-                <button className={sortMode === 'az' ? 'active' : ''} type="button" aria-pressed={sortMode === 'az'} onClick={() => setSortMode('az')}>
-                  名称 A–Z
-                </button>
+              <div className="kp-sort" role="group" aria-label={t("排序")}>
+                <button className={sortMode === 'favorite' ? 'active' : ''} type="button" aria-pressed={sortMode === 'favorite'} onClick={() => setSortMode('favorite')}>{t("常用")}</button>
+                <button className={sortMode === 'recent' ? 'active' : ''} type="button" aria-pressed={sortMode === 'recent'} onClick={() => setSortMode('recent')}>{t("最近")}</button>
+                <button className={sortMode === 'az' ? 'active' : ''} type="button" aria-pressed={sortMode === 'az'} onClick={() => setSortMode('az')}>{t("名称 A–Z")}</button>
               </div>
             ) : (
               <strong>{sectionTitle}</strong>
             )}
-            <span className="kp-result-count">{mode === 'login' ? (normalizedQuery || siteOnly ? `${shownCredentials.length} / ${total} 条` : `${total} 条`) : sectionCount}</span>
+            <span className="kp-result-count">{mode === 'login' ? (normalizedQuery || siteOnly ? t("{0} / {1} 条", [shownCredentials.length, total]) : t("{0} 条", [total])) : sectionCount}</span>
           </div>
 
           {mode === 'identity' ? (
@@ -2039,18 +2034,18 @@ function HomePage({
             </div>
           ) : (
             <div className="kp-empty">
-              <strong>{normalizedQuery || siteOnly ? '没有匹配的账号' : '还没有账号'}</strong>
-              <span>{normalizedQuery ? '试试网站名称、用户名或备注。' : siteOnly ? '当前网站还没有保存的账号。' : '导入已有密码，或新建第一个账号。'}</span>
-              {normalizedQuery || siteOnly ? <button type="button" onClick={() => { onQuery(''); setSiteOnly(false); }}>显示全部账号</button> : <button type="button" onClick={onAdd}>新建账号</button>}
+              <strong>{normalizedQuery || siteOnly ? t("没有匹配的账号") : t("还没有账号")}</strong>
+              <span>{normalizedQuery ? t("试试网站名称、用户名或备注。") : siteOnly ? t("当前网站还没有保存的账号。") : t("导入已有密码，或新建第一个账号。")}</span>
+              {normalizedQuery || siteOnly ? <button type="button" onClick={() => { onQuery(''); setSiteOnly(false); }}>{t("显示全部账号")}</button> : <button type="button" onClick={onAdd}>{t("新建账号")}</button>}
             </div>
           )}
         </section>
         )}
 
         {showToolbar && <footer className="kp-dock">
-          <button className="kp-lock-state" type="button" onClick={onLock} title="点击锁定密码库" aria-label="锁定密码库">
+          <button className="kp-lock-state" type="button" onClick={onLock} title={t("点击锁定密码库")} aria-label={t("锁定密码库")}>
             <UnlockKeyhole size={15} aria-hidden="true" />
-            <span>已解锁</span>
+            <span>{t("已解锁")}</span>
           </button>
           <button
             className={autoSaveEnabled ? 'kp-save-toggle active' : 'kp-save-toggle'}
@@ -2058,16 +2053,16 @@ function HomePage({
             aria-pressed={autoSaveEnabled}
             onClick={onToggleAutoSave}
           >
-            <span>自动保存</span>
+            <span>{t("自动保存")}</span>
             <i aria-hidden="true" />
           </button>
           <button className="kp-dock-action" type="button" onClick={onImport}>
             <Download size={18} aria-hidden="true" />
-            <span>导入</span>
+            <span>{t("导入")}</span>
           </button>
           <button className="kp-dock-action primary" type="button" onClick={onAdd}>
             <Plus size={19} aria-hidden="true" />
-            <span>新建</span>
+            <span>{t("新建")}</span>
           </button>
         </footer>}
       </div>
@@ -2080,48 +2075,38 @@ function HomePage({
         <div className="current-site-top">
           <SiteIcon domain={currentTab?.domain ?? ''} url={currentTab?.url} iconUrl={currentTab?.iconUrl} size="large" />
           <div>
-            <span>当前网站</span>
-            <h2>{currentTab?.domain || '未检测到网站'}</h2>
-            <p>匹配到 {currentMatches.length} 条账号</p>
+            <span>{t("当前网站")}</span>
+            <h2>{currentTab?.domain || t("未检测到网站")}</h2>
+            <p>{t("匹配到 ")}{currentMatches.length}{t(" 条账号")}</p>
           </div>
-          <strong>{currentMatches.length} 条记录</strong>
+          <strong>{currentMatches.length}{t(" 条记录")}</strong>
         </div>
         <div className="security-line">
           <ShieldCheck size={16} aria-hidden="true" />
-          <span>本地加密 · 已解锁</span>
+          <span>{t("本地加密 · 已解锁")}</span>
         </div>
         <InlineDiagnosticsPanel diagnostics={diagnostics} fallbackMatchedCount={currentMatches.length} primaryMatch={primaryMatch} />
         <div className="current-actions">
           <button className="button primary" type="button" disabled={!primaryMatch} onClick={() => primaryMatch && onAction('login', primaryMatch, true)}>
-            <CircleCheck size={16} aria-hidden="true" />
-            一键登录
-          </button>
+            <CircleCheck size={16} aria-hidden="true" />{t("一键登录")}</button>
           <button className="button secondary" type="button" disabled={!primaryMatch} onClick={() => primaryMatch && onAction('fill', primaryMatch, true)}>
-            <ExternalLink size={16} aria-hidden="true" />
-            浏览并填写
-          </button>
+            <ExternalLink size={16} aria-hidden="true" />{t("浏览并填写")}</button>
           <button className="button secondary" type="button" disabled={!primaryMatch || !currentTab?.id} onClick={() => primaryMatch && onBind(primaryMatch)}>
-            <KeyRound size={16} aria-hidden="true" />
-            绑定字段
-          </button>
+            <KeyRound size={16} aria-hidden="true" />{t("绑定字段")}</button>
         </div>
         {!currentTab ? (
-          <button className="inline-refresh" type="button" onClick={onRefreshCurrentTab}>
-            刷新当前网站
-          </button>
+          <button className="inline-refresh" type="button" onClick={onRefreshCurrentTab}>{t("刷新当前网站")}</button>
         ) : null}
       </section>
 
       <section className="saved-section">
         <div className="section-title">
           <div>
-            <h2>{view === 'vault' ? '密码库' : '保存的账号'}</h2>
-            <p>{query ? `${credentials.length} 条匹配` : `${total} 条账号`}</p>
+            <h2>{view === 'vault' ? t("密码库") : t("保存的账号")}</h2>
+            <p>{query ? t("{0} 条匹配", [credentials.length]) : t("{0} 条账号", [total])}</p>
           </div>
           <button className="button primary compact" type="button" onClick={onAdd}>
-            <Plus size={16} aria-hidden="true" />
-            新建
-          </button>
+            <Plus size={16} aria-hidden="true" />{t("新建")}</button>
         </div>
 
         {shownCredentials.length ? (
@@ -2140,7 +2125,7 @@ function HomePage({
             ))}
           </div>
         ) : (
-          <EmptyState title="还没有账号" body="新增账号后，KeyPilot 会加密保存到本地 Vault。" actionLabel="新建账号" onAction={onAdd} />
+          <EmptyState title={t("还没有账号")} body={t("新增账号后，KeyPilot 会加密保存到本地 Vault。")} actionLabel={t("新建账号")} onAction={onAdd} />
         )}
       </section>
     </div>
@@ -2148,19 +2133,19 @@ function HomePage({
 }
 
 function inlineSilentReasonLabel(reason?: InlineSilentRuleSummary['reason']): string {
-  if (reason === 'empty-page') return '页面内容不足';
-  if (reason === 'passive-form') return '营销/留言表单';
-  if (reason === 'manual-hide') return '你手动隐藏了此页';
-  if (reason === 'no-form-context') return '没有可填写表单';
-  if (reason === 'no-inline-anchor') return '没有合适浮标位置';
-  return '自动静默';
+  if (reason === 'empty-page') return t("页面内容不足");
+  if (reason === 'passive-form') return t("营销/留言表单");
+  if (reason === 'manual-hide') return t("你手动隐藏了此页");
+  if (reason === 'no-form-context') return t("没有可填写表单");
+  if (reason === 'no-inline-anchor') return t("没有合适浮标位置");
+  return t("自动静默");
 }
 
 function siteRuleModeLabel(mode?: SiteRulePageMode): string {
-  if (mode === 'login') return '登录页';
-  if (mode === 'register') return '注册页';
-  if (mode === 'fill-profile') return '填表页';
-  return '自动识别';
+  if (mode === 'login') return t("登录页");
+  if (mode === 'register') return t("注册页");
+  if (mode === 'fill-profile') return t("填表页");
+  return t("自动识别");
 }
 
 function HomeToolsMenu({ children }: { children: ReactNode }) {
@@ -2183,8 +2168,8 @@ function HomeToolsMenu({ children }: { children: ReactNode }) {
     }} onBlur={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false;
     }}>
-      <summary className="kp-icon-button" aria-label="更多操作" title="更多操作"><MoreVertical size={19} aria-hidden="true" /></summary>
-      <div className="kp-tools-popover" role="group" aria-label="更多操作" onClick={(event) => {
+      <summary className="kp-icon-button" aria-label={t("更多操作")} title={t("更多操作")}><MoreVertical size={19} aria-hidden="true" /></summary>
+      <div className="kp-tools-popover" role="group" aria-label={t("更多操作")} onClick={(event) => {
         if ((event.target as Element).closest('button') && detailsRef.current) detailsRef.current.open = false;
       }}>{children}</div>
     </details>
@@ -2213,32 +2198,32 @@ function FirstUseGuide({
   const steps = [
     {
       done: credentialCount > 0,
-      title: '保存第一个账号',
-      body: credentialCount > 0 ? `${credentialCount} 条账号已在本地 Vault` : '新建或导入 CSV 账号'
+      title: t("保存第一个账号"),
+      body: credentialCount > 0 ? t("{0} 条账号已在本地 Vault", [credentialCount]) : t("新建或导入 CSV 账号")
     },
     {
       done: currentMatchCount > 0,
-      title: '在网站上登录',
-      body: currentMatchCount > 0 ? `当前页匹配 ${currentMatchCount} 条账号` : '打开已保存账号的网站'
+      title: t("在网站上登录"),
+      body: currentMatchCount > 0 ? t("当前页匹配 {0} 条账号", [currentMatchCount]) : t("打开已保存账号的网站")
     },
     {
       done: fillProfileCount > 0,
-      title: '准备身份资料',
-      body: fillProfileCount > 0 ? `${fillProfileCount} 条身份资料可填表` : '导入 Excel / .kpfill'
+      title: t("准备身份资料"),
+      body: fillProfileCount > 0 ? t("{0} 条身份资料可填表", [fillProfileCount]) : t("导入 Excel / .kpfill")
     }
   ];
   const completed = steps.filter((step) => step.done).length;
 
   return (
-    <section className="kp-onboarding-card" aria-label="KeyPilot 快速开始">
-      <button className="kp-onboarding-close" type="button" aria-label="关闭快速开始" onClick={onDismiss}>
+    <section className="kp-onboarding-card" aria-label={t("KeyPilot 快速开始")}>
+      <button className="kp-onboarding-close" type="button" aria-label={t("关闭快速开始")} onClick={onDismiss}>
         <X size={15} aria-hidden="true" />
       </button>
       <div className="kp-onboarding-head">
         <span className="kp-onboarding-icon"><Wand2 size={17} aria-hidden="true" /></span>
         <div>
-          <strong>快速开始</strong>
-          <small>{completed} / {steps.length} 已完成</small>
+          <strong>{t("快速开始")}</strong>
+          <small>{completed} / {steps.length}{t(" 已完成")}</small>
         </div>
       </div>
       <div className="kp-onboarding-steps">
@@ -2252,10 +2237,10 @@ function FirstUseGuide({
       </div>
       <div className="kp-onboarding-actions">
         <button type="button" onClick={credentialCount > 0 ? onImport : onAdd}>
-          {credentialCount > 0 ? '导入更多' : '新建账号'}
+          {credentialCount > 0 ? t("导入更多") : t("新建账号")}
         </button>
-        <button type="button" onClick={onOpenVaultHome}>资料库</button>
-        <button type="button" onClick={onSettings}>安全设置</button>
+        <button type="button" onClick={onOpenVaultHome}>{t("资料库")}</button>
+        <button type="button" onClick={onSettings}>{t("安全设置")}</button>
       </div>
     </section>
   );
@@ -2284,19 +2269,19 @@ function InlinePageTools({
   const tone = silentRule ? 'warning' : siteMode ? 'info' : 'neutral';
   const title = silentRule
     ? silentRule.source === 'manual'
-      ? '本页浮标已隐藏'
-      : '本页浮标已自动隐藏'
+      ? t("本页浮标已隐藏")
+      : t("本页浮标已自动隐藏")
     : siteMode
-      ? `已标记为${siteRuleModeLabel(siteMode)}`
-      : '识别不准？';
+      ? t("已标记为{0}", [siteRuleModeLabel(siteMode)])
+      : t("识别不准？");
   const body = silentRule
-    ? `${inlineSilentReasonLabel(silentRule.reason)}，可恢复或重新标记此页。`
+    ? t("{0}，可恢复或重新标记此页。", [inlineSilentReasonLabel(silentRule.reason)])
     : siteMode
-      ? '当前页会优先使用你保存的站点规则。'
-      : '可把当前 URL 固定为登录页或填表页。';
+      ? t("当前页会优先使用你保存的站点规则。")
+      : t("可把当前 URL 固定为登录页或填表页。");
 
   return (
-    <section className={`kp-inline-tools ${tone}`} aria-label="当前页识别修复">
+    <section className={`kp-inline-tools ${tone}`} aria-label={t("当前页识别修复")}>
       <span className="kp-inline-tools-icon" aria-hidden="true">
         {silentRule ? <RefreshCw size={17} /> : siteMode ? <ShieldCheck size={17} /> : <Bug size={17} />}
       </span>
@@ -2305,10 +2290,10 @@ function InlinePageTools({
         <span>{currentTab?.domain ? `${currentTab.domain} · ${body}` : body}</span>
       </div>
       <div className="kp-inline-tool-actions">
-        {silentRule ? <button className="primary" type="button" onClick={onRestore}>恢复浮标</button> : null}
-        <button type="button" onClick={() => onMarkPageMode('login')}>标记登录</button>
-        <button type="button" onClick={() => onMarkPageMode('fill-profile')}>标记填表</button>
-        <button type="button" onClick={() => onMarkPageMode('register')}>注册页</button>
+        {silentRule ? <button className="primary" type="button" onClick={onRestore}>{t("恢复浮标")}</button> : null}
+        <button type="button" onClick={() => onMarkPageMode('login')}>{t("标记登录")}</button>
+        <button type="button" onClick={() => onMarkPageMode('fill-profile')}>{t("标记填表")}</button>
+        <button type="button" onClick={() => onMarkPageMode('register')}>{t("注册页")}</button>
       </div>
     </section>
   );
@@ -2370,7 +2355,7 @@ function IdentityProfilePicker({
   const otherProfiles = showAllProfiles
     ? profiles
         .filter((profile) => !recentIds.has(profile.id))
-        .sort((left, right) => left.title.localeCompare(right.title, 'zh-CN'))
+        .sort((left, right) => left.title.localeCompare(right.title, getLanguage()))
         .slice(0, 40)
     : [];
 
@@ -2412,7 +2397,7 @@ function IdentityProfilePicker({
         <button
           className={menuOpen ? 'kp-identity-row-more active' : 'kp-identity-row-more'}
           type="button"
-          aria-label={`${profile.title} 更多操作`}
+          aria-label={t("{0} 更多操作", [profile.title])}
           aria-expanded={menuOpen}
           onClick={(event) => {
             event.stopPropagation();
@@ -2422,27 +2407,27 @@ function IdentityProfilePicker({
           <MoreVertical size={16} aria-hidden="true" />
         </button>
         {menuOpen ? (
-          <div className="kp-identity-action-menu" role="menu" aria-label={`${profile.title} 操作`}>
+          <div className="kp-identity-action-menu" role="menu" aria-label={t("{0} 操作", [profile.title])}>
             <button type="button" className="kp-identity-action-item primary" role="menuitem" onClick={() => runProfileAction(profile, () => onFill(profile))}>
               <FileInput size={16} aria-hidden="true" />
-              <span>填表</span>
+              <span>{t("填表")}</span>
             </button>
             <button type="button" className="kp-identity-action-item" role="menuitem" onClick={() => runProfileAction(profile, () => onViewEdit(profile))}>
               <Edit3 size={16} aria-hidden="true" />
-              <span>查看/编辑</span>
+              <span>{t("查看/编辑")}</span>
             </button>
             <button type="button" className="kp-identity-action-item" role="menuitem" onClick={() => runProfileAction(profile, () => onRename(profile))}>
               <SlidersHorizontal size={16} aria-hidden="true" />
-              <span>重命名</span>
+              <span>{t("重命名")}</span>
             </button>
             <button type="button" className="kp-identity-action-item danger" role="menuitem" onClick={() => runProfileAction(profile, () => onDelete(profile))}>
               <Trash2 size={16} aria-hidden="true" />
-              <span>删除</span>
+              <span>{t("删除")}</span>
             </button>
             <span className="kp-identity-action-divider" aria-hidden="true" />
             <button type="button" className="kp-identity-action-item" role="menuitem" onClick={() => runProfileAction(profile, onOpenHome)}>
               <Home size={16} aria-hidden="true" />
-              <span>打开主页</span>
+              <span>{t("打开主页")}</span>
             </button>
           </div>
         ) : null}
@@ -2463,12 +2448,12 @@ function IdentityProfilePicker({
         }}
       >
         <span className={`kp-profile-dot ${tone}`}>{selected ? fillProfileBadgeText(selected) : <IdCard size={22} aria-hidden="true" />}</span>
-        <span className="kp-identity-picker-label">{selected ? selected.title : '身份资料'}</span>
+        <span className="kp-identity-picker-label">{selected ? selected.title : t("身份资料")}</span>
       </button>
       <button
         className="kp-identity-picker-arrow"
         type="button"
-        aria-label="选择身份资料"
+        aria-label={t("选择身份资料")}
         aria-haspopup="listbox"
         aria-expanded={active && open}
         onClick={(event) => {
@@ -2480,35 +2465,32 @@ function IdentityProfilePicker({
         <ChevronDown size={14} aria-hidden="true" />
       </button>
       {active && open ? (
-        <div className="kp-identity-menu" role="listbox" aria-label="选择身份资料">
+        <div className="kp-identity-menu" role="listbox" aria-label={t("选择身份资料")}>
           {profiles.length ? (
             <>
               <div className="kp-identity-menu-section">
-                <span className="kp-identity-menu-title">最近使用的身份信息：</span>
+                <span className="kp-identity-menu-title">{t("最近使用的身份信息：")}</span>
                 {recentProfiles.map(renderProfileRow)}
               </div>
               {otherProfiles.length ? (
                 <>
                   <span className="kp-identity-menu-divider" aria-hidden="true" />
                   <div className="kp-identity-menu-section">
-                    <span className="kp-identity-menu-title">其他身份信息（A-Z 排序）：</span>
+                    <span className="kp-identity-menu-title">{t("其他身份信息（A-Z 排序）：")}</span>
                     {otherProfiles.map(renderProfileRow)}
                   </div>
                 </>
               ) : null}
             </>
           ) : (
-            <div className="kp-identity-menu-empty">还没有身份资料</div>
+            <div className="kp-identity-menu-empty">{t("还没有身份资料")}</div>
           )}
           {profiles.length && !showAllProfiles && total > recentProfiles.length ? (
-            <button className="kp-identity-menu-foot" type="button" onClick={() => setShowAllProfiles(true)}>
-              显示所有个人信息（{total}）
+            <button className="kp-identity-menu-foot" type="button" onClick={() => setShowAllProfiles(true)}>{t("显示所有个人信息（")}{total}）
             </button>
           ) : null}
           {showAllProfiles && total > recentProfiles.length + otherProfiles.length ? (
-            <button className="kp-identity-menu-foot" type="button" onClick={onOpenHome}>
-              打开主页查看更多
-            </button>
+            <button className="kp-identity-menu-foot" type="button" onClick={onOpenHome}>{t("打开主页查看更多")}</button>
           ) : null}
         </div>
       ) : null}
@@ -2533,7 +2515,7 @@ function groupLoginNameCredentials(items: Credential[]): Array<{ folder: string;
     .sort((left, right) => {
       if (left.folder === ROOT_FOLDER_LABEL && right.folder !== ROOT_FOLDER_LABEL) return -1;
       if (right.folder === ROOT_FOLDER_LABEL && left.folder !== ROOT_FOLDER_LABEL) return 1;
-      return left.folder.localeCompare(right.folder, 'zh-CN');
+      return left.folder.localeCompare(right.folder, getLanguage());
     });
 }
 
@@ -2555,30 +2537,24 @@ function LoginNameSurface({
   onOpenDetail: (credential: Credential) => void;
 }) {
   return (
-    <section className="kp-loginname-shell" aria-label="填写登录名">
-      <div className="kp-loginname-tabs" role="tablist" aria-label="登录名范围">
-        <button className={scope === 'matched' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'matched'} onClick={() => onScopeChange('matched')}>
-          匹配登录名
-        </button>
-        <button className={scope === 'domain' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'domain'} onClick={() => onScopeChange('domain')}>
-          相同域
-        </button>
-        <button className={scope === 'all' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'all'} onClick={() => onScopeChange('all')}>
-          所有
-        </button>
+    <section className="kp-loginname-shell" aria-label={t("填写登录名")}>
+      <div className="kp-loginname-tabs" role="tablist" aria-label={t("登录名范围")}>
+        <button className={scope === 'matched' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'matched'} onClick={() => onScopeChange('matched')}>{t("匹配登录名")}</button>
+        <button className={scope === 'domain' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'domain'} onClick={() => onScopeChange('domain')}>{t("相同域")}</button>
+        <button className={scope === 'all' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'all'} onClick={() => onScopeChange('all')}>{t("所有")}</button>
       </div>
 
       {groups.length ? (
         <div className="kp-loginname-list">
           <div className="kp-loginname-summary">
-            <span>{resultCount} 条登录名</span>
-            {currentTab?.domain ? <small>当前网站：{currentTab.domain}</small> : null}
+            <span>{resultCount}{t(" 条登录名")}</span>
+            {currentTab?.domain ? <small>{t("当前网站：")}{currentTab.domain}</small> : null}
           </div>
           {groups.map((group) => (
             <div className="kp-loginname-group" key={group.folder}>
               <div className="kp-loginname-folder">
                 <Folder size={18} aria-hidden="true" />
-                <span>{group.folder}</span>
+                <span>{group.folder === ROOT_FOLDER_LABEL ? t('主目录') : group.folder}</span>
                 <small>{group.items.length}</small>
               </div>
               {group.items.map((credential) => (
@@ -2590,8 +2566,8 @@ function LoginNameSurface({
       ) : (
         <div className="kp-loginname-empty">
           <UserRound size={26} aria-hidden="true" />
-          <strong>没有可填写的登录名</strong>
-          <span>{scope === 'matched' ? '切换到“相同域”或“所有”查看其他账号。' : '换个关键词试试，或先新建一个登录账号。'}</span>
+          <strong>{t("没有可填写的登录名")}</strong>
+          <span>{scope === 'matched' ? t("切换到“相同域”或“所有”查看其他账号。") : t("换个关键词试试，或先新建一个登录账号。")}</span>
         </div>
       )}
     </section>
@@ -2652,9 +2628,9 @@ function IdentityProfileListSurface({
   const [actionProfileId, setActionProfileId] = useState<string | null>(null);
   const scopeHint = scope === 'matched'
     ? currentDomain
-      ? `当前网站匹配：${currentDomain}`
-      : '当前页没有可匹配的域名'
-    : `${allTotal} 条身份信息`;
+      ? t("当前网站匹配：{0}", [currentDomain])
+      : t("当前页没有可匹配的域名")
+    : t("{0} 条身份信息", [allTotal]);
 
   function runProfileAction(action: () => void) {
     action();
@@ -2677,33 +2653,33 @@ function IdentityProfileListSurface({
         <button
           className={menuOpen ? 'kp-identity-list-more active' : 'kp-identity-list-more'}
           type="button"
-          aria-label={`${profile.title} 更多操作`}
+          aria-label={t("{0} 更多操作", [profile.title])}
           aria-expanded={menuOpen}
           onClick={() => setActionProfileId((value) => (value === profile.id ? null : profile.id))}
         >
           <MoreVertical size={17} aria-hidden="true" />
         </button>
         {menuOpen ? (
-          <div className="kp-identity-list-action-menu" role="menu" aria-label={`${profile.title} 操作`}>
+          <div className="kp-identity-list-action-menu" role="menu" aria-label={t("{0} 操作", [profile.title])}>
             <button type="button" className="primary" role="menuitem" onClick={() => runProfileAction(() => onFill(profile))}>
               <FileInput size={15} aria-hidden="true" />
-              <span>填表</span>
+              <span>{t("填表")}</span>
             </button>
             <button type="button" role="menuitem" onClick={() => runProfileAction(() => onSelect(profile))}>
               <Eye size={15} aria-hidden="true" />
-              <span>查看</span>
+              <span>{t("查看")}</span>
             </button>
             <button type="button" role="menuitem" onClick={() => runProfileAction(() => onBind(profile))}>
               <SlidersHorizontal size={15} aria-hidden="true" />
-              <span>校准字段</span>
+              <span>{t("校准字段")}</span>
             </button>
             <button type="button" role="menuitem" onClick={() => runProfileAction(() => onRename(profile))}>
               <Edit3 size={15} aria-hidden="true" />
-              <span>重命名</span>
+              <span>{t("重命名")}</span>
             </button>
             <button type="button" className="danger" role="menuitem" onClick={() => runProfileAction(() => onDelete(profile))}>
               <Trash2 size={15} aria-hidden="true" />
-              <span>删除</span>
+              <span>{t("删除")}</span>
             </button>
           </div>
         ) : null}
@@ -2712,14 +2688,10 @@ function IdentityProfileListSurface({
   }
 
   return (
-    <section className="kp-identity-list-surface" aria-label="填写身份ID">
-      <div className="kp-identity-scope-tabs" role="tablist" aria-label="身份资料范围">
-        <button className={scope === 'matched' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'matched'} onClick={() => onScopeChange('matched')}>
-          匹配
-        </button>
-        <button className={scope === 'all' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'all'} onClick={() => onScopeChange('all')}>
-          所有
-        </button>
+    <section className="kp-identity-list-surface" aria-label={t("填写身份ID")}>
+      <div className="kp-identity-scope-tabs" role="tablist" aria-label={t("身份资料范围")}>
+        <button className={scope === 'matched' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'matched'} onClick={() => onScopeChange('matched')}>{t("匹配")}</button>
+        <button className={scope === 'all' ? 'active' : ''} type="button" role="tab" aria-selected={scope === 'all'} onClick={() => onScopeChange('all')}>{t("所有")}</button>
       </div>
 
       <div className="kp-identity-list-meta">
@@ -2731,18 +2703,17 @@ function IdentityProfileListSurface({
         <div className="kp-identity-list-body">
           {profiles.map(renderProfileRow)}
           {hiddenCount > 0 && !expanded ? (
-            <button className="kp-identity-list-show-all" type="button" onClick={onShowAll}>
-              显示所有个人信息（{total}）
+            <button className="kp-identity-list-show-all" type="button" onClick={onShowAll}>{t("显示所有个人信息（")}{total}）
             </button>
           ) : null}
         </div>
       ) : (
         <div className="kp-identity-list-empty">
           <IdCard size={28} aria-hidden="true" />
-          <strong>{query.trim() || scope === 'matched' ? '没有匹配身份资料' : '还没有身份资料'}</strong>
-          <span>{query.trim() ? '换个关键词，或清除搜索查看已有资料。' : scope === 'matched' ? '切换到“所有”查看资料库里的其他身份信息。' : '先导入 Excel/CSV，再回到这里填写注册表单。'}</span>
+          <strong>{query.trim() || scope === 'matched' ? t("没有匹配身份资料") : t("还没有身份资料")}</strong>
+          <span>{query.trim() ? t("换个关键词，或清除搜索查看已有资料。") : scope === 'matched' ? t("切换到“所有”查看资料库里的其他身份信息。") : t("先导入 Excel/CSV，再回到这里填写注册表单。")}</span>
           <button type="button" onClick={query.trim() ? () => onQuery('') : scope === 'matched' ? () => onScopeChange('all') : onOpenHome}>
-            {query.trim() ? '清除搜索' : scope === 'matched' ? '查看所有身份信息' : '打开主页导入'}
+            {query.trim() ? t("清除搜索") : scope === 'matched' ? t("查看所有身份信息") : t("打开主页导入")}
           </button>
         </div>
       )}
@@ -2794,33 +2765,33 @@ function IdentityFillSurface({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   return (
-    <section className="kp-identity-fill" aria-label="填写身份资料">
+    <section className="kp-identity-fill" aria-label={t("填写身份资料")}>
       <div className="kp-identity-fill-head">
-        <button className="kp-identity-fill-back" type="button" aria-label="返回身份资料列表" title="返回列表" onClick={onBack}>
+        <button className="kp-identity-fill-back" type="button" aria-label={t("返回身份资料列表")} title={t("返回列表")} onClick={onBack}>
           <ArrowLeft size={16} aria-hidden="true" />
         </button>
         <div>
-          <strong>通过本身份信息进行填写，拖放或复制/粘贴</strong>
+          <strong>{t("通过本身份信息进行填写，拖放或复制/粘贴")}</strong>
           <span>{profile.title} · {selectedSummary}</span>
         </div>
-        <button type="button" aria-label="更多身份资料操作" title="更多操作" onClick={() => setProfileMenuOpen((value) => !value)}>
+        <button type="button" aria-label={t("更多身份资料操作")} title={t("更多操作")} onClick={() => setProfileMenuOpen((value) => !value)}>
           <MoreVertical size={17} aria-hidden="true" />
         </button>
         {profileMenuOpen ? (
-          <div className="kp-identity-fill-menu" role="menu" aria-label="身份资料操作">
+          <div className="kp-identity-fill-menu" role="menu" aria-label={t("身份资料操作")}>
             <button type="button" role="menuitem" onClick={() => {
               setProfileMenuOpen(false);
-              onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'));
+              onCopy(t("{0} 全部资料", [profile.title]), formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'));
             }}>
               <Copy size={15} aria-hidden="true" />
-              <span>复制全部</span>
+              <span>{t("复制全部")}</span>
             </button>
             <button type="button" role="menuitem" onClick={() => {
               setProfileMenuOpen(false);
               onBind();
             }}>
               <SlidersHorizontal size={15} aria-hidden="true" />
-              <span>校准字段</span>
+              <span>{t("校准字段")}</span>
             </button>
           </div>
         ) : null}
@@ -2828,24 +2799,20 @@ function IdentityFillSurface({
 
       <div className="kp-identity-fill-actions">
         <button className="primary" type="button" onClick={onFill}>
-          <FileInput size={16} aria-hidden="true" />
-          填写表单
-        </button>
-        <button type="button" title="把资料字段和当前网页输入框对应起来" onClick={onBind}>
-          <Edit3 size={16} aria-hidden="true" />
-          编辑
-        </button>
+          <FileInput size={16} aria-hidden="true" />{t("填写表单")}</button>
+        <button type="button" title={t("把资料字段和当前网页输入框对应起来")} onClick={onBind}>
+          <Edit3 size={16} aria-hidden="true" />{t("编辑")}</button>
       </div>
 
       <label className="kp-identity-empty-toggle">
         <input type="checkbox" checked={onlyEmpty} onChange={(event) => onOnlyEmptyChange(event.target.checked)} />
-        <span>只填写空白字段</span>
-        <small>{totalFieldCount} 个字段</small>
+        <span>{t("只填写空白字段")}</span>
+        <small>{totalFieldCount}{t(" 个字段")}</small>
       </label>
 
       <label className="kp-identity-field-search">
         <Search size={15} aria-hidden="true" />
-        <input value={fieldQuery} onChange={(event) => setFieldQuery(event.target.value)} placeholder="搜索此资料里的字段" />
+        <input value={fieldQuery} onChange={(event) => setFieldQuery(event.target.value)} placeholder={t("搜索此资料里的字段")} />
       </label>
 
       <div className="kp-identity-field-list">
@@ -2857,8 +2824,8 @@ function IdentityFillSurface({
                 <strong>{fillFieldGroupLabel(group)}</strong>
                 <button
                   type="button"
-                  aria-label={`复制${fillFieldGroupLabel(group)}`}
-                  title={`复制${fillFieldGroupLabel(group)}`}
+                  aria-label={t("复制{0}", [fillFieldGroupLabel(group)])}
+                  title={t("复制{0}", [fillFieldGroupLabel(group)])}
                   onClick={() => onCopy(fillFieldGroupLabel(group), fields.map((field) => `${field.label}: ${field.value}`).join('\n'), fields.some(field => field.sensitivity !== 'normal'))}
                 >
                   <Copy size={13} aria-hidden="true" />
@@ -2868,8 +2835,8 @@ function IdentityFillSurface({
                 <div className="kp-identity-field" key={`${field.key}-${field.label}`}>
                   <span>{field.label}</span>
                   <SensitiveValue key={`${profile.id}-${field.key}-${field.value}`} field={field} />
-                  {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? '敏感' : '私密'}</em> : null}
-                  <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
+                  {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? t("敏感") : t("私密")}</em> : null}
+                  <button type="button" aria-label={t("复制 {0}", [field.label])} title={t("复制 {0}", [field.label])} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
                     <Copy size={13} aria-hidden="true" />
                   </button>
                 </div>
@@ -2879,8 +2846,8 @@ function IdentityFillSurface({
         ) : (
           <div className="kp-identity-field-empty">
             <Search size={22} aria-hidden="true" />
-            <strong>没有匹配字段</strong>
-            <span>换个关键词继续找。</span>
+            <strong>{t("没有匹配字段")}</strong>
+            <span>{t("换个关键词继续找。")}</span>
           </div>
         )}
       </div>
@@ -2921,21 +2888,21 @@ function FillProfileRow({
 
   return (
     <article className="kp-fillprofile-row">
-      <button className="kp-fillprofile-main" type="button" aria-label={`填写 ${profile.title}`} onClick={onFill}>
+      <button className="kp-fillprofile-main" type="button" aria-label={t("填写 {0}", [profile.title])} onClick={onFill}>
         <span className={`kp-fillprofile-icon ${tone}`}>{icon}</span>
         <span className="kp-fillprofile-copy">
           <strong>{profile.title}</strong>
           <small>{summary}</small>
         </span>
       </button>
-      <span className="kp-fillprofile-meta" title={`${category} · ${fieldCount} 字段`}>
+      <span className="kp-fillprofile-meta" title={t("{0} · {1} 字段", [category, fieldCount])}>
         <small>{profile.countryCode}</small>
         <strong>{fieldCount}</strong>
       </span>
-      <button className="kp-fillprofile-bind" type="button" aria-label={`绑定 ${profile.title} 的网页字段`} title="绑定网页字段" onClick={onBind}>
+      <button className="kp-fillprofile-bind" type="button" aria-label={t("绑定 {0} 的网页字段", [profile.title])} title={t("绑定网页字段")} onClick={onBind}>
         <SlidersHorizontal size={16} aria-hidden="true" />
       </button>
-      <button className="kp-account-open" type="button" aria-label={`查看 ${profile.title}`} title="查看资料" onClick={onView}>
+      <button className="kp-account-open" type="button" aria-label={t("查看 {0}", [profile.title])} title={t("查看资料")} onClick={onView}>
         <Eye size={17} aria-hidden="true" />
       </button>
     </article>
@@ -2997,7 +2964,7 @@ function FillProfileDetail({
     <div className="kp-fillprofile-detail">
       <span className="kp-fillprofile-detail-motion" aria-hidden="true" />
       <header className="kp-fillprofile-detail-head">
-        <button className="kp-fillprofile-back" type="button" aria-label="返回身份资料列表" onClick={onBack}>
+        <button className="kp-fillprofile-back" type="button" aria-label={t("返回身份资料列表")} onClick={onBack}>
           <ArrowLeft size={17} aria-hidden="true" />
         </button>
         <span className={`kp-fillprofile-icon ${tone} detail`}>{icon}</span>
@@ -3008,37 +2975,31 @@ function FillProfileDetail({
         </div>
         <span className="kp-fillprofile-detail-count">
           <strong>{totalFieldCount}</strong>
-          <small>字段</small>
+          <small>{t("字段")}</small>
         </span>
       </header>
 
       <div className="kp-fillprofile-detail-actions">
         <button className="primary" type="button" onClick={onFill}>
-          <FileInput size={15} aria-hidden="true" />
-          填写表单
-        </button>
-        <button type="button" onClick={() => onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'))}>
-          <Copy size={15} aria-hidden="true" />
-          复制全部
-        </button>
+          <FileInput size={15} aria-hidden="true" />{t("填写表单")}</button>
+        <button type="button" onClick={() => onCopy(t("{0} 全部资料", [profile.title]), formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'))}>
+          <Copy size={15} aria-hidden="true" />{t("复制全部")}</button>
         <button type="button" onClick={onBind}>
-          <SlidersHorizontal size={15} aria-hidden="true" />
-          绑定字段
-        </button>
+          <SlidersHorizontal size={15} aria-hidden="true" />{t("绑定字段")}</button>
       </div>
 
       <div className="kp-fillprofile-detail-summary">
         <span>
           <strong>{profile.countryCode}</strong>
-          <small>国家/地区</small>
+          <small>{t("国家/地区")}</small>
         </span>
         <span>
           <strong>{visibleFieldCount}</strong>
-          <small>当前可见</small>
+          <small>{t("当前可见")}</small>
         </span>
         <span>
           <strong>{groups.length}</strong>
-          <small>资料分组</small>
+          <small>{t("资料分组")}</small>
         </span>
       </div>
 
@@ -3047,15 +3008,13 @@ function FillProfileDetail({
         <input
           value={fieldQuery}
           onChange={(event) => setFieldQuery(event.target.value)}
-          placeholder="搜索字段或内容"
+          placeholder={t("搜索字段或内容")}
           autoComplete="off"
         />
       </label>
 
-      <div className="kp-fillprofile-group-tabs" aria-label="资料分组">
-        <button className={activeGroup === 'all' ? 'active' : ''} type="button" onClick={() => setActiveGroup('all')}>
-          全部
-          <span>{totalFieldCount}</span>
+      <div className="kp-fillprofile-group-tabs" aria-label={t("资料分组")}>
+        <button className={activeGroup === 'all' ? 'active' : ''} type="button" onClick={() => setActiveGroup('all')}>{t("全部")}<span>{totalFieldCount}</span>
         </button>
         {groups.map(([group, fields]) => (
           <button
@@ -3081,8 +3040,8 @@ function FillProfileDetail({
                     <span>{field.label}</span>
                     <SensitiveValue key={`${profile.id}-${field.key}-${field.value}`} field={field} />
                   </span>
-                  {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? '敏感' : '私密'}</em> : null}
-                  <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
+                  {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? t("敏感") : t("私密")}</em> : null}
+                  <button type="button" aria-label={t("复制 {0}", [field.label])} title={t("复制 {0}", [field.label])} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
                     <Copy size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -3092,8 +3051,8 @@ function FillProfileDetail({
         ) : (
           <div className="kp-fillprofile-no-fields">
             <Search size={22} aria-hidden="true" />
-            <strong>没有匹配字段</strong>
-            <span>换个关键词，或切回“全部”。</span>
+            <strong>{t("没有匹配字段")}</strong>
+            <span>{t("换个关键词，或切回“全部”。")}</span>
           </div>
         )}
       </div>
@@ -3114,9 +3073,9 @@ function HomeAccountRow({
   onOpen: () => void;
   onAction: () => void;
 }) {
-  const title = credential.title.replace(/\s+/g, ' ').trim() || credential.domain || '未命名账号';
+  const title = credential.title.replace(/\s+/g, ' ').trim() || credential.domain || t("未命名账号");
   const label = showUsername && credential.username ? `${title} (${credential.username})` : title;
-  const actionLabel = mode === 'login' ? `登录 ${label}` : `填写 ${label}`;
+  const actionLabel = mode === 'login' ? t("登录 {0}", [label]) : t("填写 {0}", [label]);
 
   return (
     <article className="kp-account-row">
@@ -3126,7 +3085,7 @@ function HomeAccountRow({
           {label}
         </span>
       </button>
-      <button className="kp-account-open" type="button" aria-label={`查看 ${label}`} title="查看账号详情" onClick={onOpen}>
+      <button className="kp-account-open" type="button" aria-label={t("查看 {0}", [label])} title={t("查看账号详情")} onClick={onOpen}>
         <ChevronRight size={16} aria-hidden="true" />
       </button>
     </article>
@@ -3149,54 +3108,54 @@ function InlineDiagnosticsPanel({
   const matchedCount = diagnostics?.matchedCount ?? fallbackMatchedCount;
   const submitOutcome = diagnostics?.submitOutcome;
   const bindingStatus = primaryMatch?.formProfile?.submit
-    ? '已绑定字段和登录按钮'
+    ? t("已绑定字段和登录按钮")
     : primaryMatch
-      ? '未绑定登录按钮'
-      : '无可绑定账号';
+      ? t("未绑定登录按钮")
+      : t("无可绑定账号");
   const diagnosis = !diagnostics
-    ? '还没有诊断结果，刷新当前网站后再试。'
+    ? t("还没有诊断结果，刷新当前网站后再试。")
     : diagnostics.locked
-      ? 'Vault 已锁定，先解锁后再诊断自动登录。'
+      ? t("Vault 已锁定，先解锁后再诊断自动登录。")
       : !hasLoginForm
-        ? '没有检测到登录框。如果页面已经显示登录框，请使用手动绑定。'
+        ? t("没有检测到登录框。如果页面已经显示登录框，请使用手动绑定。")
         : matchedCount === 0
-          ? '检测到登录框，但当前域名没有匹配账号。'
+          ? t("检测到登录框，但当前域名没有匹配账号。")
           : primaryMatch?.formProfile?.submit
-            ? '已记录绑定规则，自动登录会优先使用保存的字段和按钮。'
-            : '建议绑定字段和登录按钮，特殊网站会更稳定。';
+            ? t("已记录绑定规则，自动登录会优先使用保存的字段和按钮。")
+            : t("建议绑定字段和登录按钮，特殊网站会更稳定。");
 
   return (
     <details className="diagnostic-panel">
       <summary>
-        <span>网页诊断</span>
-        <strong>{hasLoginForm ? '检测到登录框' : '未检测到登录框'} · 匹配 {matchedCount} 条</strong>
+        <span>{t("网页诊断")}</span>
+        <strong>{hasLoginForm ? t("检测到登录框") : t("未检测到登录框")}{t(" · 匹配 ")}{matchedCount}{t(" 条")}</strong>
       </summary>
       <div className="diagnostic-grid">
         <span>Vault</span>
-        <strong>{diagnostics?.locked ? '已锁定' : '已解锁'}</strong>
-        <span>登录框</span>
-        <strong>{hasLoginForm ? '已检测' : '未检测'}</strong>
-        <span>匹配账号</span>
-        <strong>{matchedCount} 条</strong>
+        <strong>{diagnostics?.locked ? t("已锁定") : t("已解锁")}</strong>
+        <span>{t("登录框")}</span>
+        <strong>{hasLoginForm ? t("已检测") : t("未检测")}</strong>
+        <span>{t("匹配账号")}</span>
+        <strong>{matchedCount}{t(" 条")}</strong>
         <span>Frame</span>
-        <strong>{frames.length || 1} 个</strong>
-        <span>绑定状态</span>
+        <strong>{frames.length || 1}{t(" 个")}</strong>
+        <span>{t("绑定状态")}</span>
         <strong>{bindingStatus}</strong>
       </div>
       {displayedFrames.length ? (
         <ul className="diagnostic-frames">
           {displayedFrames.map((frame) => (
             <li key={`${frame.frameId ?? 0}-${frame.url}`}>
-              <span>{frame.hasLoginForm ? '登录框' : '页面'}</span>
-              <strong>{frame.domain || frame.url || '未知域名'}</strong>
-              <small>匹配 {frame.matchedCount} 条{frame.unsafeReason ? ` · 敏感字段 ${frame.unsafeReason}` : ''}</small>
+              <span>{frame.hasLoginForm ? t("登录框") : t("页面")}</span>
+              <strong>{frame.domain || frame.url || t("未知域名")}</strong>
+              <small>{t("匹配 ")}{frame.matchedCount}{t(" 条")}{frame.unsafeReason ? t(" · 敏感字段 {0}", [frame.unsafeReason]) : ''}</small>
             </li>
           ))}
         </ul>
       ) : (
-        <p>刷新当前网页后会显示更详细的 frame 诊断。</p>
+        <p>{t("刷新当前网页后会显示更详细的 frame 诊断。")}</p>
       )}
-      <p>{submitOutcome ? `上次提交：${submitOutcome.message}` : diagnosis}</p>
+      <p>{submitOutcome ? t("上次提交：{0}", [submitOutcome.message]) : diagnosis}</p>
     </details>
   );
 }
@@ -3278,7 +3237,7 @@ function CredentialRow({
 
   return (
     <article className="account-row">
-      <button className="favorite-button" type="button" aria-label={credential.pinned ? '取消收藏' : '收藏'} onClick={() => onTogglePin(credential)}>
+      <button className="favorite-button" type="button" aria-label={credential.pinned ? t("取消收藏") : t("收藏")} onClick={() => onTogglePin(credential)}>
         <Star size={18} fill={credential.pinned ? 'currentColor' : 'none'} aria-hidden="true" />
       </button>
       <button className="account-main" type="button" onClick={onOpen}>
@@ -3293,18 +3252,18 @@ function CredentialRow({
         </div>
       </button>
       <div className="menu-wrap">
-        <button className="more-button" type="button" aria-label="打开账号菜单" onClick={() => setOpen((value) => !value)}>
+        <button className="more-button" type="button" aria-label={t("打开账号菜单")} onClick={() => setOpen((value) => !value)}>
           <MoreVertical size={19} aria-hidden="true" />
         </button>
         {open ? (
           <div className="action-menu">
-            <MenuItem icon={<CircleCheck size={15} />} label="登录" onClick={() => onAction('login', credential)} />
-            <MenuItem icon={<ExternalLink size={15} />} label="浏览并填写" onClick={() => onAction('fill', credential)} />
-            <MenuItem icon={<ExternalLink size={15} />} label="转到" onClick={() => onAction('goto', credential)} />
-            <MenuItem icon={<Copy size={15} />} label="复制用户名" onClick={() => onCopy('已复制用户名。', credential.username, false)} />
-            <MenuItem icon={<KeyRound size={15} />} label="复制密码" onClick={() => onCopy('已复制密码，稍后会清空剪贴板。', credential.password, true)} />
-            <MenuItem icon={<Edit3 size={15} />} label="编辑" onClick={() => onEdit(credential)} />
-            <MenuItem danger icon={<Trash2 size={15} />} label="删除" onClick={() => onDelete(credential)} />
+            <MenuItem icon={<CircleCheck size={15} />} label={t("登录")} onClick={() => onAction('login', credential)} />
+            <MenuItem icon={<ExternalLink size={15} />} label={t("浏览并填写")} onClick={() => onAction('fill', credential)} />
+            <MenuItem icon={<ExternalLink size={15} />} label={t("转到")} onClick={() => onAction('goto', credential)} />
+            <MenuItem icon={<Copy size={15} />} label={t("复制用户名")} onClick={() => onCopy(t("已复制用户名。"), credential.username, false)} />
+            <MenuItem icon={<KeyRound size={15} />} label={t("复制密码")} onClick={() => onCopy(t("已复制密码，稍后会清空剪贴板。"), credential.password, true)} />
+            <MenuItem icon={<Edit3 size={15} />} label={t("编辑")} onClick={() => onEdit(credential)} />
+            <MenuItem danger icon={<Trash2 size={15} />} label={t("删除")} onClick={() => onDelete(credential)} />
           </div>
         ) : null}
       </div>
@@ -3354,23 +3313,23 @@ function CredentialDetailPage({
   const [revealed, setRevealed] = useSecretVisibility();
   const strength = measurePasswordStrength(credential.password);
   const formStructureLabel = credential.formProfile?.submit
-    ? `已记录 ${credential.formProfile.fieldCount ?? credential.formFields?.length ?? 0} 个字段和登录按钮`
+    ? t("已记录 {0} 个字段和登录按钮", [credential.formProfile.fieldCount ?? credential.formFields?.length ?? 0])
     : credential.formFields?.length
-      ? `已记录 ${credential.formFields.length} 个字段`
-      : '未记录';
+      ? t("已记录 {0} 个字段", [credential.formFields.length])
+      : t("未记录");
 
   function handleReveal() {
-    if (!revealed && !window.confirm('显示明文密码前，请确认周围环境安全。')) return;
+    if (!revealed && !window.confirm(t("显示明文密码前，请确认周围环境安全。"))) return;
     setRevealed((value) => !value);
   }
 
   return (
     <div className="page-view">
-      <PageHeader title="账号详情" onBack={onBack}>
-        <button type="button" aria-label="收藏" onClick={onTogglePin}>
+      <PageHeader title={t("账号详情")} onBack={onBack}>
+        <button type="button" aria-label={t("收藏")} onClick={onTogglePin}>
           <Star size={18} fill={credential.pinned ? 'currentColor' : 'none'} aria-hidden="true" />
         </button>
-        <button type="button" aria-label="编辑" onClick={onEdit}>
+        <button type="button" aria-label={t("编辑")} onClick={onEdit}>
           <Edit3 size={18} aria-hidden="true" />
         </button>
       </PageHeader>
@@ -3382,23 +3341,23 @@ function CredentialDetailPage({
         </div>
       </section>
       <section className="detail-card">
-        <div className="detail-field"><span>用户名</span><div><p>{credential.username}</p><CopyButton label="复制用户名" value={credential.username} sensitive={false} /></div></div>
+        <div className="detail-field"><span>{t("用户名")}</span><div><p>{credential.username}</p><CopyButton label={t("复制用户名")} value={credential.username} sensitive={false} /></div></div>
         <div className="detail-field">
-          <span>密码</span>
+          <span>{t("密码")}</span>
           <div>
             <code>{revealed ? credential.password : '••••••••••••••'}</code>
-            <button type="button" aria-label={revealed ? '隐藏密码' : '显示密码'} onClick={handleReveal}>
+            <button type="button" aria-label={revealed ? t("隐藏密码") : t("显示密码")} onClick={handleReveal}>
               {revealed ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
-            <CopyButton label="复制密码" value={credential.password} />
+            <CopyButton label={t("复制密码")} value={credential.password} />
           </div>
-          <StrengthMeter value={strength.score} label={strength.label} />
+          <StrengthMeter value={strength.score} label={t(strength.label)} />
         </div>
-        <DetailRow label="网站" value={credential.url} onAction={() => onAction('goto', credential)} actionIcon="external" />
-        <DetailRow label="匹配 URL" value={credential.matchUrl || '自动使用网站域名'} />
+        <DetailRow label={t("网站")} value={credential.url} onAction={() => onAction('goto', credential)} actionIcon="external" />
+        <DetailRow label={t("匹配 URL")} value={credential.matchUrl || t("自动使用网站域名")} />
         <div className="note-block">
-          <span>备注</span>
-          <p>{credential.notes || '无备注'}</p>
+          <span>{t("备注")}</span>
+          <p>{credential.notes || t("无备注")}</p>
         </div>
         <div className="tag-row">
           {(credential.tags ?? []).map((tag) => (
@@ -3409,21 +3368,19 @@ function CredentialDetailPage({
       </section>
       <CredentialSecurityPanel key={credential.id} credential={credential} session={session} onChange={onSessionChange} />
       <dl className="meta-list">
-        <div><dt>创建时间</dt><dd>{formatDateTime(credential.createdAt)}</dd></div>
-        <div><dt>更新时间</dt><dd>{formatDateTime(credential.updatedAt)}</dd></div>
-        <div><dt>最近使用</dt><dd>{formatDateTime(credential.lastUsedAt)}</dd></div>
-        <div><dt>自动提交</dt><dd>{settings.autoSubmit ? '已开启' : '关闭'}</dd></div>
-        <div><dt>表单结构</dt><dd>{formStructureLabel}</dd></div>
+        <div><dt>{t("创建时间")}</dt><dd>{formatDateTime(credential.createdAt)}</dd></div>
+        <div><dt>{t("更新时间")}</dt><dd>{formatDateTime(credential.updatedAt)}</dd></div>
+        <div><dt>{t("最近使用")}</dt><dd>{formatDateTime(credential.lastUsedAt)}</dd></div>
+        <div><dt>{t("自动提交")}</dt><dd>{settings.autoSubmit ? t("已开启") : t("关闭")}</dd></div>
+        <div><dt>{t("表单结构")}</dt><dd>{formStructureLabel}</dd></div>
       </dl>
       <div className="detail-actions">
-        <button className="button primary" type="button" onClick={() => onAction('login', credential)}>登录</button>
-        <button className="button secondary" type="button" onClick={() => onAction('fill', credential)}>浏览并填写</button>
-        <button className="button secondary" type="button" onClick={() => onAction('goto', credential)}>转到</button>
+        <button className="button primary" type="button" onClick={() => onAction('login', credential)}>{t("登录")}</button>
+        <button className="button secondary" type="button" onClick={() => onAction('fill', credential)}>{t("浏览并填写")}</button>
+        <button className="button secondary" type="button" onClick={() => onAction('goto', credential)}>{t("转到")}</button>
       </div>
       <button className="danger-text" type="button" onClick={onDelete}>
-        <Trash2 size={15} aria-hidden="true" />
-        删除账号
-      </button>
+        <Trash2 size={15} aria-hidden="true" />{t("删除账号")}</button>
     </div>
   );
 }
@@ -3435,7 +3392,7 @@ function DetailRow({ label, value, actionIcon, onAction }: { label: string; valu
       <div>
         <p>{value}</p>
         {onAction ? (
-          <button type="button" onClick={onAction} aria-label={actionIcon === 'external' ? '打开网站' : '复制'}>
+          <button type="button" onClick={onAction} aria-label={actionIcon === 'external' ? t("打开网站") : t("复制")}>
             {actionIcon === 'external' ? <ExternalLink size={17} /> : <Copy size={17} />}
           </button>
         ) : null}
@@ -3470,61 +3427,61 @@ function CredentialEditPage({
 
   return (
     <form className="page-view edit-view" onSubmit={handleSubmit}>
-      <PageHeader title={localDraft.id ? '编辑账号' : '新增账号'} onBack={onBack}>
+      <PageHeader title={localDraft.id ? t("编辑账号") : t("新增账号")} onBack={onBack}>
         {onDelete ? (
-          <button className="danger-icon" type="button" aria-label="删除账号" onClick={onDelete}>
+          <button className="danger-icon" type="button" aria-label={t("删除账号")} onClick={onDelete}>
             <Trash2 size={18} aria-hidden="true" />
           </button>
         ) : null}
       </PageHeader>
-      <Field label="名称">
+      <Field label={t("名称")}>
         <input value={localDraft.title} onChange={(event) => update('title', event.target.value)} placeholder="GitHub" required />
       </Field>
-      <Field label="用户名">
+      <Field label={t("用户名")}>
         <input value={localDraft.username} onChange={(event) => update('username', event.target.value)} placeholder="leon@example.com" required />
       </Field>
-      <Field label="密码">
+      <Field label={t("密码")}>
         <div className="input-with-action">
           <input
             value={localDraft.password}
             onChange={(event) => update('password', event.target.value)}
             type={passwordVisible ? 'text' : 'password'}
             autoComplete="new-password"
-            placeholder="输入密码"
+            placeholder={t("输入密码")}
             required
           />
           <button
             type="button"
-            aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
-            title={passwordVisible ? '隐藏密码' : '显示密码'}
+            aria-label={passwordVisible ? t("隐藏密码") : t("显示密码")}
+            title={passwordVisible ? t("隐藏密码") : t("显示密码")}
             onClick={() => setPasswordVisible((value) => !value)}
           >
             {passwordVisible ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
           </button>
-          <button type="button" aria-label="生成密码" onClick={() => update('password', generatePassword(defaultGeneratorOptions))}>
+          <button type="button" aria-label={t("生成密码")} onClick={() => update('password', generatePassword(defaultGeneratorOptions))}>
             <RefreshCw size={16} aria-hidden="true" />
           </button>
         </div>
       </Field>
-      <StrengthMeter value={strength.score} label={strength.label} />
-      <Field label="网站">
+      <StrengthMeter value={strength.score} label={t(strength.label)} />
+      <Field label={t("网站")}>
         <input value={localDraft.url} onChange={(event) => update('url', event.target.value)} placeholder="https://github.com" required />
       </Field>
-      <Field label="匹配 URL" hint="可留空沿用网站域名；支持 *.example.com/* 或带路径的登录页前缀。">
+      <Field label={t("匹配 URL")} hint={t("可留空沿用网站域名；支持 *.example.com/* 或带路径的登录页前缀。")}>
         <input value={localDraft.matchUrl} onChange={(event) => update('matchUrl', event.target.value)} placeholder="*.example.com/*" />
       </Field>
-      <Field label="备注">
-        <textarea value={localDraft.notes} onChange={(event) => update('notes', event.target.value)} rows={4} placeholder="个人 GitHub 账号" />
+      <Field label={t("备注")}>
+        <textarea value={localDraft.notes} onChange={(event) => update('notes', event.target.value)} rows={4} placeholder={t("个人 GitHub 账号")} />
       </Field>
-      <Field label="标签">
-        <input value={localDraft.tags} onChange={(event) => update('tags', event.target.value)} placeholder="开发, 工具" />
+      <Field label={t("标签")}>
+        <input value={localDraft.tags} onChange={(event) => update('tags', event.target.value)} placeholder={t("开发, 工具")} />
       </Field>
-      <Field label="文件夹">
-        <input value={localDraft.folder} onChange={(event) => update('folder', event.target.value)} placeholder="工作" />
+      <Field label={t("文件夹")}>
+        <input value={localDraft.folder} onChange={(event) => update('folder', event.target.value)} placeholder={t("工作")} />
       </Field>
       <div className="form-actions">
-        <button className="button secondary" type="button" onClick={onBack}>取消</button>
-        <button className="button primary" type="submit">保存</button>
+        <button className="button secondary" type="button" onClick={onBack}>{t("取消")}</button>
+        <button className="button primary" type="submit">{t("保存")}</button>
       </div>
     </form>
   );
@@ -3547,37 +3504,37 @@ function GeneratorPage({ onUsePassword, onCopy }: { onUsePassword: (password: st
   return (
     <section className="page-view">
       <div className="section-title simple">
-        <div><p>生成强密码后可复制或用于新增账号</p></div>
+        <div><p>{t("生成强密码后可复制或用于新增账号")}</p></div>
       </div>
       <div className="generated-password">
         <code>{password}</code>
-        <button type="button" aria-label="复制密码" onClick={() => onCopy('已复制生成的密码。', password)}><Copy size={17} /></button>
-        <button type="button" aria-label="刷新密码" onClick={() => refresh()}><RefreshCw size={17} /></button>
+        <button type="button" aria-label={t("复制密码")} onClick={() => onCopy(t("已复制生成的密码。"), password)}><Copy size={17} /></button>
+        <button type="button" aria-label={t("刷新密码")} onClick={() => refresh()}><RefreshCw size={17} /></button>
       </div>
-      <StrengthMeter value={strength.score} label={strength.label} />
-      <Field label="密码长度">
+      <StrengthMeter value={strength.score} label={t(strength.label)} />
+      <Field label={t("密码长度")}>
         <div className="range-row">
           <input type="range" min={4} max={132} value={options.length} onChange={(event) => updateOptions({ ...options, length: Number(event.target.value) })} />
           <strong>{options.length}</strong>
         </div>
       </Field>
       <div className="check-list">
-        <CheckOption label="包含大写字母 A-Z" checked={options.uppercase} onChange={(checked) => updateOptions({ ...options, uppercase: checked })} />
-        <CheckOption label="包含小写字母 a-z" checked={options.lowercase} onChange={(checked) => updateOptions({ ...options, lowercase: checked })} />
-        <CheckOption label="包含数字 0-9" checked={options.numbers} onChange={(checked) => updateOptions({ ...options, numbers: checked })} />
-        <CheckOption label="包含符号" checked={options.symbols} onChange={(checked) => updateOptions({ ...options, symbols: checked })} />
-        <CheckOption label="排除相似字符" checked={options.excludeSimilar} onChange={(checked) => updateOptions({ ...options, excludeSimilar: checked })} />
-        <CheckOption label="每类至少包含 1 个字符" checked={options.requireEveryType !== false} onChange={(checked) => updateOptions({ ...options, requireEveryType: checked })} />
+        <CheckOption label={t("包含大写字母 A-Z")} checked={options.uppercase} onChange={(checked) => updateOptions({ ...options, uppercase: checked })} />
+        <CheckOption label={t("包含小写字母 a-z")} checked={options.lowercase} onChange={(checked) => updateOptions({ ...options, lowercase: checked })} />
+        <CheckOption label={t("包含数字 0-9")} checked={options.numbers} onChange={(checked) => updateOptions({ ...options, numbers: checked })} />
+        <CheckOption label={t("包含符号")} checked={options.symbols} onChange={(checked) => updateOptions({ ...options, symbols: checked })} />
+        <CheckOption label={t("排除相似字符")} checked={options.excludeSimilar} onChange={(checked) => updateOptions({ ...options, excludeSimilar: checked })} />
+        <CheckOption label={t("每类至少包含 1 个字符")} checked={options.requireEveryType !== false} onChange={(checked) => updateOptions({ ...options, requireEveryType: checked })} />
       </div>
-      <Field label="必须包含字符" hint="生成结果会强制包含这些字符，排除字符优先生效。">
+      <Field label={t("必须包含字符")} hint={t("生成结果会强制包含这些字符，排除字符优先生效。")}>
         <input value={options.requiredCharacters ?? ''} onChange={(event) => updateOptions({ ...options, requiredCharacters: event.target.value })} placeholder="@#A9" />
       </Field>
-      <Field label="排除字符" hint="适合网站不允许某些符号时使用。">
+      <Field label={t("排除字符")} hint={t("适合网站不允许某些符号时使用。")}>
         <input value={options.excludeCharacters ?? ''} onChange={(event) => updateOptions({ ...options, excludeCharacters: event.target.value })} placeholder="{}[]&quot;" />
       </Field>
       <div className="form-actions">
-        <button className="button secondary" type="button" onClick={() => refresh()}>刷新密码</button>
-        <button className="button primary" type="button" onClick={() => onUsePassword(password)}>使用此密码</button>
+        <button className="button secondary" type="button" onClick={() => refresh()}>{t("刷新密码")}</button>
+        <button className="button primary" type="button" onClick={() => onUsePassword(password)}>{t("使用此密码")}</button>
       </div>
     </section>
   );
@@ -3656,7 +3613,7 @@ function ImportPage({
   async function handleImport() {
     if (!preview) return;
     if (!importPlan.additions.length && !importPlan.updates.length) {
-      onNotice({ kind: 'info', text: '没有选中可导入或可更新的记录。' });
+      onNotice({ kind: 'info', text: t("没有选中可导入或可更新的记录。") });
       return;
     }
 
@@ -3684,33 +3641,33 @@ function ImportPage({
   return (
     <section className="page-view">
       <div className="section-title simple">
-        <div><p>CSV 只会在本机解析</p></div>
+        <div><p>{t("CSV 只会在本机解析")}</p></div>
       </div>
       <div className="source-list">
         {(['roboform', 'chrome', 'edge', 'generic'] as ImportSource[]).map((item) => (
           <label key={item} className={source === item ? 'source-item active' : 'source-item'}>
             <input type="radio" name="source" checked={source === item} onChange={() => handleSourceChange(item)} />
-            <span>{item === 'roboform' ? 'RoboForm CSV (.csv)' : item === 'chrome' ? 'Chrome CSV (.csv)' : item === 'edge' ? 'Edge CSV (.csv)' : '通用 CSV (.csv)'}</span>
+            <span>{item === 'roboform' ? 'RoboForm CSV (.csv)' : item === 'chrome' ? 'Chrome CSV (.csv)' : item === 'edge' ? 'Edge CSV (.csv)' : t("通用 CSV (.csv)")}</span>
           </label>
         ))}
       </div>
       <label className="file-drop">
         <Upload size={21} aria-hidden="true" />
-        <strong>{fileName || '选择 CSV 文件'}</strong>
-        <span>所有数据仅在本地处理</span>
+        <strong>{fileName || t("选择 CSV 文件")}</strong>
+        <span>{t("所有数据仅在本地处理")}</span>
         <input type="file" accept=".csv,text/csv" onChange={(event) => void handleFile(event.target.files?.[0])} />
       </label>
       {preview ? (
         <>
           <div className="import-preview">
-            <PreviewMetric label="总记录" value={preview.total} />
-            <PreviewMetric label="可直接导入" value={readyRows} />
-            <PreviewMetric label="将新增" value={importPlan.additions.length} />
-            <PreviewMetric label="将更新" value={importPlan.updates.length} />
-            <PreviewMetric label="重复" value={preview.duplicates} />
-            <PreviewMetric label="冲突" value={preview.conflicts} />
-            <PreviewMetric label="缺少网址" value={preview.missingUrl} />
-            <PreviewMetric label="无效" value={preview.invalid} />
+            <PreviewMetric label={t("总记录")} value={preview.total} />
+            <PreviewMetric label={t("可直接导入")} value={readyRows} />
+            <PreviewMetric label={t("将新增")} value={importPlan.additions.length} />
+            <PreviewMetric label={t("将更新")} value={importPlan.updates.length} />
+            <PreviewMetric label={t("重复")} value={preview.duplicates} />
+            <PreviewMetric label={t("冲突")} value={preview.conflicts} />
+            <PreviewMetric label={t("缺少网址")} value={preview.missingUrl} />
+            <PreviewMetric label={t("无效")} value={preview.invalid} />
           </div>
           <ImportRowList
             rows={preview.rows}
@@ -3719,11 +3676,11 @@ function ImportPage({
           />
         </>
       ) : null}
-      <div className="security-note"><ShieldCheck size={16} /><p>导入完成后，请立即删除原始 CSV 文件。</p></div>
+      <div className="security-note"><ShieldCheck size={16} /><p>{t("导入完成后，请立即删除原始 CSV 文件。")}</p></div>
       <div className="form-actions">
-        <button className="button secondary" type="button" onClick={() => { setPreview(null); setFileName(''); setConflictActions({}); }}>取消</button>
+        <button className="button secondary" type="button" onClick={() => { setPreview(null); setFileName(''); setConflictActions({}); }}>{t("取消")}</button>
         <button className="button primary" type="button" disabled={!preview || selectedCount === 0 || busy} onClick={handleImport}>
-          {busy ? '正在导入...' : selectedCount ? `确认处理 ${selectedCount} 条` : '确认导入'}
+          {busy ? t("正在导入...") : selectedCount ? t("确认处理 {0} 条", [selectedCount]) : t("确认导入")}
         </button>
       </div>
     </section>
@@ -3768,8 +3725,8 @@ function ImportRowList({
           <div className="import-row-main">
             <span className={`import-status ${row.status}`}>{getImportStatusLabel(row.status)}</span>
             <div>
-              <strong>第 {row.rowNumber} 行 · {row.title || row.domain || row.url || row.username || '未命名记录'}</strong>
-              <small>{[row.username || '无用户名', row.domain || row.url || '无网址'].join(' · ')}</small>
+              <strong>{t("第 ")}{row.rowNumber}{t(" 行 · ")}{row.title || row.domain || row.url || row.username || t("未命名记录")}</strong>
+              <small>{[row.username || t("无用户名"), row.domain || row.url || t("无网址")].join(' · ')}</small>
             </div>
           </div>
           {row.issues.length ? (
@@ -3780,10 +3737,10 @@ function ImportRowList({
             </ul>
           ) : null}
           {row.status === 'conflict' ? (
-            <div className="conflict-actions" aria-label={`第 ${row.rowNumber} 行冲突处理`}>
-              <button type="button" className={(conflictActions[row.rowNumber] ?? 'skip') === 'skip' ? 'active' : ''} onClick={() => onConflictAction(row.rowNumber, 'skip')}>跳过</button>
-              <button type="button" className={conflictActions[row.rowNumber] === 'update' ? 'active' : ''} onClick={() => onConflictAction(row.rowNumber, 'update')}>更新现有</button>
-              <button type="button" className={conflictActions[row.rowNumber] === 'keep' ? 'active' : ''} onClick={() => onConflictAction(row.rowNumber, 'keep')}>保留新记录</button>
+            <div className="conflict-actions" aria-label={t("第 {0} 行冲突处理", [row.rowNumber])}>
+              <button type="button" className={(conflictActions[row.rowNumber] ?? 'skip') === 'skip' ? 'active' : ''} onClick={() => onConflictAction(row.rowNumber, 'skip')}>{t("跳过")}</button>
+              <button type="button" className={conflictActions[row.rowNumber] === 'update' ? 'active' : ''} onClick={() => onConflictAction(row.rowNumber, 'update')}>{t("更新现有")}</button>
+              <button type="button" className={conflictActions[row.rowNumber] === 'keep' ? 'active' : ''} onClick={() => onConflictAction(row.rowNumber, 'keep')}>{t("保留新记录")}</button>
             </div>
           ) : null}
         </article>
@@ -3793,10 +3750,10 @@ function ImportRowList({
 }
 
 function getImportStatusLabel(status: ImportPreviewRow['status']): string {
-  if (status === 'ready') return '可导入';
-  if (status === 'conflict') return '冲突';
-  if (status === 'duplicate') return '重复';
-  return '无效';
+  if (status === 'ready') return t("可导入");
+  if (status === 'conflict') return t("冲突");
+  if (status === 'duplicate') return t("重复");
+  return t("无效");
 }
 
 function SettingsPage({
@@ -3820,19 +3777,19 @@ function SettingsPage({
   const [securityBusy, setSecurityBusy] = useState(false);
 
   async function updateSetting(nextSettings: Partial<UnlockedVaultSession['vault']['settings']>) {
-    await onPersist(upsertVaultSettings(session.vault, nextSettings), '设置已保存。');
+    await onPersist(upsertVaultSettings(session.vault, nextSettings), t("设置已保存。"));
   }
 
   async function handleChangeMasterPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (nextPassword.length < 8) {
-      onNotice({ kind: 'error', text: '新主密码至少需要 8 位。' });
+      onNotice({ kind: 'error', text: t("新主密码至少需要 8 位。") });
       return;
     }
 
     if (nextPassword !== confirmPassword) {
-      onNotice({ kind: 'error', text: '两次输入的新主密码不一致。' });
+      onNotice({ kind: 'error', text: t("两次输入的新主密码不一致。") });
       return;
     }
 
@@ -3843,7 +3800,7 @@ function SettingsPage({
       setCurrentPassword('');
       setNextPassword('');
       setConfirmPassword('');
-      onSessionChange(nextSession, nextRecoveryCode ? '主密码已修改，并已生成新的恢复码。' : '主密码已修改。');
+      onSessionChange(nextSession, nextRecoveryCode ? t("主密码已修改，并已生成新的恢复码。") : t("主密码已修改。"));
       if (nextRecoveryCode) {
         onShowRecoveryCode(nextRecoveryCode);
       }
@@ -3859,7 +3816,7 @@ function SettingsPage({
     try {
       const recoveryCode = generateRecoveryCode();
       const nextSession = await enableVaultRecovery(session, recoveryCode);
-      onSessionChange(nextSession, '恢复码已生成，请立即保存。');
+      onSessionChange(nextSession, t("恢复码已生成，请立即保存。"));
       onShowRecoveryCode(recoveryCode);
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error) });
@@ -3872,7 +3829,7 @@ function SettingsPage({
     setSecurityBusy(true);
     try {
       const nextSession = await disableVaultRecovery(session);
-      onSessionChange(nextSession, '已关闭恢复码。');
+      onSessionChange(nextSession, t("已关闭恢复码。"));
     } catch (error) {
       onNotice({ kind: 'error', text: getErrorMessage(error) });
     } finally {
@@ -3896,60 +3853,60 @@ function SettingsPage({
     anchor.download = `keypilot-roboform-export-${timestamp}.csv`;
     anchor.click();
     URL.revokeObjectURL(url);
-    onNotice({ kind: 'info', text: '已导出 RoboForm 格式 CSV。此文件包含明文密码，请用完立即删除。' });
+    onNotice({ kind: 'info', text: t("已导出 RoboForm 格式 CSV。此文件包含明文密码，请用完立即删除。") });
   }
 
 
   return (
     <section className="page-view settings-view">
-      <div className="section-title simple"><div><h2>设置</h2><p>锁定、填充、备份和黑名单</p></div></div>
+      <div className="section-title simple"><div><h2>{t("设置")}</h2><p>{t("锁定、填充、备份和黑名单")}</p></div></div>
       <section className="settings-card security-settings-card">
         <div className="settings-card-head">
           <ShieldCheck size={18} />
           <div>
-            <strong>主密码与恢复</strong>
-            <span>主密码不会被保存。恢复码只显示一次，请离线保存。</span>
+            <strong>{t("主密码与恢复")}</strong>
+            <span>{t("主密码不会被保存。恢复码只显示一次，请离线保存。")}</span>
           </div>
         </div>
         <form className="password-change-form" onSubmit={handleChangeMasterPassword}>
-          <Field label="当前主密码">
-            <input type="password" value={currentPassword} autoComplete="current-password" onChange={(event) => setCurrentPassword(event.target.value)} placeholder="用于确认是本人操作" />
+          <Field label={t("当前主密码")}>
+            <input type="password" value={currentPassword} autoComplete="current-password" onChange={(event) => setCurrentPassword(event.target.value)} placeholder={t("用于确认是本人操作")} />
           </Field>
-          <Field label="新主密码">
-            <input type="password" value={nextPassword} autoComplete="new-password" onChange={(event) => setNextPassword(event.target.value)} placeholder="至少 8 位" />
+          <Field label={t("新主密码")}>
+            <input type="password" value={nextPassword} autoComplete="new-password" onChange={(event) => setNextPassword(event.target.value)} placeholder={t("至少 8 位")} />
           </Field>
-          <Field label="确认新主密码">
-            <input type="password" value={confirmPassword} autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder="再次输入新主密码" />
+          <Field label={t("确认新主密码")}>
+            <input type="password" value={confirmPassword} autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder={t("再次输入新主密码")} />
           </Field>
           <button className="button primary full" type="submit" disabled={securityBusy || !currentPassword || !nextPassword || !confirmPassword}>
-            {securityBusy ? '处理中...' : '修改主密码'}
+            {securityBusy ? t("处理中...") : t("修改主密码")}
           </button>
         </form>
         <div className="recovery-actions">
           <div>
-            <strong>{session.encryptedVault.recovery ? '恢复码已启用' : '尚未启用恢复码'}</strong>
-            <span>{session.encryptedVault.recovery ? '如果忘记主密码，可用恢复码设置新的主密码。' : '建议现在生成一份恢复码，防止忘记主密码。'}</span>
+            <strong>{session.encryptedVault.recovery ? t("恢复码已启用") : t("尚未启用恢复码")}</strong>
+            <span>{session.encryptedVault.recovery ? t("如果忘记主密码，可用恢复码设置新的主密码。") : t("建议现在生成一份恢复码，防止忘记主密码。")}</span>
           </div>
           <button className="button secondary" type="button" onClick={handleGenerateRecoveryCode} disabled={securityBusy}>
             <KeyRound size={16} />
-            {session.encryptedVault.recovery ? '重新生成' : '生成恢复码'}
+            {session.encryptedVault.recovery ? t("重新生成") : t("生成恢复码")}
           </button>
           {session.encryptedVault.recovery ? (
-            <button className="text-danger" type="button" onClick={handleDisableRecovery} disabled={securityBusy}>关闭恢复码</button>
+            <button className="text-danger" type="button" onClick={handleDisableRecovery} disabled={securityBusy}>{t("关闭恢复码")}</button>
           ) : null}
         </div>
       </section>
-      <SettingRow label="自动锁定时间" description="超过该时间后清空内存中的明文 Vault。">
+      <SettingRow label={t("自动锁定时间")} description={t("超过该时间后清空内存中的明文 Vault。")}>
         <select value={session.vault.settings.autoLockMinutes} onChange={(event) => void updateSetting({ autoLockMinutes: Number(event.target.value) })}>
-          <option value={0}>不自动锁定</option>
-          <option value={5}>5 分钟</option>
-          <option value={10}>10 分钟</option>
-          <option value={30}>30 分钟</option>
+          <option value={0}>{t("不自动锁定")}</option>
+          <option value={5}>{t("5 分钟")}</option>
+          <option value={10}>{t("10 分钟")}</option>
+          <option value={30}>{t("30 分钟")}</option>
         </select>
       </SettingRow>
-      <ToggleRow label="启动时自动锁定" checked={session.vault.settings.lockOnStartup} onChange={(checked) => void updateSetting({ lockOnStartup: checked, lockOnStartupUserSet: true })} />
+      <ToggleRow label={t("启动时自动锁定")} checked={session.vault.settings.lockOnStartup} onChange={(checked) => void updateSetting({ lockOnStartup: checked, lockOnStartupUserSet: true })} />
       <ToggleRow
-        label="高安全模式"
+        label={t("高安全模式")}
         checked={session.vault.settings.highSecurityMode}
         onChange={(checked) =>
           void updateSetting(
@@ -3963,28 +3920,28 @@ function SettingsPage({
           )
         }
       />
-      <ToggleRow label="自动填充用户名和密码" checked={session.vault.settings.autoFill} onChange={(checked) => void updateSetting({ autoFill: checked })} />
-      <ToggleRow label="允许一键登录自动点击登录按钮" checked={session.vault.settings.autoSubmit} onChange={(checked) => void updateSetting({ autoSubmit: checked })} />
-      <ToggleRow label="自动提示保存登录信息" checked={session.vault.settings.autoPromptSave} onChange={(checked) => void updateSetting({ autoPromptSave: checked })} />
-      <SettingRow label="复制密码后清空剪贴板" description="降低误粘贴和泄露风险。">
+      <ToggleRow label={t("自动填充用户名和密码")} checked={session.vault.settings.autoFill} onChange={(checked) => void updateSetting({ autoFill: checked })} />
+      <ToggleRow label={t("允许一键登录自动点击登录按钮")} checked={session.vault.settings.autoSubmit} onChange={(checked) => void updateSetting({ autoSubmit: checked })} />
+      <ToggleRow label={t("自动提示保存登录信息")} checked={session.vault.settings.autoPromptSave} onChange={(checked) => void updateSetting({ autoPromptSave: checked })} />
+      <SettingRow label={t("复制密码后清空剪贴板")} description={t("降低误粘贴和泄露风险。")}>
         <select value={session.vault.settings.clearClipboardSeconds} onChange={(event) => void updateSetting({ clearClipboardSeconds: Number(event.target.value) })}>
-          <option value={15}>15 秒</option>
-          <option value={30}>30 秒</option>
-          <option value={60}>60 秒</option>
+          <option value={15}>{t("15 秒")}</option>
+          <option value={30}>{t("30 秒")}</option>
+          <option value={60}>{t("60 秒")}</option>
         </select>
       </SettingRow>
-      <Field label="网站黑名单" hint="每行一个域名。">
+      <Field label={t("网站黑名单")} hint={t("每行一个域名。")}>
         <textarea value={session.vault.settings.blacklist.join('\n')} onChange={(event) => void updateSetting({ blacklist: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean) })} rows={4} />
       </Field>
-      <Field label="网页内图标隐藏域名" hint="每行一个域名。这里是整站隐藏；单页隐藏请在设置中心的自动静默规则里恢复。">
+      <Field label={t("网页内图标隐藏域名")} hint={t("每行一个域名。这里是整站隐藏；单页隐藏请在设置中心的自动静默规则里恢复。")}>
         <textarea value={(session.vault.settings.inlineBlacklist ?? []).join('\n')} onChange={(event) => void updateSetting({ inlineBlacklist: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean) })} rows={3} />
       </Field>
       <div className="backup-actions">
-        <button className="button secondary" type="button" onClick={exportRoboFormFormatCsv}><Download size={16} />导出 RoboForm CSV</button>
+        <button className="button secondary" type="button" onClick={exportRoboFormFormatCsv}><Download size={16} />{t("导出 RoboForm CSV")}</button>
       </div>
-      <BackupStatus session={session} onChange={next => { void onSessionChange(next, '备份状态已更新。'); }} />
-      <BackupRestorePanel session={session} onRestored={next => {void onSessionChange(next, "备份恢复完成。");}} />
-      <button className="danger-text" type="button" onClick={onReset}><Trash2 size={15} />重置 Vault</button>
+      <BackupStatus session={session} onChange={next => { void onSessionChange(next, t("备份状态已更新。")); }} />
+      <BackupRestorePanel session={session} onRestored={next => {void onSessionChange(next, t("备份恢复完成。"));}} />
+      <button className="danger-text" type="button" onClick={onReset}><Trash2 size={15} />{t("重置 Vault")}</button>
     </section>
   );
 }
@@ -4002,11 +3959,11 @@ function SetupPage({ onCreated, onError }: { onCreated: (session: UnlockedVaultS
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (password.length < 8) {
-      onError('主密码至少需要 8 位。');
+      onError(t("主密码至少需要 8 位。"));
       return;
     }
     if (password !== confirmPassword) {
-      onError('两次输入的主密码不一致。');
+      onError(t("两次输入的主密码不一致。"));
       return;
     }
     setSubmitting(true);
@@ -4025,11 +3982,12 @@ function SetupPage({ onCreated, onError }: { onCreated: (session: UnlockedVaultS
 
   return (
     <><form className="auth-form" onSubmit={handleSubmit}>
-      <div className="security-panel"><ShieldCheck size={20} /><div><h2>创建本地密码库</h2><p>主密码不会被保存，也无法找回。</p></div></div>
-      <Field label="主密码"><input autoFocus value={password} type="password" autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} placeholder="输入主密码" /></Field>
-      <Field label="确认主密码"><input value={confirmPassword} type="password" autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder="再次输入主密码" /></Field>
-      <StrengthMeter value={strength.score} label={strength.label} />
-      <button className="button primary full" type="submit" disabled={submitting}>{submitting ? '正在创建...' : '创建 Vault'}</button>
+      <div className="security-panel"><ShieldCheck size={20} /><div><h2>{t("创建本地密码库")}</h2><p>{t("主密码不会被保存，也无法找回。")}</p></div></div>
+      <a href="options.html#general" target="_blank" rel="noreferrer">{t('界面语言 / Language')}</a>
+      <Field label={t("主密码")}><input autoFocus value={password} type="password" autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} placeholder={t("输入主密码")} /></Field>
+      <Field label={t("确认主密码")}><input value={confirmPassword} type="password" autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder={t("再次输入主密码")} /></Field>
+      <StrengthMeter value={strength.score} label={t(strength.label)} />
+      <button className="button primary full" type="submit" disabled={submitting}>{submitting ? t("正在创建...") : t("创建 Vault")}</button>
     </form>
     <InitialBackupRestore onRestored={onCreated} /></>
   );
@@ -4055,12 +4013,12 @@ function UnlockPage({ onUnlocked, onReset, onError }: { onUnlocked: (session: Un
       }
 
       if (nextPassword.length < 8) {
-        onError('新主密码至少需要 8 位。');
+        onError(t("新主密码至少需要 8 位。"));
         return;
       }
 
       if (nextPassword !== confirmPassword) {
-        onError('两次输入的新主密码不一致。');
+        onError(t("两次输入的新主密码不一致。"));
         return;
       }
 
@@ -4080,27 +4038,28 @@ function UnlockPage({ onUnlocked, onReset, onError }: { onUnlocked: (session: Un
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      <div className="security-panel"><Lock size={20} /><div><h2>解锁 Vault</h2><p>{mode === 'password' ? '输入主密码后，当前浏览器会话内保持解锁。' : '用恢复码验证身份，并立即设置新的主密码。'}</p></div></div>
-      <div className="auth-tabs" role="tablist" aria-label="解锁方式">
-        <button type="button" className={mode === 'password' ? 'active' : ''} onClick={() => setMode('password')}>主密码</button>
-        <button type="button" className={mode === 'recovery' ? 'active' : ''} onClick={() => setMode('recovery')}>恢复码</button>
+      <div className="security-panel"><Lock size={20} /><div><h2>{t("解锁 Vault")}</h2><p>{mode === 'password' ? t("输入主密码后，当前浏览器会话内保持解锁。") : t("用恢复码验证身份，并立即设置新的主密码。")}</p></div></div>
+      <a href="options.html#general" target="_blank" rel="noreferrer">{t('界面语言 / Language')}</a>
+      <div className="auth-tabs" role="tablist" aria-label={t("解锁方式")}>
+        <button type="button" className={mode === 'password' ? 'active' : ''} onClick={() => setMode('password')}>{t("主密码")}</button>
+        <button type="button" className={mode === 'recovery' ? 'active' : ''} onClick={() => setMode('recovery')}>{t("恢复码")}</button>
       </div>
       {mode === 'password' ? (
         <>
-          <Field label="主密码"><input autoFocus value={password} type="password" autoComplete="current-password" onChange={(event) => setPassword(event.target.value)} placeholder="输入主密码" /></Field>
-          <button className="button primary full" type="submit" disabled={submitting || !password}>{submitting ? '正在解锁...' : '解锁 Vault'}</button>
-          <button className="text-danger" type="button" onClick={() => setMode('recovery')}>忘记主密码，使用恢复码</button>
+          <Field label={t("主密码")}><input autoFocus value={password} type="password" autoComplete="current-password" onChange={(event) => setPassword(event.target.value)} placeholder={t("输入主密码")} /></Field>
+          <button className="button primary full" type="submit" disabled={submitting || !password}>{submitting ? t("正在解锁...") : t("解锁 Vault")}</button>
+          <button className="text-danger" type="button" onClick={() => setMode('recovery')}>{t("忘记主密码，使用恢复码")}</button>
         </>
       ) : (
         <>
-          <Field label="恢复码" hint="格式类似 KP-XXXX-XXXX，大小写和横线不敏感。"><input autoFocus value={recoveryCode} type="text" autoComplete="one-time-code" onChange={(event) => setRecoveryCode(event.target.value)} placeholder="KP-XXXX-XXXX-XXXX-XXXX-XXXX" /></Field>
-          <Field label="新的主密码"><input value={nextPassword} type="password" autoComplete="new-password" onChange={(event) => setNextPassword(event.target.value)} placeholder="至少 8 位" /></Field>
-          <Field label="确认新的主密码"><input value={confirmPassword} type="password" autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder="再次输入新主密码" /></Field>
-          <button className="button primary full" type="submit" disabled={submitting || !recoveryCode || !nextPassword || !confirmPassword}>{submitting ? '正在恢复...' : '设置新主密码并解锁'}</button>
-          <button className="text-button" type="button" onClick={() => setMode('password')}>返回主密码解锁</button>
+          <Field label={t("恢复码")} hint={t("格式类似 KP-XXXX-XXXX，大小写和横线不敏感。")}><input autoFocus value={recoveryCode} type="text" autoComplete="one-time-code" onChange={(event) => setRecoveryCode(event.target.value)} placeholder="KP-XXXX-XXXX-XXXX-XXXX-XXXX" /></Field>
+          <Field label={t("新的主密码")}><input value={nextPassword} type="password" autoComplete="new-password" onChange={(event) => setNextPassword(event.target.value)} placeholder={t("至少 8 位")} /></Field>
+          <Field label={t("确认新的主密码")}><input value={confirmPassword} type="password" autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder={t("再次输入新主密码")} /></Field>
+          <button className="button primary full" type="submit" disabled={submitting || !recoveryCode || !nextPassword || !confirmPassword}>{submitting ? t("正在恢复...") : t("设置新主密码并解锁")}</button>
+          <button className="text-button" type="button" onClick={() => setMode('password')}>{t("返回主密码解锁")}</button>
         </>
       )}
-      <button className="text-danger" type="button" onClick={onReset}>没有恢复码，重置 Vault</button>
+      <button className="text-danger" type="button" onClick={onReset}>{t("没有恢复码，重置 Vault")}</button>
     </form>
   );
 }
@@ -4108,7 +4067,7 @@ function UnlockPage({ onUnlocked, onReset, onError }: { onUnlocked: (session: Un
 function PageHeader({ title, onBack, children }: { title: string; onBack: () => void; children?: ReactNode }) {
   return (
     <header className="page-header">
-      <button type="button" aria-label="返回" onClick={onBack}><ArrowLeft size={20} /></button>
+      <button type="button" aria-label={t("返回")} onClick={onBack}><ArrowLeft size={20} /></button>
       <h2>{title}</h2>
       <div>{children}</div>
     </header>
@@ -4132,9 +4091,9 @@ function RecoveryCodeDialog({ code, onClose, onNotice }: { code: string; onClose
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(code);
-      onNotice({ kind: 'success', text: '恢复码已复制。请保存到浏览器外的安全位置。' });
+      onNotice({ kind: 'success', text: t("恢复码已复制。请保存到浏览器外的安全位置。") });
     } catch {
-      onNotice({ kind: 'error', text: '复制失败，请手动选中恢复码保存。' });
+      onNotice({ kind: 'error', text: t("复制失败，请手动选中恢复码保存。") });
     }
   }
 
@@ -4142,16 +4101,16 @@ function RecoveryCodeDialog({ code, onClose, onNotice }: { code: string; onClose
     <div className="dialog-backdrop" role="presentation">
       <section className="confirm-dialog recovery-dialog" role="dialog" aria-modal="true" aria-labelledby="recovery-code-title">
         <div className="dialog-icon"><KeyRound size={20} /></div>
-        <h2 id="recovery-code-title">保存你的恢复码</h2>
-        <p>如果以后忘记主密码，只能用这个恢复码设置新的主密码。KeyPilot 不会再次显示它。</p>
+        <h2 id="recovery-code-title">{t("保存你的恢复码")}</h2>
+        <p>{t("如果以后忘记主密码，只能用这个恢复码设置新的主密码。KeyPilot 不会再次显示它。")}</p>
         <code className="recovery-code">{code}</code>
         <div className="recovery-warning">
           <AlertTriangle size={16} />
-          <span>不要截图发给别人，不要保存到同一个浏览器密码库里。建议写在纸上，或放入离线加密文件。</span>
+          <span>{t("不要截图发给别人，不要保存到同一个浏览器密码库里。建议写在纸上，或放入离线加密文件。")}</span>
         </div>
         <div className="dialog-actions">
-          <button type="button" className="button secondary" onClick={copyCode}><Copy size={15} />复制恢复码</button>
-          <button type="button" className="button primary" onClick={onClose}>我已保存</button>
+          <button type="button" className="button secondary" onClick={copyCode}><Copy size={15} />{t("复制恢复码")}</button>
+          <button type="button" className="button primary" onClick={onClose}>{t("我已保存")}</button>
         </div>
       </section>
     </div>
@@ -4186,26 +4145,26 @@ function SaveLoginPrompt({
   const existingLabel = `${existing?.title || candidate.domain}${candidate.username ? ` (${candidate.username})` : ''}`;
   const newLabel = `${normalizedTitle}${candidate.username ? ` (${candidate.username})` : ''}`;
   const primaryMode: SaveLoginMode = hasConflict ? mode : 'save';
-  const primaryLabel = primaryMode === 'update' ? '更新已有账号' : primaryMode === 'new' ? '保存为新账号' : '保存';
+  const primaryLabel = primaryMode === 'update' ? t("更新已有账号") : primaryMode === 'new' ? t("保存为新账号") : t("保存");
 
   return (
     <section className="save-prompt">
-      <button className="prompt-close" type="button" aria-label="关闭保存提示" onClick={() => onSave(candidate, 'skip')}><X size={15} /></button>
+      <button className="prompt-close" type="button" aria-label={t("关闭保存提示")} onClick={() => onSave(candidate, 'skip')}><X size={15} /></button>
       <div className="prompt-hero"><ShieldCheck size={42} /></div>
-      <h2>{exactDuplicate ? '登录信息已存在' : hasConflict ? '检测到密码变化' : '检测到新的登录信息'}</h2>
-      <p>{exactDuplicate ? '该账号已保存，无需重复保存。' : hasConflict ? '同一网站和用户名已存在，选择如何处理。' : '是否保存到钥航 KeyPilot？'}</p>
+      <h2>{exactDuplicate ? t("登录信息已存在") : hasConflict ? t("检测到密码变化") : t("检测到新的登录信息")}</h2>
+      <p>{exactDuplicate ? t("该账号已保存，无需重复保存。") : hasConflict ? t("同一网站和用户名已存在，选择如何处理。") : t("是否保存到钥航 KeyPilot？")}</p>
       <div className="candidate-card">
         <SiteIcon domain={candidate.domain} url={candidate.url} iconUrl={candidate.iconUrl} />
-        <div><strong>{candidate.domain}</strong><span>{candidate.username || '未识别用户名'}</span><code>••••••••••••</code></div>
+        <div><strong>{candidate.domain}</strong><span>{candidate.username || t("未识别用户名")}</span><code>••••••••••••</code></div>
         <Eye size={15} />
       </div>
       {exactDuplicate ? (
-        <button className="button primary full" type="button" onClick={() => onSave(candidate, 'skip')}>知道了</button>
+        <button className="button primary full" type="button" onClick={() => onSave(candidate, 'skip')}>{t("知道了")}</button>
       ) : (
         <>
           <div className="save-fields">
             <label className="save-field">
-              <span>保存名称</span>
+              <span>{t("保存名称")}</span>
               <input
                 type="text"
                 value={title}
@@ -4214,10 +4173,10 @@ function SaveLoginPrompt({
               />
             </label>
             <label className="save-field">
-              <span>保存方式</span>
+              <span>{t("保存方式")}</span>
               <select value={primaryMode} onChange={(event) => setMode(event.currentTarget.value as SaveLoginMode)}>
-                {hasConflict ? <option value="update">更新已有账号：{existingLabel}</option> : null}
-                <option value={hasConflict ? 'new' : 'save'}>保存为新账号：{newLabel}</option>
+                {hasConflict ? <option value="update">{t("更新已有账号：")}{existingLabel}</option> : null}
+                <option value={hasConflict ? 'new' : 'save'}>{t("保存为新账号：")}{newLabel}</option>
               </select>
             </label>
           </div>
@@ -4225,16 +4184,16 @@ function SaveLoginPrompt({
         </>
       )}
       <div className="prompt-actions">
-        {hasConflict ? <button type="button" onClick={() => onSave(candidateToSave, 'new')}>直接保存为新记录</button> : null}
-        <button type="button" onClick={() => onSave(candidate, 'skip')}>{hasConflict ? '跳过' : '暂不保存'}</button>
-        <button type="button" onClick={() => onSave(candidate, 'blacklist')}>从不保存此网站</button>
+        {hasConflict ? <button type="button" onClick={() => onSave(candidateToSave, 'new')}>{t("直接保存为新记录")}</button> : null}
+        <button type="button" onClick={() => onSave(candidate, 'skip')}>{hasConflict ? t("跳过") : t("暂不保存")}</button>
+        <button type="button" onClick={() => onSave(candidate, 'blacklist')}>{t("从不保存此网站")}</button>
       </div>
     </section>
   );
 }
 
 function NoticeToast({ notice, onDismiss }: { notice: Notice; onDismiss: () => void }) {
-  return <div className={`notice-toast ${notice.kind}`} role={notice.kind === 'error' ? 'alert' : 'status'}><span>{notice.text}</span><button type="button" onClick={onDismiss} aria-label="关闭提示"><X size={14} /></button></div>;
+  return <div className={`notice-toast ${notice.kind}`} role={notice.kind === 'error' ? 'alert' : 'status'}><span>{notice.text}</span><button type="button" onClick={onDismiss} aria-label={t("关闭提示")}><X size={14} /></button></div>;
 }
 
 function RenameFillProfileDialog({
@@ -4268,14 +4227,14 @@ function RenameFillProfileDialog({
         <div className="dialog-icon">
           <Edit3 size={20} aria-hidden="true" />
         </div>
-        <h2 id="rename-fill-profile-title">重命名身份资料</h2>
+        <h2 id="rename-fill-profile-title">{t("重命名身份资料")}</h2>
         <label className="rename-field">
-          <span>名称</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus maxLength={80} placeholder="例如：车险_US020" />
+          <span>{t("名称")}</span>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus maxLength={80} placeholder={t("例如：车险_US020")} />
         </label>
         <div className="dialog-actions">
-          <button type="button" className="button secondary" onClick={onClose} disabled={busy}>取消</button>
-          <button type="submit" className="button primary" disabled={busy || !nextTitle}>{busy ? '保存中...' : '保存'}</button>
+          <button type="button" className="button secondary" onClick={onClose} disabled={busy}>{t("取消")}</button>
+          <button type="submit" className="button primary" disabled={busy || !nextTitle}>{busy ? t("保存中...") : t("保存")}</button>
         </div>
       </form>
     </div>
@@ -4300,8 +4259,8 @@ function ConfirmDialog({ request, onClose }: { request: ConfirmRequest; onClose:
         <h2 id="confirm-title">{request.title}</h2>
         <p>{request.body}</p>
         <div className="dialog-actions">
-          <button type="button" className="button secondary" onClick={onClose} disabled={busy}>取消</button>
-          <button type="button" className={request.tone === 'danger' ? 'button danger' : 'button primary'} onClick={handleConfirm} disabled={busy}>{busy ? '处理中...' : request.actionLabel}</button>
+          <button type="button" className="button secondary" onClick={onClose} disabled={busy}>{t("取消")}</button>
+          <button type="button" className={request.tone === 'danger' ? 'button danger' : 'button primary'} onClick={handleConfirm} disabled={busy}>{busy ? t("处理中...") : request.actionLabel}</button>
         </div>
       </section>
     </div>
@@ -4309,7 +4268,7 @@ function ConfirmDialog({ request, onClose }: { request: ConfirmRequest; onClose:
 }
 
 function CheckingState() {
-  return <main className="checking-state"><div className="skeleton-panel" /><p>正在检查本地 Vault...</p></main>;
+  return <main className="checking-state"><div className="skeleton-panel" /><p>{t("正在检查本地 Vault...")}</p></main>;
 }
 
 function EmptyState({ title, body, actionLabel, onAction }: { title: string; body: string; actionLabel: string; onAction: () => void }) {

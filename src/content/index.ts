@@ -1,3 +1,4 @@
+import { t, htmlText, initContentLanguage } from './i18n';
 import { selectFillOption, parseFillDate, formatFillDate } from '../shared/fillValues';
 import { beginLoginFeedback, showLoginFeedback, clearLoginFeedback } from './loginFeedback';
 import { probeTotpFields, fillTotpFields, installLoginTotpWatcher, clearTotpProbe, samePageTotpFields, writeSamePageTotp, hasVerificationFields } from './totpFill';
@@ -462,7 +463,6 @@ let pendingSavePromptCheckTimer: number | null = null;
 
 try {
   document.documentElement.dataset.keypilotContentScript = '0.1.0';
-  installCaptchaAssist();
   installLoginTotpWatcher();
   if(window.top===window)void chrome.runtime.sendMessage({type:'KEYPILOT_GET_LOGIN_PROGRESS'}).then(outcome=>{
     if(outcome?.credentialId && (outcome.url!==location.href || outcome.status==='navigated')){
@@ -2215,7 +2215,7 @@ async function submitWithCaptcha(
         const state=await chrome.runtime.sendMessage({type:'KEYPILOT_AUTHORIZE_LOGIN_SUBMIT',credentialId:credential.id,username:credential.username,password:credential.password,expectedUrl:url,sessionId,prepareTotp:true});
         if(!guard() || !state?.ok)return paused(state?.reason || '动态验证码自动填写已暂停，请核对账号与网站设置。');
         if(state.waiting){
-          showLoginFeedback('动态验证码即将过期，正在等待下一组…',credential.id);
+          showLoginFeedback(t("动态验证码即将过期，正在等待下一组…"),credential.id);
           if(Date.now()>deadline)return paused('暂未取得有效动态验证码，请手动填写。');
           await new Promise(resolve=>setTimeout(resolve,500));continue;
         }
@@ -2244,11 +2244,11 @@ async function submitWithCaptcha(
 
 async function performCredentialFill(credential: FillCredentialPayload, allowStage: boolean, scopedContext?: LoginContext): Promise<FillCredentialResult> {
   const startUrl = window.location.href;
-  if(credential.loginRequested){beginLoginFeedback();showLoginFeedback('正在填写账号信息…',credential.id);}
+  if(credential.loginRequested){beginLoginFeedback();showLoginFeedback(t("正在填写账号信息…"),credential.id);}
   const context = scopedContext ?? findLoginContext();
 
   if (!context) {
-    if(credential.loginRequested)showLoginFeedback('没有找到可填写的登录表单，请在网站打开登录页面。',credential.id,true);
+    if(credential.loginRequested)showLoginFeedback(t("没有找到可填写的登录表单，请在网站打开登录页面。"),credential.id,true);
     return { ok: false, error: 'NO_LOGIN_FORM' };
   }
 
@@ -2267,7 +2267,7 @@ async function performCredentialFill(credential: FillCredentialPayload, allowSta
       const submitResult = await submitWithCaptcha(context, credential, context.usernameField, true);
 
       if (!submitResult.submitted) {
-        showLoginFeedback(submitResult.captchaMessage || '已填写用户名，请在网站继续。',credential.id,true);
+        showLoginFeedback(submitResult.captchaMessage || t("已填写用户名，请在网站继续。"),credential.id,true);
         return {
           ok: true,
           stage: 'usernameOnly',
@@ -2277,7 +2277,7 @@ async function performCredentialFill(credential: FillCredentialPayload, allowSta
         };
       }
 
-      showLoginFeedback('已填写用户名，正在等待密码步骤…',credential.id);
+      showLoginFeedback(t("已填写用户名，正在等待密码步骤…"),credential.id);
       if (allowStage) {
         startStagedPasswordFill(credential);
       }
@@ -2291,7 +2291,7 @@ async function performCredentialFill(credential: FillCredentialPayload, allowSta
       };
     }
 
-    if(credential.loginRequested)showLoginFeedback('已填写用户名，请在网站继续。',credential.id);
+    if(credential.loginRequested)showLoginFeedback(t("已填写用户名，请在网站继续。"),credential.id);
     return {
       ok: true,
       stage: 'usernameOnly',
@@ -2318,7 +2318,7 @@ async function performCredentialFill(credential: FillCredentialPayload, allowSta
     captchaSubmitted = Boolean(submitResult.captchaSubmitted);
   }
 
-  if(credential.loginRequested && !submitted)showLoginFeedback(captchaMessage || '已填写账号，请在网站继续。',credential.id,skippedSubmit && credential.autoSubmit);
+  if(credential.loginRequested && !submitted)showLoginFeedback(captchaMessage || t("已填写账号，请在网站继续。"),credential.id,skippedSubmit && credential.autoSubmit);
   const submitOutcome = submitted
     ? scheduleSubmitOutcomeCheck(credential.id, startUrl, captchaSubmitted)
     : undefined;
@@ -3244,10 +3244,10 @@ function renderManualBinding() {
         .panel { animation-duration: 1ms; }
       }
     </style>
-    <section class="panel" role="dialog" aria-label="KeyPilot 手动绑定字段">
+    <section class="panel" role="dialog" aria-label="${htmlText(t("KeyPilot 手动绑定字段"))}">
       <header>
-        <h3>KeyPilot 点选绑定</h3>
-        <button class="close" type="button" data-binding-action="cancel" aria-label="取消绑定">×</button>
+        <h3>${htmlText(t("KeyPilot 点选绑定"))}</h3>
+        <button class="close" type="button" data-binding-action="cancel" aria-label="${htmlText(t("取消绑定"))}">×</button>
       </header>
       <div class="body">
         <div class="current">
@@ -3255,11 +3255,11 @@ function renderManualBinding() {
           <span>${escapeHtml(bindingStepHint(manualBinding.step))}</span>
         </div>
         <ol>
-          <li class="${done.username ? 'done' : manualBinding.step === 'username' ? 'active' : ''}">用户名框</li>
-          <li class="${done.password ? 'done' : manualBinding.step === 'password' ? 'active' : ''}">密码框</li>
-          <li class="${done.submit ? 'done' : manualBinding.step === 'submit' ? 'active' : ''}">登录按钮</li>
+          <li class="${done.username ? 'done' : manualBinding.step === 'username' ? 'active' : ''}">${htmlText(t("用户名框"))}</li>
+          <li class="${done.password ? 'done' : manualBinding.step === 'password' ? 'active' : ''}">${htmlText(t("密码框"))}</li>
+          <li class="${done.submit ? 'done' : manualBinding.step === 'submit' ? 'active' : ''}">${htmlText(t("登录按钮"))}</li>
         </ol>
-        <p class="status">${escapeHtml(manualBinding.status || '点击页面里的对应元素。按 Esc 可取消。')}</p>
+        <p class="status">${escapeHtml(manualBinding.status || t("点击页面里的对应元素。按 Esc 可取消。"))}</p>
       </div>
     </section>
   `;
@@ -3540,23 +3540,23 @@ function renderFillProfileBinding() {
     button,select{font:inherit;color:inherit;border:1px solid #cbd5e1;border-radius:6px;background:white;padding:8px;cursor:pointer}select{width:100%;margin:8px 0}button:disabled,select:disabled{opacity:.5;cursor:default}
     button:hover:not(:disabled){background:#edf3ff}button:focus-visible,select:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.primary{background:#2563eb;color:white}.primary:hover:not(:disabled){background:#1d4ed8}
     .scope,footer{display:flex;gap:8px;margin-top:12px}.scope button{flex:1}.scope button[aria-pressed=true]{background:#edf3ff;color:#173767;border-color:#2563eb}footer{justify-content:flex-end}.status{color:#52647d}ul{padding-left:20px;max-height:150px;overflow:auto}li{margin:8px 0;overflow-wrap:anywhere}li button{padding:2px 6px;margin-left:6px;font-size:13px}
-    </style><section role="dialog" aria-label="KeyPilot 填表字段绑定">
-      <header><button type="button" class="move" aria-label="移动校准面板" title="拖动移动，也可聚焦后按方向键">⠿</button><h3>校准漏填字段</h3><button type="button" data-action="collapse" aria-expanded="${!state.collapsed}">${state.collapsed?'展开':'收起'}</button><button type="button" data-action="cancel" aria-label="取消绑定">×</button></header>
-      <p class="compact" ${state.collapsed?'':'hidden'}>点击网页上要对应的输入框<small>已绑定 ${state.bindings.length} 项 · 展开可检查和保存</small></p>
+    </style><section role="dialog" aria-label="${htmlText(t("KeyPilot 填表字段绑定"))}">
+      <header><button type="button" class="move" aria-label="${htmlText(t("移动校准面板"))}" title="${htmlText(t("拖动移动，也可聚焦后按方向键"))}">⠿</button><h3>${htmlText(t("校准漏填字段"))}</h3><button type="button" data-action="collapse" aria-expanded="${!state.collapsed}">${state.collapsed?t("展开"):t("收起")}</button><button type="button" data-action="cancel" aria-label="${htmlText(t("取消绑定"))}">×</button></header>
+      <p class="compact" ${state.collapsed?'':'hidden'}>${htmlText(t("点击网页上要对应的输入框"))}<small>${htmlText(t("已绑定 "))}${state.bindings.length}${htmlText(t(" 项 · 展开可检查和保存"))}</small></p>
       <div class="binding-body" ${state.collapsed?'hidden':''}>
-      <p>${state.target ? '已选网页字段：'+escapeHtml(controlLabel(state.target)||'未命名字段') : '先点击网页上漏填的输入框、下拉框或文本框。'}</p>
-      <label>对应的资料字段<select data-fill-binding-field aria-label="选择要绑定的资料字段" ${!state.target||state.saving?'disabled':''}>
-        <option value="">请选择资料字段</option>${fields.map(field=>`<option value="${escapeHtml(field.key)}">${escapeHtml(field.label)}</option>`).join('')}
+      <p>${state.target ? t("已选网页字段：")+escapeHtml(controlLabel(state.target)||t("未命名字段")) : t("先点击网页上漏填的输入框、下拉框或文本框。")}</p>
+      <label>${htmlText(t("对应的资料字段"))}<select data-fill-binding-field aria-label="${htmlText(t("选择要绑定的资料字段"))}" ${!state.target||state.saving?'disabled':''}>
+        <option value="">${htmlText(t("请选择资料字段"))}</option>${fields.map(field=>`<option value="${escapeHtml(field.key)}">${escapeHtml(field.label)}</option>`).join('')}
       </select></label>
-      <div class="scope" role="group" aria-label="规则应用范围" ${clearing?'hidden':''}>
-        <button type="button" data-scope="path" aria-pressed="${state.scope==='path'}" ${!pathPattern||state.saving?'disabled':''}>${pathPattern===currentRulePathPattern()?'当前路径':'原绑定路径'}</button>
-        <button type="button" data-scope="domain" aria-pressed="${state.scope==='domain'}" ${state.saving?'disabled':''}>整个域名</button>
+      <div class="scope" role="group" aria-label="${htmlText(t("规则应用范围"))}" ${clearing?'hidden':''}>
+        <button type="button" data-scope="path" aria-pressed="${state.scope==='path'}" ${!pathPattern||state.saving?'disabled':''}>${pathPattern===currentRulePathPattern()?t("当前路径"):t("原绑定路径")}</button>
+        <button type="button" data-scope="domain" aria-pressed="${state.scope==='domain'}" ${state.saving?'disabled':''}>${htmlText(t("整个域名"))}</button>
       </div><p ${clearing?'hidden':''}><small>${escapeHtml(location.hostname+(state.scope==='path'?pathPattern??'':''))}</small></p>
-      <small>已绑定 ${state.bindings.length} 个字段</small><ul>${state.bindings.map(binding=>`<li>${escapeHtml(fields.find(field=>field.key===binding.key)?.label??binding.key)} → ${escapeHtml(binding.controlLabel||binding.name||binding.id||'网页字段')}<button type="button" data-remove="${escapeHtml(binding.key)}" ${state.saving?'disabled':''}>移除</button></li>`).join('')}</ul>
-      ${clearing?`<p class="danger">保存后将删除 ${escapeHtml(original!.domain+(original!.pathPattern??'（整个域名）'))} 的这组绑定，恢复自动识别。</p>`:''}
-      <button type="button" class="pick" data-action="pick" ${state.saving?'disabled':''}>${state.target?'重新选择网页字段':'继续选取网页字段'}</button>
-      <p class="status" role="status">${escapeHtml(state.status??'选择后可继续点击其他漏填框。按 Esc 取消。')}</p>
-      </div><footer ${state.collapsed?'hidden':''}><button type="button" class="primary" data-fill-binding-action="save" ${(!state.bindings.length&&!clearing)||state.saving||state.target?'disabled':''}>${clearing?'清除这组绑定':'保存绑定'}</button></footer>
+      <small>${htmlText(t("已绑定 "))}${state.bindings.length}${htmlText(t(" 个字段"))}</small><ul>${state.bindings.map(binding=>`<li>${escapeHtml(fields.find(field=>field.key===binding.key)?.label??binding.key)} → ${escapeHtml(binding.controlLabel||binding.name||binding.id||t("网页字段"))}<button type="button" data-remove="${escapeHtml(binding.key)}" ${state.saving?'disabled':''}>${htmlText(t("移除"))}</button></li>`).join('')}</ul>
+      ${clearing?`<p class="danger">${htmlText(t("保存后将删除 "))}${escapeHtml(original!.domain+(original!.pathPattern??t("（整个域名）")))}${htmlText(t(" 的这组绑定，恢复自动识别。"))}</p>`:''}
+      <button type="button" class="pick" data-action="pick" ${state.saving?'disabled':''}>${state.target?t("重新选择网页字段"):t("继续选取网页字段")}</button>
+      <p class="status" role="status">${escapeHtml(state.status??t("选择后可继续点击其他漏填框。按 Esc 取消。"))}</p>
+      </div><footer ${state.collapsed?'hidden':''}><button type="button" class="primary" data-fill-binding-action="save" ${(!state.bindings.length&&!clearing)||state.saving||state.target?'disabled':''}>${clearing?t("清除这组绑定"):t("保存绑定")}</button></footer>
     </section>`;
   bindingRoot.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.onclick=()=>stopFillProfileBinding();
   bindingRoot.querySelector<HTMLButtonElement>('[data-action="collapse"]')!.onclick=()=>{
@@ -3889,18 +3889,18 @@ function renderBindingTestOverlay(elements: Array<{ element: HTMLElement; label:
       }
     </style>
     ${boxes}
-    <section class="panel" role="dialog" aria-label="KeyPilot 绑定测试结果">
+    <section class="panel" role="dialog" aria-label="${htmlText(t("KeyPilot 绑定测试结果"))}">
       <header>
-        <h3>KeyPilot 绑定测试</h3>
-        <button type="button" data-action="close" aria-label="关闭测试结果">×</button>
+        <h3>${htmlText(t("KeyPilot 绑定测试"))}</h3>
+        <button type="button" data-action="close" aria-label="${htmlText(t("关闭测试结果"))}">×</button>
       </header>
       <div class="body">
         <div class="status ${statusTone}">${escapeHtml(result.message)}</div>
         <div class="metrics">
-          <div class="metric"><span>字段匹配</span><strong>${result.matchedFields}/${result.totalFields}</strong></div>
-          <div class="metric"><span>登录按钮</span><strong>${result.submitMatched ? '已匹配' : result.hasSubmit ? '未匹配' : '未记录'}</strong></div>
+          <div class="metric"><span>${htmlText(t("字段匹配"))}</span><strong>${result.matchedFields}/${result.totalFields}</strong></div>
+          <div class="metric"><span>${htmlText(t("登录按钮"))}</span><strong>${result.submitMatched ? t("已匹配") : result.hasSubmit ? t("未匹配") : t("未记录")}</strong></div>
         </div>
-        <p class="hint">测试只高亮绑定目标，不会填写密码，也不会点击登录。</p>
+        <p class="hint">${htmlText(t("测试只高亮绑定目标，不会填写密码，也不会点击登录。"))}</p>
       </div>
     </section>
   `;
@@ -4694,7 +4694,7 @@ function openInlineMenuFromHover() {
   inlineMoreProfileId = null;
   inlineSearchNeedsFocus = false;
   if (!inlineMatches.length && !inlineFillProfiles.length) {
-    inlineStatus = '正在读取 KeyPilot 状态...';
+    inlineStatus = t("正在读取 KeyPilot 状态...");
   }
   suppressInlineRefreshFor(220);
   renderInlineWidget();
@@ -4768,26 +4768,26 @@ function renderInlineMoreMenu(match: InlineCredentialSummary): string {
   return `
     <div class="more-popover" role="menu" aria-label="${escapeHtml(match.title || match.domain)} 更多选项">
       <button class="command primary" type="button" data-action="login" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('login')}</span><strong>填写并提交</strong>
+        <span>${inlineCommandIcon('login')}</span><strong>${htmlText(t("填写并提交"))}</strong>
       </button>
       <button class="command" type="button" data-action="fill" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('fill')}</span><strong>填表</strong>
+        <span>${inlineCommandIcon('fill')}</span><strong>${htmlText(t("填表"))}</strong>
       </button>
       <button class="command" type="button" data-action="edit" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('edit')}</span><strong>编辑</strong>
+        <span>${inlineCommandIcon('edit')}</span><strong>${htmlText(t("编辑"))}</strong>
       </button>
       <button class="command" type="button" data-action="rename" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('rename')}</span><strong>重命名</strong>
+        <span>${inlineCommandIcon('rename')}</span><strong>${htmlText(t("重命名"))}</strong>
       </button>
       <button class="command danger" type="button" data-action="delete" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('delete')}</span><strong>删除</strong>
+        <span>${inlineCommandIcon('delete')}</span><strong>${htmlText(t("删除"))}</strong>
       </button>
       <hr />
       <button class="command" type="button" data-action="goto" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('home')}</span><strong>打开起始页</strong>
+        <span>${inlineCommandIcon('home')}</span><strong>${htmlText(t("打开起始页"))}</strong>
       </button>
       <button class="command" type="button" data-action="hide-domain" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('hide')}</span><strong>不在此页面显示</strong>
+        <span>${inlineCommandIcon('hide')}</span><strong>${htmlText(t("不在此页面显示"))}</strong>
       </button>
     </div>
   `;
@@ -4828,10 +4828,10 @@ function renderInlineAccount(match: InlineCredentialSummary): string {
         <span class="mark credential-mark">${renderInlineAccountLockIcon()}</span>
         <span class="text">
           <strong>${escapeHtml(title)}</strong>
-          <small>${escapeHtml(match.username || '无用户名')}</small>
+          <small>${escapeHtml(match.username || t("无用户名"))}</small>
         </span>
       </button>
-      <button class="more-button" type="button" data-action="more" data-id="${escapeHtml(match.id)}" aria-label="更多选项">⋮</button>
+      <button class="more-button" type="button" data-action="more" data-id="${escapeHtml(match.id)}" aria-label="${htmlText(t("更多选项"))}">⋮</button>
       ${isMoreOpen ? renderInlineMoreMenu(match) : ''}
     </article>
   `;
@@ -4915,24 +4915,24 @@ function inlineProfileTone(profile: InlineFillProfileSummary): string {
 function renderInlineProfileMoreMenu(profile: InlineFillProfileSummary): string {
   return `
     <div class="more-popover profile-popover" role="menu" aria-label="${escapeHtml(profile.title)} 更多选项">
-      <button class="command primary" type="button" data-action="fill-profile" data-id="${escapeHtml(profile.id)}" title="使用这条身份资料填写当前表单">
-        <span>${inlineCommandIcon('fill')}</span><strong>填表</strong>
+      <button class="command primary" type="button" data-action="fill-profile" data-id="${escapeHtml(profile.id)}" title="${htmlText(t("使用这条身份资料填写当前表单"))}">
+        <span>${inlineCommandIcon('fill')}</span><strong>${htmlText(t("填表"))}</strong>
       </button>
-      <button class="command" type="button" data-action="bind-profile" data-id="${escapeHtml(profile.id)}" title="为这个网站校准身份资料字段">
-        <span>${inlineCommandIcon('edit')}</span><strong>编辑</strong>
+      <button class="command" type="button" data-action="bind-profile" data-id="${escapeHtml(profile.id)}" title="${htmlText(t("为这个网站校准身份资料字段"))}">
+        <span>${inlineCommandIcon('edit')}</span><strong>${htmlText(t("编辑"))}</strong>
       </button>
       <button class="command" type="button" data-action="rename-profile" data-id="${escapeHtml(profile.id)}">
-        <span>${inlineCommandIcon('rename')}</span><strong>重命名</strong>
+        <span>${inlineCommandIcon('rename')}</span><strong>${htmlText(t("重命名"))}</strong>
       </button>
       <button class="command danger" type="button" data-action="delete-profile" data-id="${escapeHtml(profile.id)}">
-        <span>${inlineCommandIcon('delete')}</span><strong>删除</strong>
+        <span>${inlineCommandIcon('delete')}</span><strong>${htmlText(t("删除"))}</strong>
       </button>
       <hr />
       <button class="command" type="button" data-action="profile-home" data-id="${escapeHtml(profile.id)}">
-        <span>${inlineCommandIcon('home')}</span><strong>打开起始页</strong>
+        <span>${inlineCommandIcon('home')}</span><strong>${htmlText(t("打开起始页"))}</strong>
       </button>
       <button class="command" type="button" data-action="hide-domain" data-id="${escapeHtml(profile.id)}">
-        <span>${inlineCommandIcon('hide')}</span><strong>不在此页面显示</strong>
+        <span>${inlineCommandIcon('hide')}</span><strong>${htmlText(t("不在此页面显示"))}</strong>
       </button>
     </div>
   `;
@@ -4948,11 +4948,11 @@ function renderInlineFillProfile(profile: InlineFillProfileSummary): string {
       <button class="account-main" type="button" data-action="fill-profile" data-id="${escapeHtml(profile.id)}" aria-label="填写 ${escapeHtml(profile.title)}">
         <span class="mark profile-mark">${escapeHtml(getInlineProfileInitial(profile))}</span>
         <span class="text">
-          <strong>${escapeHtml(profile.title || '未命名资料')}</strong>
+          <strong>${escapeHtml(profile.title || t("未命名资料"))}</strong>
           <small>${escapeHtml(`${category} · ${summary}`)}</small>
         </span>
       </button>
-      <button class="more-button" type="button" data-action="profile-more" data-id="${escapeHtml(profile.id)}" aria-label="更多选项" title="更多选项">⋮</button>
+      <button class="more-button" type="button" data-action="profile-more" data-id="${escapeHtml(profile.id)}" aria-label="${htmlText(t("更多选项"))}" title="${htmlText(t("更多选项"))}">⋮</button>
       ${isMoreOpen ? renderInlineProfileMoreMenu(profile) : ''}
     </article>
   `;
@@ -4988,38 +4988,38 @@ function renderInlineWidget() {
   const showSearchBox = rawHasContent && (Boolean(query) || !hasAccountContent);
   const menuContent = hasAnyContent
     ? `
-      ${hasAccountContent ? `<div class="section-title">登录账号</div>${accountContent}` : ''}
-      ${recentProfileContent ? `<div class="section-title">最近使用的身份信息</div>${recentProfileContent}` : ''}
-      ${otherProfileContent ? `<div class="section-title">${recentProfileContent ? '其他身份信息（A-Z 排序）' : '身份资料'}</div>${otherProfileContent}` : ''}
+      ${hasAccountContent ? `<div class="section-title">${htmlText(t("登录账号"))}</div>${accountContent}` : ''}
+      ${recentProfileContent ? `<div class="section-title">${htmlText(t("最近使用的身份信息"))}</div>${recentProfileContent}` : ''}
+      ${otherProfileContent ? `<div class="section-title">${recentProfileContent ? t("其他身份信息（A-Z 排序）") : t("身份资料")}</div>${otherProfileContent}` : ''}
     `
     : `
       <div class="empty">
-        <strong>${rawHasContent ? '没有匹配结果' : inlineLocked ? 'KeyPilot 已锁定' : '没有可用资料'}</strong>
-        <p>${rawHasContent ? '换个关键词试试，可以搜索名称、邮箱、电话、公司或资料编号。' : inlineLocked ? '请先点击浏览器工具栏里的 KeyPilot 解锁 Vault。' : '当前页面没有匹配账号或身份资料。'}</p>
-        <button type="button" data-action="refresh">刷新状态</button>
+        <strong>${rawHasContent ? t("没有匹配结果") : inlineLocked ? t("KeyPilot 已锁定") : t("没有可用资料")}</strong>
+        <p>${rawHasContent ? t("换个关键词试试，可以搜索名称、邮箱、电话、公司或资料编号。") : inlineLocked ? t("请先点击浏览器工具栏里的 KeyPilot 解锁 Vault。") : t("当前页面没有匹配账号或身份资料。")}</p>
+        <button type="button" data-action="refresh">${htmlText(t("刷新状态"))}</button>
       </div>
     `;
   const searchBox = showSearchBox
     ? `
-      <label class="inline-search" aria-label="搜索账号或身份资料">
+      <label class="inline-search" aria-label="${htmlText(t("搜索账号或身份资料"))}">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
         </svg>
-        <input data-inline-search type="search" value="${escapeHtml(inlineFilterQuery)}" placeholder="搜索账号、身份资料" autocomplete="off" />
+        <input data-inline-search type="search" value="${escapeHtml(inlineFilterQuery)}" placeholder="${htmlText(t("搜索账号、身份资料"))}" autocomplete="off" />
       </label>
     `
     : '';
   const menu = inlineMenuOpen ? `
-    <section class="menu" role="menu" aria-label="KeyPilot 快捷登录">
+    <section class="menu" role="menu" aria-label="${htmlText(t("KeyPilot 快捷登录"))}">
       ${searchBox}
       <div class="accounts">
         ${menuContent}
       </div>
       <footer>
-        <button class="footer-home" type="button" data-action="vault-home" aria-label="打开 KeyPilot 首页">
+        <button class="footer-home" type="button" data-action="vault-home" aria-label="${htmlText(t("打开 KeyPilot 首页"))}">
           ${inlineCommandIcon('home')}
         </button>
-        <button class="footer-report" type="button" data-action="report">报告自动填充问题</button>
+        <button class="footer-report" type="button" data-action="report">${htmlText(t("报告自动填充问题"))}</button>
       </footer>
       ${inlineStatus ? `<p class="status">${escapeHtml(inlineStatus)}</p>` : ''}
     </section>
@@ -5488,7 +5488,7 @@ function renderInlineWidget() {
       }
     </style>
     <div class="${shellClass}">
-      <button class="trigger" type="button" data-action="toggle" aria-label="打开 KeyPilot 快捷登录">
+      <button class="trigger" type="button" data-action="toggle" aria-label="${htmlText(t("打开 KeyPilot 快捷登录"))}">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path fill="currentColor" d="M12 2.5 19 5v5.3c0 5.1-2.9 8.5-7 10.2-4.1-1.7-7-5.1-7-10.2V5l7-2.5Z"/>
           <path fill="#fff" d="m10.8 14.6-3-3 1.5-1.5 1.5 1.5 3.9-3.9 1.5 1.5-5.4 5.4Z"/>
@@ -5592,7 +5592,7 @@ function renderInlineWidget() {
       }
 
       if (action === 'refresh') {
-        inlineStatus = '正在刷新状态...';
+        inlineStatus = t("正在刷新状态...");
         renderInlineWidget();
         scheduleInlineRefresh(0);
         return;
@@ -5800,30 +5800,30 @@ function renderInlineWidgetLegacy() {
           <button class="account-main" type="button" data-action="login" data-id="${escapeHtml(match.id)}" aria-label="使用 ${escapeHtml(match.title)} 登录">
             <span class="mark">${renderInlineIcon(match)}</span>
             <span class="text">
-              <strong>${escapeHtml(match.title || match.domain || '未命名账号')}</strong>
-              <small>${escapeHtml(match.username || '无用户名')}</small>
+              <strong>${escapeHtml(match.title || match.domain || t("未命名账号"))}</strong>
+              <small>${escapeHtml(match.username || t("无用户名"))}</small>
             </span>
           </button>
           <div class="account-actions">
-            <button type="button" data-action="fill" data-id="${escapeHtml(match.id)}">填充</button>
-            <button type="button" data-action="login" data-id="${escapeHtml(match.id)}">登录</button>
+            <button type="button" data-action="fill" data-id="${escapeHtml(match.id)}">${htmlText(t("填充"))}</button>
+            <button type="button" data-action="login" data-id="${escapeHtml(match.id)}">${htmlText(t("登录"))}</button>
           </div>
         </article>
       `).join('')
     : `
       <div class="empty">
-        <strong>${inlineLocked ? 'KeyPilot 已锁定' : '没有匹配账号'}</strong>
-        <p>${inlineLocked ? '请先点击浏览器工具栏里的 KeyPilot 解锁 Vault。' : '打开 KeyPilot 新增当前网站账号，或检查保存的网址是否属于同一主域。'}</p>
-        <button type="button" data-action="refresh">刷新状态</button>
+        <strong>${inlineLocked ? t("KeyPilot 已锁定") : t("没有匹配账号")}</strong>
+        <p>${inlineLocked ? t("请先点击浏览器工具栏里的 KeyPilot 解锁 Vault。") : t("打开 KeyPilot 新增当前网站账号，或检查保存的网址是否属于同一主域。")}</p>
+        <button type="button" data-action="refresh">${htmlText(t("刷新状态"))}</button>
       </div>
     `;
   const menu = inlineMenuOpen ? `
-    <section class="menu" role="menu" aria-label="KeyPilot 快捷登录">
+    <section class="menu" role="menu" aria-label="${htmlText(t("KeyPilot 快捷登录"))}">
       <div class="accounts">
         ${accountContent}
       </div>
       <footer>
-        <button type="button" data-action="report">报告自动填充问题</button>
+        <button type="button" data-action="report">${htmlText(t("报告自动填充问题"))}</button>
       </footer>
       ${inlineStatus ? `<p class="status">${escapeHtml(inlineStatus)}</p>` : ''}
     </section>
@@ -6025,7 +6025,7 @@ function renderInlineWidgetLegacy() {
         line-height: 1.4;
       }
     </style>
-    <button class="trigger" type="button" data-action="toggle" aria-label="打开 KeyPilot 快捷登录">
+    <button class="trigger" type="button" data-action="toggle" aria-label="${htmlText(t("打开 KeyPilot 快捷登录"))}">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path fill="currentColor" d="M12 2.5 19 5v5.3c0 5.1-2.9 8.5-7 10.2-4.1-1.7-7-5.1-7-10.2V5l7-2.5Z"/>
         <path fill="#fff" d="m10.8 14.6-3-3 1.5-1.5 1.5 1.5 3.9-3.9 1.5 1.5-5.4 5.4Z"/>
@@ -6148,7 +6148,7 @@ function renderInlineWidgetLegacy() {
       }
 
       if (action === 'refresh') {
-        inlineStatus = '正在刷新状态...';
+        inlineStatus = t("正在刷新状态...");
         renderInlineWidget();
         scheduleInlineRefresh(0);
         return;
@@ -6506,62 +6506,60 @@ function renderInlineCredentialEditor() {
       }
     </style>
     <div class="backdrop" data-editor-backdrop="true">
-      <aside class="drawer" role="dialog" aria-modal="true" aria-label="编辑账号">
+      <aside class="drawer" role="dialog" aria-modal="true" aria-label="${htmlText(t("编辑账号"))}">
         <div class="drawer-shell">
           <header class="titlebar">
             <span class="title-icon">${summary ? renderInlineIcon(summary) : renderInlineAccountLockIcon()}</span>
             <span class="title-copy">
-              <strong>${escapeHtml(draft?.title || '编辑账号')}</strong>
-              <span>${escapeHtml(draft?.domain || draft?.username || '本地加密账号')}</span>
+              <strong>${escapeHtml(draft?.title || t("编辑账号"))}</strong>
+              <span>${escapeHtml(draft?.domain || draft?.username || t("本地加密账号"))}</span>
             </span>
-            <button class="icon-button" type="button" data-editor-action="close" aria-label="关闭编辑面板">
+            <button class="icon-button" type="button" data-editor-action="close" aria-label="${htmlText(t("关闭编辑面板"))}">
               ${renderInlineEditorIcon('close')}
             </button>
           </header>
           <div class="actionbar">
-            <button class="button" type="button" data-editor-action="cancel">取消</button>
-            <button class="button primary" type="button" data-editor-action="save" ${canSave ? '' : 'disabled'}>${inlineEditorSaving ? '保存中' : '保存'}</button>
+            <button class="button" type="button" data-editor-action="cancel">${htmlText(t("取消"))}</button>
+            <button class="button primary" type="button" data-editor-action="save" ${canSave ? '' : 'disabled'}>${inlineEditorSaving ? t("保存中") : t("保存")}</button>
           </div>
           <main class="body">
             ${draft ? `
               <div class="form">
                 <label class="field">
-                  <span>名称</span>
+                  <span>${htmlText(t("名称"))}</span>
                   <input data-field="title" type="text" value="${escapeHtml(draft.title)}" autocomplete="off" />
                 </label>
                 <label class="field">
-                  <span>转到 URL</span>
+                  <span>${htmlText(t("转到 URL"))}</span>
                   <input data-field="url" type="url" value="${escapeHtml(draft.url)}" autocomplete="off" />
                 </label>
                 <label class="field">
-                  <span>匹配 URL</span>
-                  <input data-field="matchUrl" type="text" value="${escapeHtml(draft.matchUrl ?? '')}" autocomplete="off" placeholder="留空使用网站域名，或填写 *.example.com/*" />
+                  <span>${htmlText(t("匹配 URL"))}</span>
+                  <input data-field="matchUrl" type="text" value="${escapeHtml(draft.matchUrl ?? '')}" autocomplete="off" placeholder="${htmlText(t("留空使用网站域名，或填写 *.example.com/*"))}" />
                 </label>
                 <label class="field">
-                  <span>登录名</span>
+                  <span>${htmlText(t("登录名"))}</span>
                   <input data-field="username" type="text" value="${escapeHtml(draft.username)}" autocomplete="username" />
                 </label>
                 <label class="field">
-                  <span>密码</span>
+                  <span>${htmlText(t("密码"))}</span>
                   <span class="password-control">
                     <input data-field="password" type="${inlineEditorPasswordVisible ? 'text' : 'password'}" value="${escapeHtml(draft.password)}" autocomplete="current-password" />
-                    <button class="icon-button" type="button" data-editor-action="toggle-password" aria-label="${inlineEditorPasswordVisible ? '隐藏密码' : '显示密码'}">
+                    <button class="icon-button" type="button" data-editor-action="toggle-password" aria-label="${inlineEditorPasswordVisible ? t("隐藏密码") : t("显示密码")}">
                       ${renderInlineEditorIcon(inlineEditorPasswordVisible ? 'eye-off' : 'eye')}
                     </button>
-                    <button class="icon-button" type="button" data-editor-action="generate-password" aria-label="重新生成密码">
+                    <button class="icon-button" type="button" data-editor-action="generate-password" aria-label="${htmlText(t("重新生成密码"))}">
                       ${renderInlineEditorIcon('refresh')}
                     </button>
                   </span>
                 </label>
                 <label class="field">
-                  <span>备注</span>
+                  <span>${htmlText(t("备注"))}</span>
                   <textarea data-field="notes">${escapeHtml(draft.notes ?? '')}</textarea>
                 </label>
                 <p class="hint">
-                  ${renderInlineEditorIcon('link')}
-                  转到 URL 和匹配 URL 第一版会同步保存为同一个地址，后续可以扩展为独立匹配规则。
-                </p>
-                ${inlineEditorStatus ? `<p class="status${inlineEditorStatus.includes('失败') || inlineEditorStatus.includes('错误') || inlineEditorStatus.includes('不能为空') ? ' error' : ''}">${escapeHtml(inlineEditorStatus)}</p>` : ''}
+                  ${renderInlineEditorIcon('link')}${htmlText(t("\r\n                  转到 URL 和匹配 URL 第一版会同步保存为同一个地址，后续可以扩展为独立匹配规则。\r\n                "))}</p>
+                ${inlineEditorStatus ? `<p class="status${inlineEditorStatus.includes(t("失败")) || inlineEditorStatus.includes(t("错误")) || inlineEditorStatus.includes(t("不能为空")) ? ' error' : ''}">${escapeHtml(inlineEditorStatus)}</p>` : ''}
               </div>
             ` : `
               <div class="loading" aria-live="polite">
@@ -7266,7 +7264,7 @@ function renderPasswordGeneratorStrength(): string {
   return `
     <span class="pg-strength s${strength.score}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5.2c0 4.8-2.7 8.1-7 9.8-4.3-1.7-7-5-7-9.8V6l7-3Z" fill="currentColor"/></svg>
-      ${escapeHtml(passwordGeneratorValue ? strength.label : '待生成')}
+      ${escapeHtml(passwordGeneratorValue ? strength.label : t("待生成"))}
     </span>
   `;
 }
@@ -7300,53 +7298,51 @@ function renderPasswordGeneratorWidget() {
   const stablePanel = passwordGeneratorOpen && Boolean(previousPanel);
 
   const panel = passwordGeneratorOpen ? `
-    <section class="pg-panel" role="dialog" aria-label="KeyPilot 密码生成器">
-      <header data-pg-drag-handle="true" aria-label="拖动移动密码生成器，双击恢复自动跟随输入框">
+    <section class="pg-panel" role="dialog" aria-label="${htmlText(t("KeyPilot 密码生成器"))}">
+      <header data-pg-drag-handle="true" aria-label="${htmlText(t("拖动移动密码生成器，双击恢复自动跟随输入框"))}">
         <span class="pg-brand">${renderPasswordGeneratorIcon()}</span>
-        <strong>密码生成器 - KeyPilot</strong>
-        <button type="button" class="pg-icon-button" data-pg-action="close" aria-label="关闭密码生成器">
+        <strong>${htmlText(t("密码生成器 - KeyPilot"))}</strong>
+        <button type="button" class="pg-icon-button" data-pg-action="close" aria-label="${htmlText(t("关闭密码生成器"))}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
       </header>
-      <nav class="pg-tabs" aria-label="生成模式">
-        <button type="button" class="active">随机密码</button>
-        <button type="button" disabled>密匙口令</button>
+      <nav class="pg-tabs" aria-label="${htmlText(t("生成模式"))}">
+        <button type="button" class="active">${htmlText(t("随机密码"))}</button>
+        <button type="button" disabled>${htmlText(t("密匙口令"))}</button>
       </nav>
       <div class="pg-output">
-        <code>${escapeHtml(passwordGeneratorValue || '请选择字符类型')}</code>
-        <button type="button" data-pg-action="copy" aria-label="复制生成的密码">
+        <code>${escapeHtml(passwordGeneratorValue || t("请选择字符类型"))}</code>
+        <button type="button" data-pg-action="copy" aria-label="${htmlText(t("复制生成的密码"))}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h10v12H8zM6 16H4V4h12v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
         </button>
-        <button type="button" data-pg-action="refresh" aria-label="重新生成密码">
+        <button type="button" data-pg-action="refresh" aria-label="${htmlText(t("重新生成密码"))}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M18.4 10A7 7 0 0 0 6.3 7.5M5.6 14a7 7 0 0 0 12.1 2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
       <div class="pg-strength-row">
         ${renderPasswordGeneratorStrength()}
-        <button type="button" data-pg-action="preset-maximum">更强</button>
+        <button type="button" data-pg-action="preset-maximum">${htmlText(t("更强"))}</button>
       </div>
-      <button class="pg-fill" type="button" data-pg-action="fill" ${passwordGeneratorValue ? '' : 'disabled'}>
-        以及填写密码
-      </button>
+      <button class="pg-fill" type="button" data-pg-action="fill" ${passwordGeneratorValue ? '' : 'disabled'}>${htmlText(t("\r\n        以及填写密码\r\n      "))}</button>
       <section class="pg-options">
         <label class="pg-length">
-          <span>字符数</span>
-          <input type="number" min="4" max="132" value="${passwordGeneratorOptions.length}" data-pg-option="length" aria-label="密码字符数" />
+          <span>${htmlText(t("字符数"))}</span>
+          <input type="number" min="4" max="132" value="${passwordGeneratorOptions.length}" data-pg-option="length" aria-label="${htmlText(t("密码字符数"))}" />
         </label>
         <div class="pg-switches">
-          ${renderPasswordGeneratorSwitch('大写', 'A-Z', 'uppercase')}
-          ${renderPasswordGeneratorSwitch('小写', 'a-z', 'lowercase')}
-          ${renderPasswordGeneratorSwitch('数字', '0-9', 'numbers')}
-          ${renderPasswordGeneratorSwitch('符号', '!@#$', 'symbols')}
-          ${renderPasswordGeneratorSwitch('排除相似字符', 'I、l、1、O、0', 'excludeSimilar')}
-          ${renderPasswordGeneratorSwitch('每类至少 1 个', '启用类型都会出现', 'requireEveryType')}
+          ${renderPasswordGeneratorSwitch(t("大写"), 'A-Z', 'uppercase')}
+          ${renderPasswordGeneratorSwitch(t("小写"), 'a-z', 'lowercase')}
+          ${renderPasswordGeneratorSwitch(t("数字"), '0-9', 'numbers')}
+          ${renderPasswordGeneratorSwitch(t("符号"), '!@#$', 'symbols')}
+          ${renderPasswordGeneratorSwitch(t("排除相似字符"), 'I、l、1、O、0', 'excludeSimilar')}
+          ${renderPasswordGeneratorSwitch(t("每类至少 1 个"), t("启用类型都会出现"), 'requireEveryType')}
         </div>
         <label class="pg-text-rule">
-          <span>必须包含</span>
+          <span>${htmlText(t("必须包含"))}</span>
           <input type="text" value="${escapeHtml(passwordGeneratorOptions.requiredCharacters ?? '')}" data-pg-option="requiredCharacters" placeholder="@#A9" />
         </label>
         <label class="pg-text-rule">
-          <span>排除字符</span>
+          <span>${htmlText(t("排除字符"))}</span>
           <input type="text" value="${escapeHtml(passwordGeneratorOptions.excludeCharacters ?? '')}" data-pg-option="excludeCharacters" placeholder="{}[]&quot;" />
         </label>
       </section>
@@ -7354,7 +7350,7 @@ function renderPasswordGeneratorWidget() {
     </section>
   ` : '';
   const fixedTrigger = passwordGeneratorManualPosition && passwordGeneratorOpen ? '' : passwordGeneratorInlineButton?.isConnected ? '' : `
-    <button class="pg-trigger" type="button" data-pg-action="toggle" aria-label="打开 KeyPilot 密码生成器">
+    <button class="pg-trigger" type="button" data-pg-action="toggle" aria-label="${htmlText(t("打开 KeyPilot 密码生成器"))}">
       ${renderPasswordGeneratorIcon()}
     </button>
   `;
@@ -7748,7 +7744,7 @@ function renderPasswordGeneratorWidget() {
 
       if (action === 'refresh') {
         passwordGeneratorValue = generatePassword(passwordGeneratorOptions);
-        passwordGeneratorStatus = '已重新生成。';
+        passwordGeneratorStatus = t("已重新生成。");
         renderPasswordGeneratorWidget();
         return;
       }
@@ -7760,7 +7756,7 @@ function renderPasswordGeneratorWidget() {
           excludeSimilar: false,
           requireEveryType: true
         });
-        passwordGeneratorStatus = '已切换为更高强度。';
+        passwordGeneratorStatus = t("已切换为更高强度。");
         renderPasswordGeneratorWidget();
         return;
       }
@@ -7842,9 +7838,9 @@ async function copyPasswordGeneratorValue() {
   try {
     const copied = await sendRuntimeMessage<{ok:boolean}>({type:'KEYPILOT_COPY_GENERATED_PASSWORD',value:passwordGeneratorValue});
     if(!copied.ok) throw new Error('CLIPBOARD_UNAVAILABLE');
-    passwordGeneratorStatus = '已复制到剪贴板。';
+    passwordGeneratorStatus = t("已复制到剪贴板。");
   } catch {
-    passwordGeneratorStatus = '复制失败，请手动选中密码复制。';
+    passwordGeneratorStatus = t("复制失败，请手动选中密码复制。");
   }
 
   renderPasswordGeneratorWidget();
@@ -7854,7 +7850,7 @@ function fillPasswordGeneratorValue() {
   const context = findPasswordGeneratorContext();
 
   if (!context || !passwordGeneratorValue) {
-    passwordGeneratorStatus = '没有找到可以填写的新密码框。';
+    passwordGeneratorStatus = t("没有找到可以填写的新密码框。");
     renderPasswordGeneratorWidget();
     positionPasswordGeneratorWidget();
     return;
@@ -7868,8 +7864,8 @@ function fillPasswordGeneratorValue() {
 
   rememberCandidate('input');
   passwordGeneratorStatus = context.confirmField
-    ? '已填写密码和确认密码。注册或登录成功后会提示保存。'
-    : '已填写密码。注册或登录成功后会提示保存。';
+    ? t("已填写密码和确认密码。注册或登录成功后会提示保存。")
+    : t("已填写密码。注册或登录成功后会提示保存。");
   renderPasswordGeneratorWidget();
   positionPasswordGeneratorWidget();
 }
@@ -8288,13 +8284,13 @@ function getRecognitionDebugSnapshot() {
 }
 
 function renderDebugBadge(label: string, value: boolean): string {
-  return `<span class="badge ${value ? 'ok' : 'bad'}"><b>${escapeHtml(label)}</b>${value ? '是' : '否'}</span>`;
+  return `<span class="badge ${value ? 'ok' : 'bad'}"><b>${escapeHtml(label)}</b>${value ? t("是") : t("否")}</span>`;
 }
 
 function renderDebugElementLink(label: string, inputIndex: number | undefined, element: DebugElementSummary | undefined): string {
   const title = element?.selector ?? element?.tagName ?? '未识别';
   const button = typeof inputIndex === 'number'
-    ? `<button type="button" data-debug-field-index="${inputIndex}">定位 #${inputIndex}</button>`
+    ? `<button type="button" data-debug-field-index="${inputIndex}">${htmlText(t("定位 #"))}${inputIndex}</button>`
     : '<span>无</span>';
 
   return `
@@ -8715,16 +8711,16 @@ function renderRecognitionDebugPanel() {
         }
       }
     </style>
-    <div class="panel" role="dialog" aria-label="KeyPilot 页面识别调试">
+    <div class="panel" role="dialog" aria-label="${htmlText(t("KeyPilot 页面识别调试"))}">
       <header>
         <div>
-          <strong>KeyPilot 页面识别调试</strong>
+          <strong>${htmlText(t("KeyPilot 页面识别调试"))}</strong>
           <span>${escapeHtml(snapshot.frame.domain || snapshot.frame.url)}</span>
         </div>
-        <button class="header-button" type="button" data-debug-action="apply-login-rule">设为登录页</button>
-        <button class="header-button" type="button" data-debug-action="refresh">刷新</button>
-        <button class="header-button" type="button" data-debug-action="copy">复制诊断</button>
-        <button class="close-button" type="button" data-debug-action="close" aria-label="关闭">×</button>
+        <button class="header-button" type="button" data-debug-action="apply-login-rule">${htmlText(t("设为登录页"))}</button>
+        <button class="header-button" type="button" data-debug-action="refresh">${htmlText(t("刷新"))}</button>
+        <button class="header-button" type="button" data-debug-action="copy">${htmlText(t("复制诊断"))}</button>
+        <button class="close-button" type="button" data-debug-action="close" aria-label="${htmlText(t("关闭"))}">×</button>
       </header>
       <main>
         <section>
@@ -8733,44 +8729,44 @@ function renderRecognitionDebugPanel() {
             <p>${escapeHtml(snapshot.decisions.inlineLoginAnchor.reason)}</p>
           </div>
           <div class="badge-grid">
-            ${renderDebugBadge('登录 URL', snapshot.signals.loginUrl)}
-            ${renderDebugBadge('注册页面', snapshot.signals.registrationPage)}
-            ${renderDebugBadge('密码框像注册', snapshot.signals.passwordFieldsLookLikeRegistration)}
-            ${renderDebugBadge('登录图标可用', loginAvailable)}
-            ${renderDebugBadge('生成器命中', generatorActive)}
-            ${renderDebugBadge('最终有锚点', snapshot.decisions.finalInlineAnchor.available)}
+            ${renderDebugBadge(t("登录 URL"), snapshot.signals.loginUrl)}
+            ${renderDebugBadge(t("注册页面"), snapshot.signals.registrationPage)}
+            ${renderDebugBadge(t("密码框像注册"), snapshot.signals.passwordFieldsLookLikeRegistration)}
+            ${renderDebugBadge(t("登录图标可用"), loginAvailable)}
+            ${renderDebugBadge(t("生成器命中"), generatorActive)}
+            ${renderDebugBadge(t("最终有锚点"), snapshot.decisions.finalInlineAnchor.available)}
           </div>
         </section>
 
         <section>
-          <h3>当前状态</h3>
-          <div class="kv"><span>输入框</span><strong>${snapshot.counts.visibleInputs}/${snapshot.counts.inputs} 可见</strong><span></span></div>
-          <div class="kv"><span>用户名候选</span><strong>${snapshot.counts.usernameCandidates}</strong><span></span></div>
-          <div class="kv"><span>密码框</span><strong>${snapshot.counts.nonCurrentPasswordFields}</strong><span></span></div>
-          <div class="kv"><span>匹配账号</span><strong>${snapshot.counts.inlineCredentialMatches}</strong><span></span></div>
-          <div class="kv"><span>身份资料</span><strong>${snapshot.counts.inlineFillProfiles}</strong><span></span></div>
-          <div class="kv"><span>浮动容器</span><strong>${escapeHtml(snapshot.inline.hostDisplay || 'none')} ${escapeHtml(snapshot.inline.hostLeft || '')} ${escapeHtml(snapshot.inline.hostTop || '')}</strong><span></span></div>
+          <h3>${htmlText(t("当前状态"))}</h3>
+          <div class="kv"><span>${htmlText(t("输入框"))}</span><strong>${snapshot.counts.visibleInputs}/${snapshot.counts.inputs}${htmlText(t(" 可见"))}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("用户名候选"))}</span><strong>${snapshot.counts.usernameCandidates}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("密码框"))}</span><strong>${snapshot.counts.nonCurrentPasswordFields}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("匹配账号"))}</span><strong>${snapshot.counts.inlineCredentialMatches}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("身份资料"))}</span><strong>${snapshot.counts.inlineFillProfiles}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("浮动容器"))}</span><strong>${escapeHtml(snapshot.inline.hostDisplay || 'none')} ${escapeHtml(snapshot.inline.hostLeft || '')} ${escapeHtml(snapshot.inline.hostTop || '')}</strong><span></span></div>
         </section>
 
         <section>
-          <h3>锚点判断</h3>
-          ${renderDebugElementLink('登录锚点', snapshot.decisions.inlineLoginAnchor.inputIndex, snapshot.decisions.inlineLoginAnchor.element)}
-          ${renderDebugElementLink('身份锚点', snapshot.decisions.fillProfileAnchor.inputIndex, snapshot.decisions.fillProfileAnchor.element)}
-          ${renderDebugElementLink('最终锚点', snapshot.decisions.finalInlineAnchor.inputIndex, snapshot.decisions.finalInlineAnchor.element)}
-          ${renderDebugElementLink('生成器锚点', snapshot.decisions.passwordGenerator.anchorIndex, snapshot.decisions.passwordGenerator.anchor)}
+          <h3>${htmlText(t("锚点判断"))}</h3>
+          ${renderDebugElementLink(t("登录锚点"), snapshot.decisions.inlineLoginAnchor.inputIndex, snapshot.decisions.inlineLoginAnchor.element)}
+          ${renderDebugElementLink(t("身份锚点"), snapshot.decisions.fillProfileAnchor.inputIndex, snapshot.decisions.fillProfileAnchor.element)}
+          ${renderDebugElementLink(t("最终锚点"), snapshot.decisions.finalInlineAnchor.inputIndex, snapshot.decisions.finalInlineAnchor.element)}
+          ${renderDebugElementLink(t("生成器锚点"), snapshot.decisions.passwordGenerator.anchorIndex, snapshot.decisions.passwordGenerator.anchor)}
         </section>
 
         <section>
-          <h3>登录上下文</h3>
-          ${renderDebugElementLink('用户名框', snapshot.contexts.login.usernameFieldIndex, snapshot.contexts.login.usernameField)}
-          ${renderDebugElementLink('密码框', snapshot.contexts.login.passwordFieldIndex, snapshot.contexts.login.passwordField)}
-          <div class="kv"><span>表单</span><strong>${escapeHtml(snapshot.contexts.login.form?.selector || snapshot.contexts.login.form?.tagName || '无')}</strong><span></span></div>
-          <div class="kv"><span>作用域</span><strong>${escapeHtml(snapshot.contexts.login.scope?.selector || snapshot.contexts.login.scope?.tagName || '无')}</strong><span></span></div>
-          <div class="kv"><span>安全字段</span><strong>${escapeHtml(snapshot.contexts.login.unsafeReason || '无')}</strong><span></span></div>
+          <h3>${htmlText(t("登录上下文"))}</h3>
+          ${renderDebugElementLink(t("用户名框"), snapshot.contexts.login.usernameFieldIndex, snapshot.contexts.login.usernameField)}
+          ${renderDebugElementLink(t("密码框"), snapshot.contexts.login.passwordFieldIndex, snapshot.contexts.login.passwordField)}
+          <div class="kv"><span>${htmlText(t("表单"))}</span><strong>${escapeHtml(snapshot.contexts.login.form?.selector || snapshot.contexts.login.form?.tagName || t("无"))}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("作用域"))}</span><strong>${escapeHtml(snapshot.contexts.login.scope?.selector || snapshot.contexts.login.scope?.tagName || t("无"))}</strong><span></span></div>
+          <div class="kv"><span>${htmlText(t("安全字段"))}</span><strong>${escapeHtml(snapshot.contexts.login.unsafeReason || t("无"))}</strong><span></span></div>
         </section>
 
         <section>
-          <h3>输入框明细，点击可定位</h3>
+          <h3>${htmlText(t("输入框明细，点击可定位"))}</h3>
           <div class="field-list">
             ${renderRecognitionInputs(snapshot.inputs)}
           </div>
@@ -9003,7 +8999,7 @@ async function refreshInlineMatches() {
   const needsLoadingRender = inlineMenuOpen && !inlineMatches.length && !inlineFillProfiles.length;
 
   if (needsLoadingRender) {
-    inlineStatus = '正在读取 KeyPilot 状态...';
+    inlineStatus = t("正在读取 KeyPilot 状态...");
     renderInlineWidget();
     positionInlineWidget();
   }
@@ -9042,10 +9038,10 @@ async function refreshInlineMatches() {
       return;
     }
     inlineStatus = response.locked
-      ? 'KeyPilot 已锁定，请先打开插件解锁。'
+      ? t("KeyPilot 已锁定，请先打开插件解锁。")
       : inlineMatches.length || inlineFillProfiles.length
         ? ''
-        : '当前网页没有匹配账号或身份资料。';
+        : t("当前网页没有匹配账号或身份资料。");
     renderInlineWidget();
     positionInlineWidget();
   } catch {
@@ -9054,7 +9050,7 @@ async function refreshInlineMatches() {
     inlineMatches = [];
     inlineFillProfiles = [];
     inlineLocked = false;
-    inlineStatus = '无法读取 KeyPilot 状态，请刷新网页或扩展。';
+    inlineStatus = t("无法读取 KeyPilot 状态，请刷新网页或扩展。");
     renderInlineWidget();
     positionInlineWidget();
   }
@@ -9063,7 +9059,7 @@ async function refreshInlineMatches() {
 async function handleInlineFill(credentialId: string, action: InlineCredentialFillRequest['action'], silent = false) {
   if(!silent)repairTarget={kind:'credential',id:credentialId};
   if (!silent) {
-    inlineStatus = action === 'login' ? '正在填写并提交...' : '正在填表...';
+    inlineStatus = action === 'login' ? t("正在填写并提交...") : t("正在填表...");
     renderInlineWidget();
   }
 
@@ -9079,15 +9075,15 @@ async function handleInlineFill(credentialId: string, action: InlineCredentialFi
 
     if (!silent) {
       if (response.skippedSubmit) {
-        inlineStatus = response.captchaMessage ?? '已填表。检测到验证码或敏感字段，未自动提交。';
+        inlineStatus = response.captchaMessage ?? t("已填表。检测到验证码或敏感字段，未自动提交。");
       } else if (response.submitButtonMissing && action === 'login') {
-        inlineStatus = '已填表，但没有找到可靠的登录按钮。点账号更多里的“绑定字段”重新选择按钮。';
+        inlineStatus = t("已填表，但没有找到可靠的登录按钮。点账号更多里的“绑定字段”重新选择按钮。");
       } else if (response.stage === 'usernameOnly') {
-        inlineStatus = response.submitOutcome?.message ?? (response.submitted ? '已填写用户名，正在判断下一步...' : '已填写用户名。');
+        inlineStatus = response.submitOutcome?.message ?? (response.submitted ? t("已填写用户名，正在判断下一步...") : t("已填写用户名。"));
       } else if (response.submitOutcome?.status === 'checking') {
         inlineStatus = response.submitOutcome.message;
       } else {
-        inlineStatus = action === 'login' ? '已发送登录指令。' : '已填入账号和密码。';
+        inlineStatus = action === 'login' ? t("已发送登录指令。") : t("已填入账号和密码。");
       }
 
       renderInlineWidget();
@@ -9121,7 +9117,7 @@ async function handleInlineBind(credentialId: string) {
   inlineMoreCredentialId = null;
   inlineMenuOpen = false;
   clearPinnedInlineAnchor();
-  inlineStatus = '正在启动字段绑定...';
+  inlineStatus = t("正在启动字段绑定...");
   renderInlineWidget();
 
   try {
@@ -9164,7 +9160,7 @@ async function handleInlineFillProfile(profileId: string, silent = false, onlyEm
     return;
   }
 
-  inlineStatus = '正在填写身份资料...';
+  inlineStatus = t("正在填写身份资料...");
   renderInlineWidget();
 
   try {
@@ -9189,7 +9185,7 @@ async function handleInlineFillProfile(profileId: string, silent = false, onlyEm
     return;
 
     const missingCount = response.diagnostics?.filter((item) => item.status === 'missing').length ?? 0;
-    inlineStatus = missingCount > 0 ? `已填写 ${response.filledCount} 个字段，${missingCount} 个字段未匹配。` : `已填写 ${response.filledCount} 个字段。`;
+    inlineStatus = missingCount > 0 ? t("已填写 {0} 个字段，{1} 个字段未匹配。", [response.filledCount, missingCount]) : t("已填写 {0} 个字段。", [response.filledCount]);
     renderInlineWidget();
     scheduleInlineRefresh(900);
   } catch (error) {
@@ -9205,7 +9201,7 @@ async function handleInlineBindProfile(profileId: string) {
   inlineMoreProfileId = null;
   inlineMenuOpen = false;
   clearPinnedInlineAnchor();
-  inlineStatus = '正在启动身份字段绑定...';
+  inlineStatus = t("正在启动身份字段绑定...");
   renderInlineWidget();
 
   try {
@@ -9218,7 +9214,7 @@ async function handleInlineBindProfile(profileId: string) {
       throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'FILL_BINDING_START_FAILED'));
     }
 
-    inlineStatus = '已启动身份字段绑定。';
+    inlineStatus = t("已启动身份字段绑定。");
     renderInlineWidget();
   } catch (error) {
     inlineMenuOpen = true;
@@ -9267,7 +9263,7 @@ async function handleInlineRenameProfile(profileId: string) {
   if (!nextTitle) return;
 
   inlineMoreProfileId = null;
-  inlineStatus = '正在重命名身份资料...';
+  inlineStatus = t("正在重命名身份资料...");
   renderInlineWidget();
 
   try {
@@ -9282,7 +9278,7 @@ async function handleInlineRenameProfile(profileId: string) {
     }
 
     inlineFillProfiles = inlineFillProfiles.map((item) => (item.id === profileId ? { ...item, title: response.title ?? nextTitle } : item));
-    inlineStatus = response.message ?? '身份资料已重命名。';
+    inlineStatus = response.message ?? t("身份资料已重命名。");
     renderInlineWidget();
     scheduleInlineRefresh(700);
   } catch (error) {
@@ -9298,7 +9294,7 @@ async function handleInlineDeleteProfile(profileId: string) {
   if (!confirmed) return;
 
   inlineMoreProfileId = null;
-  inlineStatus = '正在删除身份资料...';
+  inlineStatus = t("正在删除身份资料...");
   renderInlineWidget();
 
   try {
@@ -9312,7 +9308,7 @@ async function handleInlineDeleteProfile(profileId: string) {
     }
 
     inlineFillProfiles = inlineFillProfiles.filter((item) => item.id !== profileId);
-    inlineStatus = response.message ?? '身份资料已移到回收站。';
+    inlineStatus = response.message ?? t("身份资料已移到回收站。");
     renderInlineWidget();
     scheduleInlineRefresh(700);
   } catch (error) {
@@ -9334,12 +9330,12 @@ async function handleInlineCommand(credentialId: string, command: InlineCredenti
 
   inlineStatus =
     command === 'goto'
-      ? '正在打开起始页...'
+      ? t("正在打开起始页...")
         : command === 'delete'
-          ? '正在删除账号...'
+          ? t("正在删除账号...")
         : command === 'hide-domain'
-          ? '正在隐藏此页面...'
-          : '正在打开账号编辑页...';
+          ? t("正在隐藏此页面...")
+          : t("正在打开账号编辑页...");
   renderInlineWidget();
 
   try {
@@ -9364,7 +9360,7 @@ async function handleInlineCommand(credentialId: string, command: InlineCredenti
       return;
     }
 
-    inlineStatus = response.message ?? '操作已完成。';
+    inlineStatus = response.message ?? t("操作已完成。");
     if (command === 'delete') {
       inlineMatches = inlineMatches.filter((match) => match.id !== credentialId);
       inlineMoreCredentialId = null;
@@ -9392,7 +9388,7 @@ async function refreshInlineMatchesLegacy() {
   }
 
   if (inlineMenuOpen) {
-    inlineStatus = '正在读取 KeyPilot 状态...';
+    inlineStatus = t("正在读取 KeyPilot 状态...");
   }
   renderInlineWidget();
   positionInlineWidget();
@@ -9405,23 +9401,23 @@ async function refreshInlineMatchesLegacy() {
     inlineMatches = response.ok ? response.matches ?? [] : [];
     inlineLocked = Boolean(response.locked);
     inlineStatus = response.locked
-      ? 'KeyPilot 已锁定，请先打开插件解锁。'
+      ? t("KeyPilot 已锁定，请先打开插件解锁。")
       : inlineMatches.length
         ? ''
-        : '当前网页没有匹配账号。';
+        : t("当前网页没有匹配账号。");
     renderInlineWidget();
     positionInlineWidget();
   } catch {
     inlineMatches = [];
     inlineLocked = false;
-    inlineStatus = '无法读取 KeyPilot 状态，请刷新网页或扩展。';
+    inlineStatus = t("无法读取 KeyPilot 状态，请刷新网页或扩展。");
     renderInlineWidget();
     positionInlineWidget();
   }
 }
 
 async function handleInlineFillLegacy(credentialId: string, action: InlineCredentialFillRequest['action']) {
-  inlineStatus = action === 'login' ? '正在登录...' : '正在填充...';
+  inlineStatus = action === 'login' ? t("正在登录...") : t("正在填充...");
   renderInlineWidget();
 
   try {
@@ -9435,13 +9431,13 @@ async function handleInlineFillLegacy(credentialId: string, action: InlineCreden
     }
 
     if (response.skippedSubmit) {
-      inlineStatus = response.captchaMessage ?? '已填充。检测到验证码或敏感字段，未自动提交。';
+      inlineStatus = response.captchaMessage ?? t("已填充。检测到验证码或敏感字段，未自动提交。");
     } else if (response.submitButtonMissing && action === 'login') {
-      inlineStatus = '已填充，但没有找到可靠的登录按钮。';
+      inlineStatus = t("已填充，但没有找到可靠的登录按钮。");
     } else if (response.stage === 'usernameOnly') {
-      inlineStatus = response.submitted ? '已填写用户名，等待密码框出现。' : '已填写用户名。';
+      inlineStatus = response.submitted ? t("已填写用户名，等待密码框出现。") : t("已填写用户名。");
     } else {
-      inlineStatus = action === 'login' ? '已发送登录指令。' : '已填充账号密码。';
+      inlineStatus = action === 'login' ? t("已发送登录指令。") : t("已填充账号密码。");
     }
 
     renderInlineWidget();
@@ -9512,8 +9508,11 @@ function startContentModule(name: string, callback: () => void) {
   }
 }
 
-startContentModule('PasswordGenerator', startInlinePasswordGenerator);
-startContentModule('InlineCredential', startInlineCredentialWidget);
+void initContentLanguage().then(() => {
+  startContentModule('CaptchaAssist', installCaptchaAssist);
+  startContentModule('PasswordGenerator', startInlinePasswordGenerator);
+  startContentModule('InlineCredential', startInlineCredentialWidget);
+});
 loadFloatingIconPositions();
 
 function ensureSavePrompt() {
@@ -9590,17 +9589,17 @@ function renderSavePrompt(status = '') {
   const targetOptions = hasExisting
     ? `
       <button type="button" class="${primaryAction === 'update' ? 'active' : ''}" data-save-action="select-update">
-        <strong>更新已有账号密码</strong>
+        <strong>${htmlText(t("更新已有账号密码"))}</strong>
         <span>${escapeHtml(existingName)}</span>
       </button>
       <button type="button" class="${primaryAction === 'new' ? 'active' : ''}" data-save-action="select-new">
-        <strong>保存为新账号</strong>
+        <strong>${htmlText(t("保存为新账号"))}</strong>
         <span>${escapeHtml(newName)}</span>
       </button>
     `
     : `
       <button type="button" class="active" data-save-action="select-save">
-        <strong>保存为新账号</strong>
+        <strong>${htmlText(t("保存为新账号"))}</strong>
         <span>${escapeHtml(newName)}</span>
       </button>
     `;
@@ -9818,11 +9817,11 @@ function renderSavePrompt(status = '') {
       <header>
         ${renderSavePromptSiteIcon(candidate)}
         <h3>${escapeHtml(title)}</h3>
-        <button class="report" type="button" data-save-action="report">报告一个问题</button>
+        <button class="report" type="button" data-save-action="report">${htmlText(t("报告一个问题"))}</button>
       </header>
       <div class="body">
         <label class="name-field">
-          <span>保存名称</span>
+          <span>${htmlText(t("保存名称"))}</span>
           <input data-save-name type="text" value="${escapeHtml(draftTitle)}" autocomplete="off" />
         </label>
         <div class="target-select">
@@ -9835,8 +9834,8 @@ function renderSavePrompt(status = '') {
         <div class="actions">
           ${
             context.locked
-              ? `<button type="button" data-save-action="skip">现在不行</button><button type="button" data-save-action="blacklist">不再提示</button><button class="primary" type="button" data-save-action="${primaryAction}">${actionLabel}</button>`
-              : `<button type="button" data-save-action="blacklist">不要保存这个网页</button><button type="button" data-save-action="skip">现在不行</button><button class="primary" type="button" data-save-action="${primaryAction}">${actionLabel}</button>`
+              ? `<button type="button" data-save-action="skip">${htmlText(t("现在不行"))}</button><button type="button" data-save-action="blacklist">${htmlText(t("不再提示"))}</button><button class="primary" type="button" data-save-action="${primaryAction}">${actionLabel}</button>`
+              : `<button type="button" data-save-action="blacklist">${htmlText(t("不要保存这个网页"))}</button><button type="button" data-save-action="skip">${htmlText(t("现在不行"))}</button><button class="primary" type="button" data-save-action="${primaryAction}">${actionLabel}</button>`
           }
         </div>
       </div>
@@ -10072,7 +10071,7 @@ function renderSavePromptLegacy(status = '') {
       <header>
         <span class="mark">K</span>
         <h3>${escapeHtml(title)}</h3>
-        <button class="close" type="button" data-save-action="skip" aria-label="关闭保存提示">×</button>
+        <button class="close" type="button" data-save-action="skip" aria-label="${htmlText(t("关闭保存提示"))}">×</button>
       </header>
       <div class="body">
         <p>${escapeHtml(body)}</p>
@@ -10088,7 +10087,7 @@ function renderSavePromptLegacy(status = '') {
           ${
             context.locked
               ? '<button class="primary" type="button" data-save-action="save">保存</button><button type="button" data-save-action="skip">暂不保存</button>'
-              : `<button class="primary" type="button" data-save-action="${primaryAction}">${primaryLabel}</button><button type="button" data-save-action="skip">暂不保存</button>`
+              : `<button class="primary" type="button" data-save-action="${primaryAction}">${primaryLabel}</button><button type="button" data-save-action="skip">${htmlText(t("暂不保存"))}</button>`
           }
         </div>
         ${
@@ -10096,7 +10095,7 @@ function renderSavePromptLegacy(status = '') {
             ? ''
             : `<div class="link-row">
                 ${hasExisting ? '<button type="button" data-save-action="new">另存为新记录</button>' : '<span></span>'}
-                <button class="danger" type="button" data-save-action="blacklist">从不保存此网站</button>
+                <button class="danger" type="button" data-save-action="blacklist">${htmlText(t("从不保存此网站"))}</button>
               </div>`
         }
       </div>
@@ -10635,7 +10634,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       repairTarget=null;clearFillReview();closeInlineCredentialEditor();clearSaveCandidateState();clearBindingTestOverlay();
       stagedFill=null;stagedObserver?.disconnect();stagedObserver=null;stopManualBinding();stopFillProfileBinding();
       clearTimeout(submitOutcomeTimer ?? undefined);lastSubmitOutcome=null;clearLoginFeedback();
-      inlineMatches=[];inlineFillProfiles=[];inlineLocked=true;inlineMenuOpen=false;inlineStatus='密码库已锁定。';
+      inlineMatches=[];inlineFillProfiles=[];inlineLocked=true;inlineMenuOpen=false;inlineStatus=t("密码库已锁定。");
       passwordGeneratorValue='';passwordGeneratorOpen=false;passwordGeneratorHost?.remove();passwordGeneratorHost=null;passwordGeneratorRoot=null;inlineStateLoaded=false; renderInlineWidget(); sendResponse({ok:true}); return true;
     }
     if (message?.type === 'KEYPILOT_PROBE_TOTP') {
@@ -10710,5 +10709,5 @@ async function startInlineRepair() {
  const profile=target?.kind==='profile'?inlineFillProfiles.find(item=>item.id===target.id):inlineFillProfiles.length===1?inlineFillProfiles[0]:undefined;
  if (credential) await handleInlineBind(credential.id);
  else if(profile) await handleInlineBindProfile(profile.id);
- else {inlineStatus='请先选择要修复的账号或资料，再使用它的“绑定字段”操作。';renderInlineWidget();}
+ else {inlineStatus=t("请先选择要修复的账号或资料，再使用它的“绑定字段”操作。");renderInlineWidget();}
 }

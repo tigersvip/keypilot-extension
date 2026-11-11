@@ -1,4 +1,6 @@
 import { validateAutoTotpOrigins, validateSiteLoginSettings } from './loginSettings';
+import { normalizeLanguage } from './language';
+import { readLanguagePreference } from './i18n';
 import { applyReminderReceipts, syncReminderIndex } from './reminders';
 import { validateCaptchaRules } from './captchaRules';
 import { mergeVaultChanges } from './vaultMerge';
@@ -56,6 +58,7 @@ export async function createVaultSession(masterPassword: string, recoveryCode?: 
     if (masterPassword.length < 8) throw new Error('MASTER_PASSWORD_TOO_SHORT');
     if (await getEncryptedVault()) throw new Error('VAULT_ALREADY_EXISTS');
     const { vault } = await ensureSaveInboxKeyPair(createEmptyVault());
+    vault.settings.language = await readLanguagePreference() ?? vault.settings.language;
     const { encryptedVault, key } = await createEncryptedVault(masterPassword, vault, recoveryCode);
     await saveEncryptedVault(encryptedVault, vault);
     const session = { key, vault, encryptedVault, sessionId: crypto.randomUUID() };
@@ -94,6 +97,7 @@ export function normalizeVault(vault: VaultPlain): VaultPlain {
   const settings = {
     ...defaultSettings,
     ...vault.settings,
+    language: normalizeLanguage(vault.settings.language),
     // Three-way setting merges represent removed map entries as undefined.
     ...(vault.settings.siteLoginSettings ? {siteLoginSettings: JSON.parse(JSON.stringify(vault.settings.siteLoginSettings))} : {}),
     captchaSiteRules: Object.fromEntries(Object.entries(vault.settings.captchaSiteRules??{}).filter(([,rule])=>rule!==undefined))
@@ -288,12 +292,15 @@ async function prepareUnlockedVaultSession(
 ): Promise<UnlockedVaultSession> {
   const receivedVault = await applyReminderReceipts(rawVault, encryptedVault.kdf.salt);
   const prepared = await ensureSaveInboxKeyPair(receivedVault);
+  const language = await readLanguagePreference();
+  const languageChanged = language !== undefined && language !== prepared.vault.settings.language;
+  if (languageChanged) prepared.vault.settings.language = language;
   const pending = await importPendingSaveInbox(prepared.vault);
   const saveInboxPublicKey = getSaveInboxPublicKeyFromVault(pending.vault.saveInboxKeyPair);
   const publicKeyChanged = saveInboxPublicKey?.keyId !== encryptedVault.saveInboxPublicKey?.keyId;
   let nextEncryptedVault = encryptedVault;
 
-  if (JSON.stringify(rawVault.reminders) !== JSON.stringify(receivedVault.reminders) || prepared.changed || pending.changed || publicKeyChanged) {
+  if (languageChanged || JSON.stringify(rawVault.reminders) !== JSON.stringify(receivedVault.reminders) || prepared.changed || pending.changed || publicKeyChanged) {
     nextEncryptedVault = await encryptVaultWithExistingKey(key, encryptedVault, pending.vault);
     await saveEncryptedVault(nextEncryptedVault, pending.vault);
   }

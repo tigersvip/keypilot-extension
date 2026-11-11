@@ -796,6 +796,10 @@ a {
   display: none;
 }
 
+html:not([lang^="zh"]) .kp-mode-chips {
+  grid-template-columns: max-content max-content minmax(0, 1fr);
+}
+
 .kp-mode-chips > button {
   display: inline-grid;
   grid-template-columns: 20px minmax(0, auto);
@@ -3111,6 +3115,16 @@ a {
 
 .kp-lock-state:hover {
   background: rgba(22, 163, 74, 0.09);
+}
+
+html:not([lang^="zh"]) .kp-dock {
+  gap: 5px;
+  padding-inline: 8px;
+}
+
+html:not([lang^="zh"]) .kp-dock-action {
+  gap: 4px;
+  padding-inline: 4px;
 }
 
 .kp-lock-state:active {

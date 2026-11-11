@@ -1,10 +1,2 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { OptionsApp } from './OptionsApp';
-import '../styles/options.css';
-
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <OptionsApp />
-  </React.StrictMode>
-);
+import { initLanguage } from '../shared/i18n';
+void initLanguage().then(() => import('./render'));

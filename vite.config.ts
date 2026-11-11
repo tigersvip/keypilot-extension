@@ -4,11 +4,17 @@ import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { buildLocaleAsset } from './tools/locale-assets.ts';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react(), {
+    name: 'local-language-packs',
+    generateBundle() {
+      this.emitFile({type: 'asset', fileName: 'locales/messages.json', source: buildLocaleAsset(rootDir)});
+    }
+  }, {
     name: 'single-content-script-installation',
     renderChunk(code, chunk) {
       if (chunk.name !== 'content' || !chunk.isEntry) return null;

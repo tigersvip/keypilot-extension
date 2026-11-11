@@ -21,14 +21,15 @@ test.beforeEach(async()=>{
  await context.route(url,route=>route.fulfill({contentType:'text/html',body:form}));
 });
 test.afterEach(async()=>{await context?.close();});
-async function seed(enabled=true,disabledSite=false){
+async function seed(enabled=true,disabledSite=false,language:'zh-CN'|'en-US'='zh-CN'){
  const vault=createEmptyVault();vault.settings.captchaAssistEnabled=enabled;vault.settings.autoFill=false;vault.settings.autoSubmit=true;vault.saveInboxKeyPair=await generateSaveInboxKeyPair();
+ vault.settings.language=language;
  if(disabledSite)vault.settings.captchaSiteRules={[new URL(url).origin]:{mode:'auto',disabled:true}};
  credential=buildCredential({title:'Synthetic only',url,username:'synthetic-user',password:'Synthetic-only!42'});vault.credentials=[credential];
  const {encryptedVault,key}=await createEncryptedVault('Test-master!42',vault);
  const cache={vault,encryptedVault,exportedKey:await exportVaultKey(key),cachedAt:Date.now(),sessionId:'captcha-login-test'};
  await worker.evaluate(async({cache,index})=>{await navigator.locks.request('keypilot-vault-write',async()=>{
-  await chrome.storage.local.set({'keypilot.encryptedVault':cache.encryptedVault,'keypilot.reminderIndex':index});
+  await chrome.storage.local.set({'keypilot.encryptedVault':cache.encryptedVault,'keypilot.reminderIndex':index,'keypilot.language':cache.vault.settings.language});
   await chrome.storage.session.set({'keypilot.unlockedSession':cache,'keypilot.sessionState':{id:cache.sessionId,expiresAt:0,highSecurity:false}});
  });},{cache,index:buildReminderIndex(vault,encryptedVault.kdf.salt,null)});
 }
@@ -49,6 +50,26 @@ test('explicit inline login recognizes and fills the first result, then submits 
  await expect(page.locator('#captcha')).toHaveValue('4827');await expect(page.locator('#submitted')).toHaveText('1');await expect(panel(page)).toBeHidden();
  await page.waitForTimeout(3500);await expect(page.locator('#submitted')).toHaveText('1');expect(errors).toEqual([]);
  await mkdir(evidence,{recursive:true});await page.screenshot({path:resolve(evidence,'one-click-complete.png'),fullPage:true});
+});
+
+test('one-click login waits for a delayed English language pack before preparing captcha controls',async()=>{
+ await worker.evaluate(()=>{
+  const original=globalThis.fetch;
+  const gate=new Promise<void>(resolve=>(globalThis as any).releaseLanguage=resolve);
+  globalThis.fetch=async(...args)=>{
+   if(String(args[0]).endsWith('/locales/messages.json'))await gate;
+   return original(...args);
+  };
+ });
+ await seed(true,false,'en-US');const page=await open();
+ const response=fill();
+ await expect(page.locator('#password')).toHaveValue(credential.password);
+ await expect(page.locator('#keypilot-captcha-root')).toHaveCount(0);
+ await worker.evaluate(()=>(globalThis as any).releaseLanguage());
+ expect(await response).toMatchObject({ok:true,submitted:true,skippedSubmit:false});
+ await expect(page.locator('#captcha')).toHaveValue('4827');
+ await expect(page.locator('#submitted')).toHaveText('1');
+ await expect(page.getByRole('dialog',{name:'Local captcha recognition'})).toBeHidden();
 });
 test('opening a saved login through the managed job also completes CAPTCHA without a second click',async()=>{
  await seed();const control=await context.newPage();await control.goto(base+'/login-status.html');

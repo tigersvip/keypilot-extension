@@ -1,10 +1,2 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { App } from './App';
-import '../styles/popup.css';
-
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+import { initLanguage } from '../shared/i18n';
+void initLanguage().then(() => import('./render'));

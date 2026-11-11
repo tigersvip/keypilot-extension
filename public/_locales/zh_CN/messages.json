@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "钥航 KeyPilot"
+  },
+  "extensionDescription": {
+    "message": "本地优先的密码管理、自动填表与浏览器提醒。"
+  },
+  "fillCommand": {
+    "message": "填写账号或个人资料（自动识别表单）"
+  },
+  "lockCommand": {
+    "message": "锁定所有 KeyPilot 页面"
+  },
+  "searchCommand": {
+    "message": "打开密码库并搜索"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "KeyPilot"
+  },
+  "extensionDescription": {
+    "message": "Gestión local de contraseñas, relleno de formularios y recordatorios del navegador."
+  },
+  "fillCommand": {
+    "message": "Rellenar una cuenta o perfil (detectar formularios)"
+  },
+  "lockCommand": {
+    "message": "Bloquear todas las páginas de KeyPilot"
+  },
+  "searchCommand": {
+    "message": "Abrir la bóveda y buscar"
+  }
+}

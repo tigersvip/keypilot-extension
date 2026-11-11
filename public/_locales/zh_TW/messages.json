@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "KeyPilot"
+  },
+  "extensionDescription": {
+    "message": "本機優先的密碼管理、自動填表與瀏覽器提醒。"
+  },
+  "fillCommand": {
+    "message": "填寫帳號或個人資料（自動識別表單）"
+  },
+  "lockCommand": {
+    "message": "鎖定所有 KeyPilot 頁面"
+  },
+  "searchCommand": {
+    "message": "開啟密碼庫並搜尋"
+  }
+}

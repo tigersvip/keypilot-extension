@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "KeyPilot"
+  },
+  "extensionDescription": {
+    "message": "Local-first password management, form filling and browser reminders."
+  },
+  "fillCommand": {
+    "message": "Fill an account or profile (detect forms automatically)"
+  },
+  "lockCommand": {
+    "message": "Lock all KeyPilot pages"
+  },
+  "searchCommand": {
+    "message": "Open the vault and search"
+  }
+}

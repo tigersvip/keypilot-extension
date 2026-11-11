@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../shared/i18n';
 import { AccountReminders } from '../shared/AccountReminders';
 import { CopyButton } from '../shared/CopyButton';
 import { navigateAccountList } from '../shared/listNavigation';
@@ -240,20 +241,22 @@ interface OpenTabResult {
 }
 
 const SECTION_LABELS: Record<DashboardSection, string> = {
-  all: '所有',
-  folder: '文件夹',
-  logins: '登录',
-  notes: '保密笔记本',
-  identities: '个人信息',
-  generator: '密码生成器',
-  authenticator: '身份验证器',
-  reminders: '提醒中心',
-  security: '安全中心',
-  sharing: '共享中心',
-  emergency: '紧急访问',
-  trash: '回收站'
+  all: t("所有"),
+  folder: t("文件夹"),
+  logins: t("登录"),
+  notes: t("保密笔记本"),
+  identities: t("个人信息"),
+  generator: t("密码生成器"),
+  authenticator: t("身份验证器"),
+  reminders: t("提醒中心"),
+  security: t("安全中心"),
+  sharing: t("共享中心"),
+  emergency: t("紧急访问"),
+  trash: t("回收站")
 };
+// This is a legacy storage sentinel, not a translated display label.
 const ROOT_FOLDER_NAME = '主目录';
+const displayFolderName = (name: string) => isRootFolder(name) ? t('主目录') : name;
 const resolvedIconCache = new Map<string, string | null>();
 const failedIconUrls = new Set<string>();
 
@@ -377,7 +380,7 @@ function buildFolderOptions(folders: VaultFolder[], items: VaultItem[]): string[
   return Array.from(names.values()).sort((left, right) => {
     if (left === ROOT_FOLDER_NAME) return -1;
     if (right === ROOT_FOLDER_NAME) return 1;
-    return left.localeCompare(right, 'zh-Hans-CN');
+    return left.localeCompare(right, getLanguage());
   });
 }
 
@@ -393,34 +396,34 @@ function folderItemCount(folderName: string, items: VaultItem[]): number {
 }
 
 function itemSubtitle(item: VaultItem): string {
-  if (item.kind === 'login') return item.credential.username || item.credential.domain || '无用户名';
-  if (item.kind === 'note') return item.note.note.slice(0, 40) || '空笔记';
+  if (item.kind === 'login') return item.credential.username || item.credential.domain || t("无用户名");
+  if (item.kind === 'note') return item.note.note.slice(0, 40) || t("空笔记");
   if (item.kind === 'fillProfile') return fillProfileSummary(item.fillProfile);
-  return item.identity.email || item.identity.phone || item.identity.fullName || '身份资料';
+  return item.identity.email || item.identity.phone || item.identity.fullName || t("身份资料");
 }
 
 function itemWebsite(item: VaultItem): string {
   if (item.kind === 'login') return item.credential.domain;
   if (item.kind === 'fillProfile') {
-    return `${item.fillProfile.countryCode} · ${fillProfileCategoryLabel(item.fillProfile.category)} · ${item.fillProfile.fields.length} 字段`;
+    return t("{0} · {1} · {2} 字段", [item.fillProfile.countryCode, fillProfileCategoryLabel(item.fillProfile.category), item.fillProfile.fields.length]);
   }
   return '';
 }
 
 function vaultTableLabels(section: DashboardSection): [string, string, string, string, string] {
   if (section === 'identities') {
-    return ['名字', '文件夹', '联系方式', '资料类型', '国家/字段'];
+    return [t("名字"), t("文件夹"), t("联系方式"), t("资料类型"), t("国家/字段")];
   }
 
   if (section === 'notes') {
-    return ['名字', '文件夹', '摘要', '类型', '状态'];
+    return [t("名字"), t("文件夹"), t("摘要"), t("类型"), t("状态")];
   }
 
   if (section === 'logins') {
-    return ['名字', '文件夹', '用户名', '密码强度', '网址地址'];
+    return [t("名字"), t("文件夹"), t("用户名"), t("密码强度"), t("网址地址")];
   }
 
-  return ['名字', '文件夹', '登录名/联系信息', '类型/强度', '网站/字段'];
+  return [t("名字"), t("文件夹"), t("登录名/联系信息"), t("类型/强度"), t("网站/字段")];
 }
 
 function itemPrimaryData(item: VaultItem): string {
@@ -441,33 +444,33 @@ function itemPrimaryData(item: VaultItem): string {
 function itemTypeLabel(item: VaultItem): string {
   if (item.kind === 'login') return '';
   if (item.kind === 'fillProfile') return fillProfileCategoryLabel(item.fillProfile.category);
-  if (item.kind === 'identity') return '身份资料';
-  return '保密笔记';
+  if (item.kind === 'identity') return t("身份资料");
+  return t("保密笔记");
 }
 
 function itemTableEndpoint(item: VaultItem): string {
   if (item.kind === 'login') return itemWebsite(item);
   if (item.kind === 'fillProfile') {
-    return `${item.fillProfile.countryCode || '未设置国家'} · ${item.fillProfile.fields.length} 字段`;
+    return t("{0} · {1} 字段", [item.fillProfile.countryCode || t("未设置国家"), item.fillProfile.fields.length]);
   }
   if (item.kind === 'identity') {
-    return [item.identity.country, item.identity.region, item.identity.city].filter(Boolean).join(' · ') || '本地资料';
+    return [item.identity.country, item.identity.region, item.identity.city].filter(Boolean).join(' · ') || t("本地资料");
   }
 
-  return item.note.pinned ? '已固定' : '本地加密';
+  return item.note.pinned ? t("已固定") : t("本地加密");
 }
 
 function vaultItemClipboardText(item: VaultItem): string {
   if (item.kind === 'login') {
     return [
-      `名称: ${item.credential.title}`,
+      t("名称: {0}", [item.credential.title]),
       `URL: ${item.credential.url}`,
       item.credential.matchUrl ? `Match URL: ${item.credential.matchUrl}` : '',
-      `域名: ${item.credential.domain}`,
-      `用户名: ${item.credential.username}`,
-      `密码: ${item.credential.password}`,
-      item.credential.notes ? `备注: ${item.credential.notes}` : '',
-      item.credential.tags?.length ? `标签: ${item.credential.tags.join(', ')}` : ''
+      t("域名: {0}", [item.credential.domain]),
+      t("用户名: {0}", [item.credential.username]),
+      t("密码: {0}", [item.credential.password]),
+      item.credential.notes ? t("备注: {0}", [item.credential.notes]) : '',
+      item.credential.tags?.length ? t("标签: {0}", [item.credential.tags.join(', ')]) : ''
     ]
       .filter(Boolean)
       .join('\n');
@@ -479,23 +482,23 @@ function vaultItemClipboardText(item: VaultItem): string {
 
   if (item.kind === 'identity') {
     return [
-      `名称: ${item.identity.title}`,
-      item.identity.fullName ? `姓名: ${item.identity.fullName}` : '',
-      item.identity.email ? `邮箱: ${item.identity.email}` : '',
-      item.identity.phone ? `电话: ${item.identity.phone}` : '',
-      item.identity.company ? `公司: ${item.identity.company}` : '',
-      item.identity.address ? `地址: ${item.identity.address}` : '',
-      item.identity.city ? `城市: ${item.identity.city}` : '',
-      item.identity.region ? `州/省: ${item.identity.region}` : '',
-      item.identity.postalCode ? `邮编: ${item.identity.postalCode}` : '',
-      item.identity.country ? `国家: ${item.identity.country}` : '',
-      item.identity.notes ? `备注: ${item.identity.notes}` : ''
+      t("名称: {0}", [item.identity.title]),
+      item.identity.fullName ? t("姓名: {0}", [item.identity.fullName]) : '',
+      item.identity.email ? t("邮箱: {0}", [item.identity.email]) : '',
+      item.identity.phone ? t("电话: {0}", [item.identity.phone]) : '',
+      item.identity.company ? t("公司: {0}", [item.identity.company]) : '',
+      item.identity.address ? t("地址: {0}", [item.identity.address]) : '',
+      item.identity.city ? t("城市: {0}", [item.identity.city]) : '',
+      item.identity.region ? t("州/省: {0}", [item.identity.region]) : '',
+      item.identity.postalCode ? t("邮编: {0}", [item.identity.postalCode]) : '',
+      item.identity.country ? t("国家: {0}", [item.identity.country]) : '',
+      item.identity.notes ? t("备注: {0}", [item.identity.notes]) : ''
     ]
       .filter(Boolean)
       .join('\n');
   }
 
-  return [`标题: ${item.note.title}`, `内容: ${item.note.note}`].join('\n');
+  return [t("标题: {0}", [item.note.title]), t("内容: {0}", [item.note.note])].join('\n');
 }
 
 function fillProfileSummary(profile: FillProfile): string {
@@ -506,14 +509,14 @@ function fillProfileSummary(profile: FillProfile): string {
   const business = fillFieldValue(publicFields, 'businessName') || fillFieldValue(publicFields, 'dbaName');
   const loanAmount = fillFieldValue(publicFields, 'loanAmount');
   const vehicle = [fillFieldValue(publicFields, 'vehicleYear'), fillFieldValue(publicFields, 'vehicleMake'), fillFieldValue(publicFields, 'vehicleModel')].filter(Boolean).join(' ');
-  return business || loanAmount || name || email || phone || vehicle || `${profile.fields.length} 个字段`;
+  return business || loanAmount || name || email || phone || vehicle || t("{0} 个字段", [profile.fields.length]);
 }
 
 function fillProfileBadgeText(profile: FillProfile): string {
-  if (profile.category === 'auto_insurance') return '车';
-  if (profile.category === 'loan') return '贷';
-  if (profile.category === 'business') return '企';
-  if (profile.category === 'payment') return '卡';
+  if (profile.category === 'auto_insurance') return t("车");
+  if (profile.category === 'loan') return t("贷");
+  if (profile.category === 'business') return t("企");
+  if (profile.category === 'payment') return t("卡");
 
   const words = profile.title.trim().split(/\s+/).filter(Boolean);
   if (words.length >= 2) {
@@ -563,34 +566,34 @@ function stableHash(value: string): number {
 }
 
 function fillProfileCategoryLabel(category: FillProfile['category']): string {
-  if (category === 'auto_insurance') return '车险填表';
-  if (category === 'shipping') return '收货地址';
-  if (category === 'billing') return '账单资料';
-  if (category === 'payment') return '付款资料';
-  if (category === 'business') return '公司资料';
-  if (category === 'loan') return '贷款资料';
-  if (category === 'identity') return '身份资料';
-  return '自定义资料';
+  if (category === 'auto_insurance') return t("车险填表");
+  if (category === 'shipping') return t("收货地址");
+  if (category === 'billing') return t("账单资料");
+  if (category === 'payment') return t("付款资料");
+  if (category === 'business') return t("公司资料");
+  if (category === 'loan') return t("贷款资料");
+  if (category === 'identity') return t("身份资料");
+  return t("自定义资料");
 }
 
 function fillFieldGroupLabel(group: FillField['group']): string {
   const labels: Record<FillField['group'], string> = {
-    personal: '个人',
-    contact: '联系方式',
-    address: '所在地',
-    driver: '驾驶资料',
-    vehicle: '车辆',
-    insurance: '保险',
-    payment: '付款',
-    business: '公司',
-    loan: '贷款',
-    employment: '工作',
-    finance: '财务',
-    sensitive: '证件资料',
-    custom: '其他'
+    personal: t("个人"),
+    contact: t("联系方式"),
+    address: t("所在地"),
+    driver: t("驾驶资料"),
+    vehicle: t("车辆"),
+    insurance: t("保险"),
+    payment: t("付款"),
+    business: t("公司"),
+    loan: t("贷款"),
+    employment: t("工作"),
+    finance: t("财务"),
+    sensitive: t("证件资料"),
+    custom: t("其他")
   };
 
-  return labels[group] ?? '其他';
+  return labels[group] ?? t("其他");
 }
 
 function fillFieldGroupIcon(group: FillField['group']): ReactNode {
@@ -631,7 +634,7 @@ function fillProfileFieldsByGroup(profile: FillProfile): Array<[FillField['group
 }
 
 function formatFillProfileForClipboard(profile: FillProfile): string {
-  const lines = [`${profile.title}`, `${profile.countryCode} · ${fillProfileCategoryLabel(profile.category)} · ${profile.fields.length} 字段`];
+  const lines = [`${profile.title}`, t("{0} · {1} · {2} 字段", [profile.countryCode, fillProfileCategoryLabel(profile.category), profile.fields.length])];
 
   fillProfileFieldsByGroup(profile).forEach(([group, fields]) => {
     lines.push('', `[${fillFieldGroupLabel(group)}]`);
@@ -644,13 +647,13 @@ function formatFillProfileForClipboard(profile: FillProfile): string {
 }
 
 function defaultFillImportPrefix(category: FillProfile['category']): string {
-  if (category === 'auto_insurance') return '车险';
-  if (category === 'business') return '公司';
-  if (category === 'loan') return '贷款';
-  if (category === 'payment') return '付款';
-  if (category === 'shipping' || category === 'billing') return '地址';
-  if (category === 'identity') return '身份';
-  return '资料';
+  if (category === 'auto_insurance') return t("车险");
+  if (category === 'business') return t("公司");
+  if (category === 'loan') return t("贷款");
+  if (category === 'payment') return t("付款");
+  if (category === 'shipping' || category === 'billing') return t("地址");
+  if (category === 'identity') return t("身份");
+  return t("资料");
 }
 
 function fillImportSourceKey(preview: FillProfileImportPreview): string {
@@ -715,8 +718,8 @@ function fillImportOverridesFromPreview(preview: FillProfileImportPreview): Fill
 function sortFillImportProfiles(profiles: FillProfile[], order: FillImportOrder): FillProfile[] {
   const items = [...profiles];
   if (order === 'reverse') return items.reverse();
-  if (order === 'titleAsc') return items.sort((left, right) => left.title.localeCompare(right.title, 'zh-CN'));
-  if (order === 'titleDesc') return items.sort((left, right) => right.title.localeCompare(left.title, 'zh-CN'));
+  if (order === 'titleAsc') return items.sort((left, right) => left.title.localeCompare(right.title, getLanguage()));
+  if (order === 'titleDesc') return items.sort((left, right) => right.title.localeCompare(left.title, getLanguage()));
   return items;
 }
 
@@ -803,7 +806,7 @@ function matchesSearch(item: VaultItem, query: string): boolean {
 
 function sortItems(items: VaultItem[], sort: SortMode): VaultItem[] {
   return [...items].sort((left, right) => {
-    if (sort === 'az') return itemName(left).localeCompare(itemName(right), 'zh-Hans-CN');
+    if (sort === 'az') return itemName(left).localeCompare(itemName(right), getLanguage());
     if (sort === 'popular') {
       if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
     }
@@ -812,20 +815,20 @@ function sortItems(items: VaultItem[], sort: SortMode): VaultItem[] {
 }
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message === 'MASTER_PASSWORD_TOO_SHORT') return '主密码至少需要 8 位。';
-  if (error instanceof Error && error.message === 'VAULT_WRITE_CONFLICT') return '记录已在其他页面修改，请重新打开记录后再保存。';
+  if (error instanceof Error && error.message === 'MASTER_PASSWORD_TOO_SHORT') return t("主密码至少需要 8 位。");
+  if (error instanceof Error && error.message === 'VAULT_WRITE_CONFLICT') return t("记录已在其他页面修改，请重新打开记录后再保存。");
   if (error instanceof Error) {
-    if (error.message === 'The operation failed for an operation-specific reason') return '主密码错误，请重新输入。';
-    if (error.message === 'VAULT_NOT_FOUND') return '没有找到本地 Vault。';
-    if (error.message === 'VAULT_LOCKED') return 'Vault 已锁定，请先解锁后再绑定。';
-    if (error.message === 'BINDING_START_FAILED') return '无法启动网页点选绑定，请刷新目标网页后重试。';
-    if (error.message === 'BINDING_TEST_FAILED') return '无法启动绑定测试，请刷新目标网页后重试。';
-    if (error.message === 'NO_MATCHING_CREDENTIAL') return '当前网页和账号域名不匹配，不能绑定。';
-    if (error.message === 'INVALID_CREDENTIAL_URL') return '账号网址无效，无法打开网页绑定。';
-    return error.message;
+    if (error.message === 'The operation failed for an operation-specific reason') return t("主密码错误，请重新输入。");
+    if (error.message === 'VAULT_NOT_FOUND') return t("没有找到本地 Vault。");
+    if (error.message === 'VAULT_LOCKED') return t("Vault 已锁定，请先解锁后再绑定。");
+    if (error.message === 'BINDING_START_FAILED') return t("无法启动网页点选绑定，请刷新目标网页后重试。");
+    if (error.message === 'BINDING_TEST_FAILED') return t("无法启动绑定测试，请刷新目标网页后重试。");
+    if (error.message === 'NO_MATCHING_CREDENTIAL') return t("当前网页和账号域名不匹配，不能绑定。");
+    if (error.message === 'INVALID_CREDENTIAL_URL') return t("账号网址无效，无法打开网页绑定。");
+    return t(error.message);
   }
 
-  return String(error || '操作失败');
+  return String(error || t("操作失败"));
 }
 
 function openExtensionUrl(path: string) {
@@ -878,13 +881,13 @@ function credentialToFillPayload(credential: Credential, autoSubmit: boolean): F
 }
 
 async function copyText(value: string, label: string, setNotice: (value: string) => void, sensitive = !/用户名|网址|链接/.test(label)): Promise<boolean> {
-  if (!value) { setNotice(`${label}为空。`); return false; }
+  if (!value) { setNotice(t("{0}为空。", [label])); return false; }
   try {
     if (!await copyProtectedText(value, sensitive)) return false;
-    setNotice(`已复制${label}。`);
+    setNotice(t("已复制{0}。", [label]));
     return true;
   } catch {
-    setNotice('复制失败，请确认密码库已解锁后重试。');
+    setNotice(t("复制失败，请确认密码库已解锁后重试。"));
     return false;
   }
 }
@@ -937,10 +940,10 @@ function deletedItemName(item: DeletedVaultItem): string {
 }
 
 function deletedItemSubtitle(item: DeletedVaultItem): string {
-  if (item.kind === 'credential') return item.item.username || item.item.domain || '无用户名';
-  if (item.kind === 'secureNote') return item.item.note.slice(0, 48) || '空笔记';
+  if (item.kind === 'credential') return item.item.username || item.item.domain || t("无用户名");
+  if (item.kind === 'secureNote') return item.item.note.slice(0, 48) || t("空笔记");
   if (item.kind === 'fillProfile') return fillProfileSummary(item.item);
-  return item.item.email || item.item.phone || item.item.fullName || '身份资料';
+  return item.item.email || item.item.phone || item.item.fullName || t("身份资料");
 }
 
 function deletedItemWebsite(item: DeletedVaultItem): string {
@@ -950,10 +953,10 @@ function deletedItemWebsite(item: DeletedVaultItem): string {
 }
 
 function deletedItemKindLabel(item: DeletedVaultItem): string {
-  if (item.kind === 'credential') return '登录';
-  if (item.kind === 'secureNote') return '保密笔记';
-  if (item.kind === 'fillProfile') return '填表资料';
-  return '个人信息';
+  if (item.kind === 'credential') return t("登录");
+  if (item.kind === 'secureNote') return t("保密笔记");
+  if (item.kind === 'fillProfile') return t("填表资料");
+  return t("个人信息");
 }
 
 function deletedItemMatchesSearch(item: DeletedVaultItem, query: string): boolean {
@@ -1068,11 +1071,11 @@ export function VaultApp() {
   const initialUiState = useMemo(readVaultUiState, []);
   const [status, setStatus] = useState<VaultStatus>('checking');
   const [session, setSession] = useState<UnlockedVaultSession | null>(null);
-  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice('密码库已锁定，请重新解锁。');setModal(null);setDetailCredentialId(null);setDetailFillProfileId(null); });
+  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice(t("密码库已锁定，请重新解锁。"));setModal(null);setDetailCredentialId(null);setDetailFillProfileId(null); });
   const [masterPassword, setMasterPassword] = useState('');
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
-  useEffect(() => {if(status==='unlocked' && new URLSearchParams(location.search).get('focus')==='search')document.querySelector<HTMLInputElement>('input[type="search"],input[placeholder*="搜索"]')?.focus();},[status]);
+  useEffect(() => {if(status==='unlocked' && new URLSearchParams(location.search).get('focus')==='search')document.querySelector<HTMLInputElement>('input[type="search"]')?.focus();},[status]);
   const [section, setSection] = useState<DashboardSection>(initialUiState.section);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(initialUiState.selectedFolder);
   const [sortMode, setSortMode] = useState<SortMode>(initialUiState.sortMode);
@@ -1168,7 +1171,7 @@ export function VaultApp() {
       setSession(nextSession);
       setStatus('unlocked');
       setMasterPassword('');
-      setNotice(status === 'setup' ? 'Vault 已创建。' : 'Vault 已解锁。');
+      setNotice(status === 'setup' ? t("Vault 已创建。") : t("Vault 已解锁。"));
     } catch (error) {
       setNotice(getErrorMessage(error));
     }
@@ -1462,7 +1465,7 @@ export function VaultApp() {
     const nextCredential = existing
       ? {
           ...existing,
-          title: draft.title.trim() || extractDomain(draft.url) || '未命名账号',
+          title: draft.title.trim() || extractDomain(draft.url) || t("未命名账号"),
           url: normalizedDraftUrl,
           domain: extractDomain(draft.url),
           matchUrl,
@@ -1477,7 +1480,7 @@ export function VaultApp() {
           updatedAt: Date.now()
         }
       : buildCredential({
-          title: draft.title.trim() || extractDomain(draft.url) || '未命名账号',
+          title: draft.title.trim() || extractDomain(draft.url) || t("未命名账号"),
           url: draft.url,
           matchUrl,
           iconUrl,
@@ -1490,17 +1493,17 @@ export function VaultApp() {
           source: 'manual'
         });
     const nextVault = existing ? updateCredentialInVault(session.vault, nextCredential) : addCredentialToVault(session.vault, nextCredential);
-    await persist(ensureFolderInVault(nextVault, draft.folder), existing ? '登录项已更新。' : '登录项已创建。');
+    await persist(ensureFolderInVault(nextVault, draft.folder), existing ? t("登录项已更新。") : t("登录项已创建。"));
     setModal(null);
   }
 
   async function saveNote(draft: NoteDraft, existing?: SecureNote) {
     if (!session) return;
     const note: SecureNote = existing
-      ? { ...existing, title: draft.title.trim() || '未命名笔记', note: draft.note, folder: draft.folder.trim() || undefined, updatedAt: Date.now() }
+      ? { ...existing, title: draft.title.trim() || t("未命名笔记"), note: draft.note, folder: draft.folder.trim() || undefined, updatedAt: Date.now() }
       : {
           id: crypto.randomUUID(),
-          title: draft.title.trim() || '未命名笔记',
+          title: draft.title.trim() || t("未命名笔记"),
           note: draft.note,
           folder: draft.folder.trim() || undefined,
           createdAt: Date.now(),
@@ -1510,7 +1513,7 @@ export function VaultApp() {
         ...session.vault,
         secureNotes: existing ? notes.map((item) => (item.id === existing.id ? note : item)) : [note, ...notes]
       };
-    await persist(ensureFolderInVault(nextVault, draft.folder), existing ? '保密笔记已更新。' : '保密笔记已创建。');
+    await persist(ensureFolderInVault(nextVault, draft.folder), existing ? t("保密笔记已更新。") : t("保密笔记已创建。"));
     setModal(null);
   }
 
@@ -1520,14 +1523,14 @@ export function VaultApp() {
       ? {
           ...existing,
           ...draft,
-          title: draft.title.trim() || draft.fullName.trim() || '未命名身份',
+          title: draft.title.trim() || draft.fullName.trim() || t("未命名身份"),
           folder: draft.folder.trim() || undefined,
           updatedAt: Date.now()
         }
       : {
           id: crypto.randomUUID(),
           ...draft,
-          title: draft.title.trim() || draft.fullName.trim() || '未命名身份',
+          title: draft.title.trim() || draft.fullName.trim() || t("未命名身份"),
           folder: draft.folder.trim() || undefined,
           createdAt: Date.now(),
           updatedAt: Date.now()
@@ -1536,7 +1539,7 @@ export function VaultApp() {
         ...session.vault,
         identities: existing ? identities.map((item) => (item.id === existing.id ? identity : item)) : [identity, ...identities]
       };
-    await persist(ensureFolderInVault(nextVault, draft.folder), existing ? '个人信息已更新。' : '个人信息已创建。');
+    await persist(ensureFolderInVault(nextVault, draft.folder), existing ? t("个人信息已更新。") : t("个人信息已创建。"));
     setModal(null);
   }
 
@@ -1548,7 +1551,7 @@ export function VaultApp() {
     if (currentName) {
       if (isRootFolder(normalizedCurrentName)) {
         setModal(null);
-        setNotice('主目录不能重命名。');
+        setNotice(t("主目录不能重命名。"));
         return;
       }
 
@@ -1560,12 +1563,12 @@ export function VaultApp() {
 
       const nameTaken = folderOptions.some((folderName) => folderName.toLowerCase() === normalizedName.toLowerCase());
       if (nameTaken) {
-        setNotice('文件夹已经存在。');
+        setNotice(t("文件夹已经存在。"));
         return;
       }
 
       const nextVault = renameFolderInVault(session.vault, normalizedCurrentName, normalizedName);
-      await persist(nextVault, isRootFolder(normalizedName) ? '文件夹内容已移动到主目录。' : '文件夹已重命名。');
+      await persist(nextVault, isRootFolder(normalizedName) ? t("文件夹内容已移动到主目录。") : t("文件夹已重命名。"));
       setModal(null);
       openFolder(normalizedName);
       return;
@@ -1574,12 +1577,12 @@ export function VaultApp() {
     if (isRootFolder(normalizedName)) {
       setModal(null);
       openFolder(ROOT_FOLDER_NAME);
-      setNotice('主目录已经存在。');
+      setNotice(t("主目录已经存在。"));
       return;
     }
 
     const nextVault = createFolderInVault(session.vault, normalizedName);
-    await persist(nextVault, nextVault === session.vault ? '文件夹已经存在。' : '文件夹已创建。');
+    await persist(nextVault, nextVault === session.vault ? t("文件夹已经存在。") : t("文件夹已创建。"));
     setModal(null);
     openFolder(normalizedName);
   }
@@ -1591,7 +1594,7 @@ export function VaultApp() {
 
     if (isRootFolder(source)) {
       setModal(null);
-      setNotice('主目录不能移动。');
+      setNotice(t("主目录不能移动。"));
       return;
     }
 
@@ -1602,7 +1605,7 @@ export function VaultApp() {
     }
 
     const nextVault = moveFolderContentsInVault(session.vault, source, target);
-    await persist(nextVault, isRootFolder(target) ? '文件夹内容已移动到主目录。' : `文件夹内容已移动到“${target}”。`);
+    await persist(nextVault, isRootFolder(target) ? t("文件夹内容已移动到主目录。") : t("文件夹内容已移动到“{0}”。", [target]));
     setModal(null);
     openFolder(target);
   }
@@ -1614,13 +1617,13 @@ export function VaultApp() {
 
     const count = folderItemCount(normalizedFolder, allItems);
     const message = count
-      ? `删除文件夹“${normalizedFolder}”？里面的 ${count} 个项目会移回主目录，不会删除账号密码。`
-      : `删除空文件夹“${normalizedFolder}”？`;
+      ? t("删除文件夹“{0}”？里面的 {1} 个项目会移回主目录，不会删除账号密码。", [normalizedFolder, count])
+      : t("删除空文件夹“{0}”？", [normalizedFolder]);
 
     if (!window.confirm(message)) return;
 
     const nextVault = deleteFolderFromVault(session.vault, normalizedFolder);
-    await persist(nextVault, count ? '文件夹已删除，项目已移回主目录。' : '文件夹已删除。');
+    await persist(nextVault, count ? t("文件夹已删除，项目已移回主目录。") : t("文件夹已删除。"));
     setFolderContextMenu(null);
 
     if (section === 'folder' && normalizeFolderLabel(selectedFolder ?? ROOT_FOLDER_NAME).toLowerCase() === normalizedFolder.toLowerCase()) {
@@ -1632,14 +1635,14 @@ export function VaultApp() {
     if (!session) return;
     const normalizedFolder = normalizeFolderLabel(folderName);
     const nextVault = moveVaultEntryToFolder(session.vault, vaultItemToMoveKind(item), item.id, normalizedFolder);
-    await persist(nextVault, `已移动到“${normalizedFolder}”。`);
+    await persist(nextVault, t("已移动到“{0}”。", [normalizedFolder]));
     setModal(null);
     openFolder(normalizedFolder);
   }
 
   async function deleteItem(item: VaultItem) {
     if (!session) return;
-    if (!window.confirm(`将“${itemName(item)}”移到回收站？之后可以在回收站恢复。`)) return;
+    if (!window.confirm(t("将“{0}”移到回收站？之后可以在回收站恢复。", [itemName(item)]))) return;
 
     setItemContextMenu(null);
     const nextVault =
@@ -1650,7 +1653,7 @@ export function VaultApp() {
           : item.kind === 'fillProfile'
             ? deleteFillProfileFromVault(session.vault, item.id)
             : deleteIdentityFromVault(session.vault, item.id);
-    await persist(nextVault, '项目已移到回收站。');
+    await persist(nextVault, t("项目已移到回收站。"));
   }
 
   function viewVaultItem(item: VaultItem) {
@@ -1691,7 +1694,7 @@ export function VaultApp() {
       const clonedProfile: FillProfile = {
         ...item.fillProfile,
         id: crypto.randomUUID(),
-        title: `${item.fillProfile.title} - 副本`,
+        title: t("{0} - 副本", [item.fillProfile.title]),
         pinned: false,
         createdAt: now,
         updatedAt: now,
@@ -1705,7 +1708,7 @@ export function VaultApp() {
           updatedAt: now
         }))
       };
-      await persist(ensureFolderInVault({ ...session.vault, fillProfiles: [clonedProfile, ...fillProfiles] }, clonedProfile.folder), '个人信息副本已创建。');
+      await persist(ensureFolderInVault({ ...session.vault, fillProfiles: [clonedProfile, ...fillProfiles] }, clonedProfile.folder), t("个人信息副本已创建。"));
       openFillProfileDetail(clonedProfile);
       return;
     }
@@ -1714,13 +1717,13 @@ export function VaultApp() {
       const clonedIdentity: IdentityProfile = {
         ...item.identity,
         id: crypto.randomUUID(),
-        title: `${item.identity.title} - 副本`,
+        title: t("{0} - 副本", [item.identity.title]),
         pinned: false,
         createdAt: now,
         updatedAt: now,
         lastUsedAt: undefined
       };
-      await persist(ensureFolderInVault({ ...session.vault, identities: [clonedIdentity, ...identities] }, clonedIdentity.folder), '个人信息副本已创建。');
+      await persist(ensureFolderInVault({ ...session.vault, identities: [clonedIdentity, ...identities] }, clonedIdentity.folder), t("个人信息副本已创建。"));
       setModal({ type: 'identity', identity: clonedIdentity });
       return;
     }
@@ -1728,13 +1731,13 @@ export function VaultApp() {
     const clonedNote: SecureNote = {
       ...item.note,
       id: crypto.randomUUID(),
-      title: `${item.note.title} - 副本`,
+      title: t("{0} - 副本", [item.note.title]),
       pinned: false,
       createdAt: now,
       updatedAt: now,
       lastUsedAt: undefined
     };
-    await persist(ensureFolderInVault({ ...session.vault, secureNotes: [clonedNote, ...notes] }, clonedNote.folder), '保密笔记副本已创建。');
+    await persist(ensureFolderInVault({ ...session.vault, secureNotes: [clonedNote, ...notes] }, clonedNote.folder), t("保密笔记副本已创建。"));
     setModal({ type: 'note', note: clonedNote });
   }
 
@@ -1749,7 +1752,7 @@ export function VaultApp() {
 
     const pinned = !item.pinned;
     const updatedAt = Date.now();
-    const message = pinned ? '已添加到固定栏。' : '已从固定栏移除。';
+    const message = pinned ? t("已添加到固定栏。") : t("已从固定栏移除。");
 
     if (item.kind === 'fillProfile') {
       await persist(updateFillProfileInVault(session.vault, { ...item.fillProfile, pinned, updatedAt }), message);
@@ -1775,7 +1778,7 @@ export function VaultApp() {
   async function openFillProfileDetail(profile: FillProfile, mode: DetailMode = 'view') {
     if (mode === 'edit' && profile.fields.some(field => field.sensitivity !== 'normal')) {
       try { if (!await authorizeSensitiveAction()) return; }
-      catch { setNotice('密码库已锁定，请重新解锁。'); return; }
+      catch { setNotice(t("密码库已锁定，请重新解锁。")); return; }
     }
     setDetailFillProfileId(profile.id);
     setDetailFillProfileMode(mode);
@@ -1800,26 +1803,26 @@ export function VaultApp() {
       notes: noteText.trim() || undefined,
       updatedAt: Date.now()
     };
-    await persist(updateCredentialInVault(session.vault, nextCredential), '备注已更新。');
+    await persist(updateCredentialInVault(session.vault, nextCredential), t("备注已更新。"));
   }
 
   async function saveFillProfile(profile: FillProfile) {
     if (!session) return;
     const nextProfile = {
       ...profile,
-      title: profile.title.trim() || fillProfileSummary(profile) || '未命名个人信息',
+      title: profile.title.trim() || fillProfileSummary(profile) || t("未命名个人信息"),
       countryCode: profile.countryCode.trim().toUpperCase() || 'US',
       folder: profile.folder?.trim() || undefined,
       updatedAt: Date.now()
     };
-    await persist(ensureFolderInVault(updateFillProfileInVault(session.vault, nextProfile), nextProfile.folder), '个人信息已更新。');
+    await persist(ensureFolderInVault(updateFillProfileInVault(session.vault, nextProfile), nextProfile.folder), t("个人信息已更新。"));
     setDetailFillProfileMode('view');
   }
 
   async function cloneCredential(credential: Credential) {
     if (!session) return;
     const clonedCredential = buildCredential({
-      title: `${credential.title} - 副本`,
+      title: t("{0} - 副本", [credential.title]),
       url: credential.url,
       matchUrl: credential.matchUrl,
       iconUrl: credential.iconUrl,
@@ -1834,7 +1837,7 @@ export function VaultApp() {
       source: credential.source ?? 'manual'
     });
 
-    await persist(addCredentialToVault(session.vault, clonedCredential), '账号副本已创建。');
+    await persist(addCredentialToVault(session.vault, clonedCredential), t("账号副本已创建。"));
     openCredentialDetail(clonedCredential);
   }
 
@@ -1846,15 +1849,15 @@ export function VaultApp() {
         pinned: !credential.pinned,
         updatedAt: Date.now()
       }),
-      credential.pinned ? '已从固定栏移除。' : '已添加到固定栏。'
+      credential.pinned ? t("已从固定栏移除。") : t("已添加到固定栏。")
     );
     setDetailMoreOpen(false);
   }
 
   async function deleteCredentialFromDetail(credential: Credential) {
     if (!session) return;
-    if (!window.confirm(`将“${credential.title}”移到回收站？之后可以在回收站恢复。`)) return;
-    await persist(deleteCredentialFromVault(session.vault, credential.id), '账号已移到回收站。');
+    if (!window.confirm(t("将“{0}”移到回收站？之后可以在回收站恢复。", [credential.title]))) return;
+    await persist(deleteCredentialFromVault(session.vault, credential.id), t("账号已移到回收站。"));
     setDetailCredentialId(null);
     setDetailMode('view');
     setDetailMoreOpen(false);
@@ -1862,8 +1865,8 @@ export function VaultApp() {
 
   async function deleteFillProfileFromDetail(profile: FillProfile) {
     if (!session) return;
-    if (!window.confirm(`将“${profile.title}”移到回收站？之后可以在回收站恢复。`)) return;
-    await persist(deleteFillProfileFromVault(session.vault, profile.id), '个人信息已移到回收站。');
+    if (!window.confirm(t("将“{0}”移到回收站？之后可以在回收站恢复。", [profile.title]))) return;
+    await persist(deleteFillProfileFromVault(session.vault, profile.id), t("个人信息已移到回收站。"));
     setDetailFillProfileId(null);
     setDetailFillProfileMode('view');
   }
@@ -1871,7 +1874,7 @@ export function VaultApp() {
   async function restoreDeletedItem(item: DeletedVaultItem) {
     if (!session) return;
     const nextVault = restoreDeletedItemToVault(session.vault, item.id);
-    await persist(nextVault, '项目已恢复。');
+    await persist(nextVault, t("项目已恢复。"));
 
     if (item.kind === 'credential') {
       openCredentialDetail(item.item);
@@ -1880,8 +1883,8 @@ export function VaultApp() {
 
   async function purgeDeletedItem(item: DeletedVaultItem) {
     if (!session) return;
-    if (!window.confirm(`永久删除“${deletedItemName(item)}”？此操作无法撤销。`)) return;
-    await persist(purgeDeletedItemFromVault(session.vault, item.id), '项目已永久删除。');
+    if (!window.confirm(t("永久删除“{0}”？此操作无法撤销。", [deletedItemName(item)]))) return;
+    await persist(purgeDeletedItemFromVault(session.vault, item.id), t("项目已永久删除。"));
   }
 
   async function runCredentialAction(action: CredentialAction, credential: Credential) {
@@ -1899,7 +1902,7 @@ export function VaultApp() {
         throw new Error(response.error ?? 'TAB_CREATE_FAILED');
       }
 
-      const actionText = action === 'login' ? '已发送一键登录指令。' : action === 'fill' ? '已发送浏览并填写指令。' : '已打开网站。';
+      const actionText = action === 'login' ? t("已发送一键登录指令。") : action === 'fill' ? t("已发送浏览并填写指令。") : t("已打开网站。");
       await persist(touchCredentialInVault(session.vault, credential.id), actionText);
     } catch (error) {
       setNotice(getErrorMessage(error).replace('EXTENSION_API_UNAVAILABLE', '请在已加载的浏览器插件中测试该功能。'));
@@ -1927,7 +1930,7 @@ export function VaultApp() {
     if (!session) return;
     const selectedProfiles = applyFillImportOptions(preview, options);
     if (!selectedProfiles.length) {
-      setNotice('没有选择可导入的填表资料。');
+      setNotice(t("没有选择可导入的填表资料。"));
       return;
     }
 
@@ -1940,7 +1943,7 @@ export function VaultApp() {
         fillImportBatches: upsertFillImportBatchRecord(withFolder.settings.fillImportBatches, preview, options, selectedProfiles.length)
       }
     };
-    await persist(withBatchRecord, `已导入 ${selectedProfiles.length} 条填表资料。下次会从第 ${options.offset + selectedProfiles.length + 1} 条继续建议。`);
+    await persist(withBatchRecord, t("已导入 {0} 条填表资料。下次会从第 {1} 条继续建议。", [selectedProfiles.length, options.offset + selectedProfiles.length + 1]));
     setFillImportPreview(null);
     openSection('identities');
   }
@@ -1952,7 +1955,7 @@ export function VaultApp() {
     const now = Date.now();
     const nextTemplate: FillImportMappingTemplate = {
       ...template,
-      name: template.name.trim() || '填表映射模板',
+      name: template.name.trim() || t("填表映射模板"),
       useCount: existing?.useCount ?? template.useCount ?? 0,
       createdAt: existing?.createdAt ?? template.createdAt ?? now,
       updatedAt: now
@@ -1965,7 +1968,7 @@ export function VaultApp() {
       }
     };
 
-    await persist(nextVault, `映射模板已保存：${nextTemplate.name}`);
+    await persist(nextVault, t("映射模板已保存：{0}", [nextTemplate.name]));
   }
 
   async function startCredentialBinding(credential: Credential) {
@@ -1979,7 +1982,7 @@ export function VaultApp() {
         throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'BINDING_START_FAILED'));
       }
 
-      setNotice('已打开网站。请在网页里依次点击用户名框、密码框和登录按钮。');
+      setNotice(t("已打开网站。请在网页里依次点击用户名框、密码框和登录按钮。"));
     } catch (error) {
       setNotice(getErrorMessage(error).replace('EXTENSION_API_UNAVAILABLE', '请在已加载的浏览器插件中测试该功能。'));
     }
@@ -1996,7 +1999,7 @@ export function VaultApp() {
         throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'BINDING_TEST_FAILED'));
       }
 
-      setNotice('已打开网站并开始测试绑定。网页会高亮已识别的字段和登录按钮。');
+      setNotice(t("已打开网站并开始测试绑定。网页会高亮已识别的字段和登录按钮。"));
     } catch (error) {
       setNotice(getErrorMessage(error).replace('EXTENSION_API_UNAVAILABLE', '请在已加载的浏览器插件中测试该功能。'));
     }
@@ -2004,7 +2007,7 @@ export function VaultApp() {
 
   function openCredentialExportDialog() {
     if (!credentials.length) {
-      setNotice('当前没有可导出的账号。');
+      setNotice(t("当前没有可导出的账号。"));
       return;
     }
 
@@ -2014,13 +2017,13 @@ export function VaultApp() {
   async function exportCredentialsFile(selectedCredentials: Credential[], format: CredentialExportFormat) {
     if (!await authorizeSensitiveAction()) return;
     if (!selectedCredentials.length) {
-      setNotice('请选择至少 1 条账号再导出。');
+      setNotice(t("请选择至少 1 条账号再导出。"));
       return;
     }
 
     const exportResult = exportCredentialsByFormat(selectedCredentials, format);
     const confirmed = window.confirm(
-      `即将导出 ${selectedCredentials.length} 条账号为 ${exportResult.label}。\n\n导出文件会包含明文账号和密码，请只保存在可信位置，用完后及时删除。是否继续？`
+      t("即将导出 {0} 条账号为 {1}。\n\n导出文件会包含明文账号和密码，请只保存在可信位置，用完后及时删除。是否继续？", [selectedCredentials.length, exportResult.label])
     );
 
     if (!confirmed) return;
@@ -2028,12 +2031,12 @@ export function VaultApp() {
     const blob = new Blob([`${exportResult.addBom ? '\uFEFF' : ''}${exportResult.body}`], { type: exportResult.mimeType });
     downloadBlob(blob, `${exportResult.filenamePrefix}-${timestampForFile()}.${exportResult.extension}`);
     setCredentialExportOpen(false);
-    setNotice(`已导出 ${selectedCredentials.length} 条账号为 ${exportResult.label}。文件包含明文密码，请妥善处理。`);
+    setNotice(t("已导出 {0} 条账号为 {1}。文件包含明文密码，请妥善处理。", [selectedCredentials.length, exportResult.label]));
   }
 
   function openFillProfileExportDialog() {
     if (!fillProfiles.length) {
-      setNotice('当前没有可导出的填表资料。');
+      setNotice(t("当前没有可导出的填表资料。"));
       return;
     }
 
@@ -2043,12 +2046,12 @@ export function VaultApp() {
   async function exportFillProfilesFile(selectedProfiles: FillProfile[]) {
     if (!await authorizeSensitiveAction()) return;
     if (!selectedProfiles.length) {
-      setNotice('请选择至少 1 条资料再导出。');
+      setNotice(t("请选择至少 1 条资料再导出。"));
       return;
     }
 
     const confirmed = window.confirm(
-      `即将导出 ${selectedProfiles.length} 条身份ID/填表资料为 KeyPilot .kpfill 文件。\n\n这个文件会包含资料字段值，可能包括 SSN、CVV、EIN、银行账号等敏感信息。请只发给可信的人，是否继续？`
+      t("即将导出 {0} 条身份ID/填表资料为 KeyPilot .kpfill 文件。\n\n这个文件会包含资料字段值，可能包括 SSN、CVV、EIN、银行账号等敏感信息。请只发给可信的人，是否继续？", [selectedProfiles.length])
     );
 
     if (!confirmed) return;
@@ -2056,7 +2059,7 @@ export function VaultApp() {
     const blob = new Blob([exportFillProfilesKpFill(selectedProfiles)], { type: 'application/json;charset=utf-8' });
     downloadBlob(blob, `keypilot-fill-profiles-${timestampForFile()}.kpfill`);
     setFillExportOpen(false);
-    setNotice(`已导出 ${selectedProfiles.length} 条填表资料为 .kpfill 文件。`);
+    setNotice(t("已导出 {0} 条填表资料为 .kpfill 文件。", [selectedProfiles.length]));
   }
 
   if (status !== 'unlocked' || !session) {
@@ -2065,12 +2068,13 @@ export function VaultApp() {
         <div className="vault-auth-content">
         <form onSubmit={handleAuth}>
           <img src="icons/icon128.png" alt="" />
-          <h1>{status === 'setup' ? '创建 KeyPilot Vault' : status === 'locked' ? '解锁 KeyPilot Vault' : '正在检查 Vault'}</h1>
-          <p>本地加密保存账号、2FA、笔记和身份资料。</p>
+          <h1>{status === 'setup' ? t("创建 KeyPilot Vault") : status === 'locked' ? t("解锁 KeyPilot Vault") : t("正在检查 Vault")}</h1>
+          <p>{t("本地加密保存账号、2FA、笔记和身份资料。")}</p>
+          <a href="options.html#general" target="_blank" rel="noreferrer">{t('界面语言 / Language')}</a>
           {status !== 'checking' ? (
             <>
               <label>
-                <span>主密码</span>
+                <span>{t("主密码")}</span>
                 <input
                   type="password"
                   value={masterPassword}
@@ -2080,12 +2084,12 @@ export function VaultApp() {
                   required
                 />
               </label>
-              <button type="submit">{status === 'setup' ? '创建 Vault' : '解锁'}</button>
+              <button type="submit">{status === 'setup' ? t("创建 Vault") : t("解锁")}</button>
             </>
           ) : null}
           {notice ? <strong>{notice}</strong> : null}
         </form>
-        {status === 'setup' && <InitialBackupRestore onRestored={next => {setSession(next);setStatus('unlocked');setNotice('完整备份已恢复，包含 2FA 和插件设置。');}} />}
+        {status === 'setup' && <InitialBackupRestore onRestored={next => {setSession(next);setStatus('unlocked');setNotice(t("完整备份已恢复，包含 2FA 和插件设置。"));}} />}
         </div>
       </main>
     );
@@ -2099,22 +2103,22 @@ export function VaultApp() {
           <strong>KeyPilot</strong>
         </div>
         <div className="sidebar-group">
-          <SidebarButton icon={<List size={18} />} label="所有" count={allItems.length} active={section === 'all'} onClick={() => openSection('all')} />
-          <SidebarButton icon={<Lock size={18} />} label="登录" count={credentials.length} active={section === 'logins'} onClick={() => openSection('logins')} />
-          <SidebarButton icon={<NotebookText size={18} />} label="保密笔记本" count={notes.length} active={section === 'notes'} onClick={() => openSection('notes')} />
-          <SidebarButton icon={<IdCard size={18} />} label="个人信息" count={identities.length + fillProfiles.length} active={section === 'identities'} onClick={() => openSection('identities')} />
+          <SidebarButton icon={<List size={18} />} label={t("所有")} count={allItems.length} active={section === 'all'} onClick={() => openSection('all')} />
+          <SidebarButton icon={<Lock size={18} />} label={t("登录")} count={credentials.length} active={section === 'logins'} onClick={() => openSection('logins')} />
+          <SidebarButton icon={<NotebookText size={18} />} label={t("保密笔记本")} count={notes.length} active={section === 'notes'} onClick={() => openSection('notes')} />
+          <SidebarButton icon={<IdCard size={18} />} label={t("个人信息")} count={identities.length + fillProfiles.length} active={section === 'identities'} onClick={() => openSection('identities')} />
         </div>
         <div className="sidebar-folder-group">
           <header>
-            <span>文件夹</span>
-            <button type="button" aria-label="新建文件夹" title="新建文件夹" onClick={() => openQuickModal({ type: 'folder' })}>
+            <span>{t("文件夹")}</span>
+            <button type="button" aria-label={t("新建文件夹")} title={t("新建文件夹")} onClick={() => openQuickModal({ type: 'folder' })}>
               <Plus size={15} />
             </button>
           </header>
           <div>
         <SidebarButton
           icon={<Home size={18} />}
-          label="主目录"
+          label={t("主目录")}
           count={folderItemCount(ROOT_FOLDER_NAME, allItems)}
           active={section === 'folder' && selectedFolder === ROOT_FOLDER_NAME}
           onClick={() => openFolder(ROOT_FOLDER_NAME)}
@@ -2135,15 +2139,15 @@ export function VaultApp() {
           </div>
         </div>
         <div className="sidebar-group">
-          <SidebarButton icon={<ShieldCheck size={18} />} label="身份验证器" count={session.vault.totpAccounts?.filter(item => !item.deletedAt).length ?? 0} active={section === 'authenticator'} onClick={() => openSection('authenticator')} />
-          {session.vault.settings.remindersEnabled && <SidebarButton icon={<Bell size={18} />} label="提醒中心" count={session.vault.reminders?.filter(item => reminderIsPending(item)).length ?? 0} active={section === 'reminders'} onClick={() => openSection('reminders')} />}
-          <SidebarButton icon={<Wand2 size={18} />} label="密码生成器" active={section === 'generator'} onClick={() => openSection('generator')} />
-          <SidebarButton icon={<Shield size={18} />} label="安全中心" active={section === 'security'} onClick={() => openSection('security')} />
-          <SidebarButton icon={<Trash2 size={18} />} label="回收站" count={deletedItems.length} active={section === 'trash'} onClick={() => openSection('trash')} />
+          <SidebarButton icon={<ShieldCheck size={18} />} label={t("身份验证器")} count={session.vault.totpAccounts?.filter(item => !item.deletedAt).length ?? 0} active={section === 'authenticator'} onClick={() => openSection('authenticator')} />
+          {session.vault.settings.remindersEnabled && <SidebarButton icon={<Bell size={18} />} label={t("提醒中心")} count={session.vault.reminders?.filter(item => reminderIsPending(item)).length ?? 0} active={section === 'reminders'} onClick={() => openSection('reminders')} />}
+          <SidebarButton icon={<Wand2 size={18} />} label={t("密码生成器")} active={section === 'generator'} onClick={() => openSection('generator')} />
+          <SidebarButton icon={<Shield size={18} />} label={t("安全中心")} active={section === 'security'} onClick={() => openSection('security')} />
+          <SidebarButton icon={<Trash2 size={18} />} label={t("回收站")} count={deletedItems.length} active={section === 'trash'} onClick={() => openSection('trash')} />
         </div>
-        <button className="sidebar-help" type="button" aria-label="设置与帮助" title="设置与帮助" onClick={() => openExtensionUrl('options.html')}>
+        <button className="sidebar-help" type="button" aria-label={t("设置与帮助")} title={t("设置与帮助")} onClick={() => openExtensionUrl('options.html')}>
           <HelpCircle size={18} />
-          <span>设置与帮助</span>
+          <span>{t("设置与帮助")}</span>
         </button>
       </aside>
 
@@ -2162,7 +2166,7 @@ export function VaultApp() {
           }}
           onShare={() => {
             setFolderContextMenu(null);
-            setNotice('共享文件夹需要同步和权限能力，后续版本会支持。');
+            setNotice(t("共享文件夹需要同步和权限能力，后续版本会支持。"));
           }}
         />
       ) : null}
@@ -2181,8 +2185,8 @@ export function VaultApp() {
           onDelete={(item) => void deleteItem(item)}
           onCredentialAction={(action, credential) => void runCredentialAction(action, credential)}
           onOpenTrash={() => openSection('trash')}
-          onShare={(item) => setNotice(`“${itemName(item)}”的分享功能需要同步与权限能力，后续版本会支持。`)}
-          onSend={(item) => setNotice(`“${itemName(item)}”的发送功能需要安全导出流程，后续版本会支持。`)}
+          onShare={(item) => setNotice(t("“{0}”的分享功能需要同步与权限能力，后续版本会支持。", [itemName(item)]))}
+          onSend={(item) => setNotice(t("“{0}”的发送功能需要安全导出流程，后续版本会支持。", [itemName(item)]))}
         />
       ) : null}
 
@@ -2190,25 +2194,25 @@ export function VaultApp() {
         <header className="vault-topbar">
           <label className="vault-search">
             <Search size={18} />
-            <input aria-label="在 KeyPilot 中搜索" aria-describedby="vault-search-help" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="在 KeyPilot 中搜索" />
-            <span id="vault-search-help" className="kp-sr-only">上下键选择记录，Enter 查看，Escape 返回搜索或清空搜索。</span>
+            <input aria-label={t("在 KeyPilot 中搜索")} aria-describedby="vault-search-help" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("在 KeyPilot 中搜索")} />
+            <span id="vault-search-help" className="kp-sr-only">{t("上下键选择记录，Enter 查看，Escape 返回搜索或清空搜索。")}</span>
             <SlidersHorizontal size={18} />
           </label>
-          <button type="button" aria-label="选择导出账号 CSV" title="选择导出账号 CSV" onClick={openCredentialExportDialog}>
+          <button type="button" aria-label={t("选择导出账号 CSV")} title={t("选择导出账号 CSV")} onClick={openCredentialExportDialog}>
             <Download size={19} />
           </button>
-          <button className="vault-backup-link" type="button" aria-label="完整备份" title="完整备份" onClick={() => openExtensionUrl('options.html#account')}>
-            <ShieldCheck size={18} /><span>完整备份</span>
+          <button className="vault-backup-link" type="button" aria-label={t("完整备份")} title={t("完整备份")} onClick={() => openExtensionUrl('options.html#account')}>
+            <ShieldCheck size={18} /><span>{t("完整备份")}</span>
           </button>
-          <button type="button" aria-label="刷新" onClick={() => void boot()}>
+          <button type="button" aria-label={t("刷新")} onClick={() => void boot()}>
             <RefreshCw size={19} />
           </button>
-          <button type="button" aria-label="帮助" onClick={() => openExtensionUrl('options.html')}>
+          <button type="button" aria-label={t("帮助")} onClick={() => openExtensionUrl('options.html')}>
             <HelpCircle size={19} />
           </button>
           <div className="vault-user">
             <UserCircle size={21} />
-            <span>本地密码库</span>
+            <span>{t("本地密码库")}</span>
           </div>
           <input
             ref={fillImportInputRef}
@@ -2222,7 +2226,7 @@ export function VaultApp() {
         <BackupStatus session={session} onChange={setSession} reminderOnly />
 
         {section === 'generator' ? (
-          <GeneratorPanel onCopy={(password) => copyText(password, '密码', setNotice)} />
+          <GeneratorPanel onCopy={(password) => copyText(password, t("密码"), setNotice)} />
         ) : section === 'security' ? (
           <SecurityPanel
             security={security}
@@ -2230,7 +2234,7 @@ export function VaultApp() {
             onEdit={(credential) => openCredentialDetail(credential, 'edit')}
             onBind={(credential) => void startCredentialBinding(credential)}
             onOpen={(credential) => void runCredentialAction('goto', credential)}
-            onCopyPassword={(credential) => void copyText(credential.password, '密码', setNotice)}
+            onCopyPassword={(credential) => void copyText(credential.password, t("密码"), setNotice)}
           />
         ) : section === 'trash' ? (
           <TrashPanel items={scopedDeletedItems} onRestore={(item) => void restoreDeletedItem(item)} onPurge={(item) => void purgeDeletedItem(item)} />
@@ -2243,7 +2247,7 @@ export function VaultApp() {
         ) : (
           <VaultList
             section={section}
-            title={section === 'folder' ? normalizeFolderLabel(selectedFolder ?? ROOT_FOLDER_NAME) : SECTION_LABELS[section]}
+            title={section === 'folder' ? displayFolderName(normalizeFolderLabel(selectedFolder ?? ROOT_FOLDER_NAME)) : SECTION_LABELS[section]}
             items={scopedItems}
             sortMode={sortMode}
             viewMode={viewMode}
@@ -2415,32 +2419,32 @@ function QuickCreateMenu({
 }) {
   return (
     <div className={open ? 'quick-create open' : 'quick-create'}>
-      {open ? <button className="quick-create-scrim" type="button" aria-label="关闭新建菜单" onClick={onClose} /> : null}
+      {open ? <button className="quick-create-scrim" type="button" aria-label={t("关闭新建菜单")} onClick={onClose} /> : null}
       {open ? (
-        <div className="quick-create-menu" role="menu" aria-label="新建项目">
+        <div className="quick-create-menu" role="menu" aria-label={t("新建项目")}>
           <button type="button" role="menuitem" onClick={onNewFolder}>
             <FolderOpen size={22} />
-            <span>文件夹</span>
+            <span>{t("文件夹")}</span>
           </button>
           <button type="button" role="menuitem" onClick={onNewIdentity}>
             <IdCard size={22} />
-            <span>个人信息</span>
+            <span>{t("个人信息")}</span>
           </button>
           <button type="button" role="menuitem" onClick={onNewContact}>
             <Users size={22} />
-            <span>联系人</span>
+            <span>{t("联系人")}</span>
           </button>
           <button type="button" role="menuitem" onClick={onNewNote}>
             <FileText size={22} />
-            <span>保密笔记本</span>
+            <span>{t("保密笔记本")}</span>
           </button>
           <button type="button" role="menuitem" onClick={onNewLogin}>
             <Lock size={22} />
-            <span>登录</span>
+            <span>{t("登录")}</span>
           </button>
         </div>
       ) : null}
-      <button className="vault-fab" type="button" aria-label={open ? '关闭新建菜单' : '新建'} aria-expanded={open} onClick={onToggle}>
+      <button className="vault-fab" type="button" aria-label={open ? t("关闭新建菜单") : t("新建")} aria-expanded={open} onClick={onToggle}>
         {open ? <X size={30} /> : <Plus size={30} />}
       </button>
     </div>
@@ -2496,23 +2500,23 @@ function FolderContextMenu({
 
   return (
     <div className="folder-context-layer" role="presentation">
-      <button className="folder-context-scrim" type="button" aria-label="关闭文件夹菜单" onClick={onClose} />
-      <div className="folder-context-menu" role="menu" aria-label={`${menu.folderName} 文件夹操作`} style={{ left: menu.x, top: menu.y, maxHeight: `calc(100dvh - ${menu.y + 8}px)` }}>
+      <button className="folder-context-scrim" type="button" aria-label={t("关闭文件夹菜单")} onClick={onClose} />
+      <div className="folder-context-menu" role="menu" aria-label={t("{0} 文件夹操作", [menu.folderName])} style={{ left: menu.x, top: menu.y, maxHeight: `calc(100dvh - ${menu.y + 8}px)` }}>
         <button type="button" role="menuitem" onClick={() => run(onNewFolder)}>
           <FolderPlus size={18} />
-          <span>新建文件夹</span>
+          <span>{t("新建文件夹")}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => run(onRename)}>
           <Pencil size={18} />
-          <span>重命名</span>
+          <span>{t("重命名")}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => run(onMove)}>
           <MoveRight size={18} />
-          <span>移动</span>
+          <span>{t("移动")}</span>
         </button>
         <button className="danger" type="button" role="menuitem" onClick={() => run(onDelete)}>
           <Trash2 size={18} />
-          <span>{count ? '删除并移回主目录' : '删除'}</span>
+          <span>{count ? t("删除并移回主目录") : t("删除")}</span>
         </button>
         <hr />
 
@@ -2568,72 +2572,72 @@ function VaultItemContextMenu({
 
   return (
     <div className="folder-context-layer" role="presentation">
-      <button className="folder-context-scrim" type="button" aria-label="关闭项目菜单" onClick={onClose} />
+      <button className="folder-context-scrim" type="button" aria-label={t("关闭项目菜单")} onClick={onClose} />
       <div ref={menuRef} onKeyDown={event => {
         if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
         event.preventDefault();
         const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button'));
         const index = buttons.indexOf(event.target as HTMLButtonElement);
         buttons[(index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
-      }} className="vault-item-context-menu" role="menu" aria-label={`${itemName(item)} 操作菜单`} style={{ left: menu.x, top: menu.y }}>
+      }} className="vault-item-context-menu" role="menu" aria-label={t("{0} 操作菜单", [itemName(item)])} style={{ left: menu.x, top: menu.y }}>
         {item.kind === 'login' ? (
           <>
             <button className="primary" type="button" role="menuitem" onClick={() => run(() => onCredentialAction('login', item.credential))}>
               <CirclePlay size={18} />
-              <span>登录</span>
+              <span>{t("登录")}</span>
             </button>
             <button type="button" role="menuitem" onClick={() => run(() => onCredentialAction('fill', item.credential))}>
               <FileText size={18} />
-              <span>浏览并填写</span>
+              <span>{t("浏览并填写")}</span>
             </button>
             <button type="button" role="menuitem" onClick={() => run(() => onCredentialAction('goto', item.credential))}>
               <ArrowUpRight size={18} />
-              <span>转到</span>
+              <span>{t("转到")}</span>
             </button>
-            <button type="button" role="menuitem" onClick={() => run(() => onCopy('用户名', item.credential.username, false))}><Copy size={18} /><span>复制用户名</span></button>
-            <button type="button" role="menuitem" onClick={() => run(() => onCopy('密码', item.credential.password, true))}><KeyRound size={18} /><span>复制密码</span></button>
+            <button type="button" role="menuitem" onClick={() => run(() => onCopy(t("用户名"), item.credential.username, false))}><Copy size={18} /><span>{t("复制用户名")}</span></button>
+            <button type="button" role="menuitem" onClick={() => run(() => onCopy(t("密码"), item.credential.password, true))}><KeyRound size={18} /><span>{t("复制密码")}</span></button>
             <hr />
           </>
         ) : null}
         <button type="button" role="menuitem" onClick={() => run(() => onView(item))}>
           <Eye size={18} />
-          <span>查看</span>
+          <span>{t("查看")}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => run(() => onEdit(item))}>
           <Pencil size={18} />
-          <span>重命名/编辑</span>
+          <span>{t("重命名/编辑")}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => run(() => onMove(item))}>
           <MoveRight size={18} />
-          <span>移动</span>
+          <span>{t("移动")}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => run(() => onClone(item))}>
           <Copy size={18} />
-          <span>克隆</span>
+          <span>{t("克隆")}</span>
         </button>
         {item.kind !== 'login' && <button type="button" role="menuitem" onClick={() => run(() => {
-          if (item.kind === 'note') onCopy('笔记', item.note.note, true);
-          else if (item.kind === 'fillProfile') onCopy('资料摘要', fillProfileSummary(item.fillProfile), false);
-          else onCopy('邮箱', item.identity.email ?? '', false);
-        })}><Copy size={18} /><span>{item.kind === 'note' ? '复制笔记' : item.kind === 'fillProfile' ? '复制资料摘要' : '复制邮箱'}</span></button>}
+          if (item.kind === 'note') onCopy(t("笔记"), item.note.note, true);
+          else if (item.kind === 'fillProfile') onCopy(t("资料摘要"), fillProfileSummary(item.fillProfile), false);
+          else onCopy(t("邮箱"), item.identity.email ?? '', false);
+        })}><Copy size={18} /><span>{item.kind === 'note' ? t("复制笔记") : item.kind === 'fillProfile' ? t("复制资料摘要") : t("复制邮箱")}</span></button>}
         <button type="button" role="menuitem" onClick={() => run(() => onCopyAll(item))}>
           <Copy size={18} />
-          <span>复制所有字段</span>
+          <span>{t("复制所有字段")}</span>
         </button>
         <button type="button" role="menuitem" onClick={() => run(() => onTogglePinned(item))}>
           <Pin size={18} />
-          <span>{item.pinned ? '从固定栏移除' : '添加到固定栏'}</span>
+          <span>{item.pinned ? t("从固定栏移除") : t("添加到固定栏")}</span>
         </button>
         <button className="danger" type="button" role="menuitem" onClick={() => run(() => onDelete(item))}>
           <Trash2 size={18} />
-          <span>删除</span>
+          <span>{t("删除")}</span>
         </button>
         <hr />
 
 
         <button type="button" role="menuitem" onClick={() => run(onOpenTrash)}>
           <Undo2 size={18} />
-          <span>打开回收站</span>
+          <span>{t("打开回收站")}</span>
         </button>
       </div>
     </div>
@@ -2679,17 +2683,13 @@ function VaultList({
 }) {
   const newAction = section === 'notes' ? onNewNote : section === 'identities' ? onNewIdentity : onNewLogin;
   const tableLabels = vaultTableLabels(section);
-  const emptyActionLabel = section === 'folder' ? '新建登录' : '新建';
+  const emptyActionLabel = section === 'folder' ? t("新建登录") : t("新建");
 
   return (
     <div className="vault-list-area">
       <div className="vault-tabs">
-        <button className={sortMode === 'popular' ? 'active' : ''} type="button" onClick={() => onSort('popular')}>
-          常用
-        </button>
-        <button className={sortMode === 'recent' ? 'active' : ''} type="button" onClick={() => onSort('recent')}>
-          最近
-        </button>
+        <button className={sortMode === 'popular' ? 'active' : ''} type="button" onClick={() => onSort('popular')}>{t("常用")}</button>
+        <button className={sortMode === 'recent' ? 'active' : ''} type="button" onClick={() => onSort('recent')}>{t("最近")}</button>
         <button className={sortMode === 'az' ? 'active' : ''} type="button" onClick={() => onSort('az')}>
           A-Z
         </button>
@@ -2697,23 +2697,21 @@ function VaultList({
           {section === 'identities' && onImportFillProfiles ? (
             <button className="vault-tab-action" type="button" onClick={onImportFillProfiles} disabled={importingFillProfiles}>
               <Upload size={16} />
-              {importingFillProfiles ? '解析中' : '导入填表资料'}
+              {importingFillProfiles ? t("解析中") : t("导入填表资料")}
             </button>
           ) : null}
           {section === 'identities' && onExportFillProfiles ? (
             <button className="vault-tab-action subtle" type="button" onClick={onExportFillProfiles}>
-              <Download size={16} />
-              选择导出 .kpfill
-            </button>
+              <Download size={16} />{t("选择导出 .kpfill")}</button>
           ) : null}
           <div className="view-switcher">
-          <button className={viewMode === 'grid' ? 'active' : ''} type="button" aria-label="网格视图" onClick={() => onViewMode('grid')}>
+          <button className={viewMode === 'grid' ? 'active' : ''} type="button" aria-label={t("网格视图")} onClick={() => onViewMode('grid')}>
             <Grid3X3 size={17} />
           </button>
-          <button className={viewMode === 'compact' ? 'active' : ''} type="button" aria-label="紧凑视图" onClick={() => onViewMode('compact')}>
+          <button className={viewMode === 'compact' ? 'active' : ''} type="button" aria-label={t("紧凑视图")} onClick={() => onViewMode('compact')}>
             <LayoutList size={17} />
           </button>
-          <button className={viewMode === 'table' ? 'active' : ''} type="button" aria-label="表格视图" onClick={() => onViewMode('table')}>
+          <button className={viewMode === 'table' ? 'active' : ''} type="button" aria-label={t("表格视图")} onClick={() => onViewMode('table')}>
             <List size={17} />
           </button>
           </div>
@@ -2744,8 +2742,8 @@ function VaultList({
         ) : (
           <div className="vault-empty">
             <FileText size={34} />
-            <strong>{title} 里还没有项目</strong>
-            <p>创建后会加密保存到本地 Vault。</p>
+            <strong>{title}{t(" 里还没有项目")}</strong>
+            <p>{t("创建后会加密保存到本地 Vault。")}</p>
             <button type="button" onClick={newAction}>
               <Plus size={17} />
               {emptyActionLabel}
@@ -2789,20 +2787,20 @@ function VaultItemRow({
         onView(item);
       }}
     >
-      <button className="item-name" type="button" aria-label={`查看 ${itemName(item)}`} onClick={() => onView(item)}>
+      <button className="item-name" type="button" aria-label={t("查看 {0}", [itemName(item)])} onClick={() => onView(item)}>
         <ItemIcon item={item} />
         <span>
           <strong>{itemName(item)}</strong>
           <small>{itemSubtitle(item)}</small>
         </span>
       </button>
-      <span>{itemFolder(item)}</span>
-      <span title={primaryData}>{primaryData || (item.kind === 'login' ? '无用户名' : '未填写')}</span>
+      <span>{displayFolderName(itemFolder(item))}</span>
+      <span title={primaryData}>{primaryData || (item.kind === 'login' ? t("无用户名") : t("未填写"))}</span>
       <span>
         {strength ? (
           <span className={`strength s${strength.score}`}>
             <Shield size={15} />
-            {strength.label}
+            {t(strength.label)}
           </span>
         ) : item.kind === 'fillProfile' ? (
           <span className="profile-type-label">{typeLabel}</span>
@@ -2813,10 +2811,10 @@ function VaultItemRow({
       <span className="website">{endpoint}</span>
       <span className="row-actions">
         {item.kind === 'login' ? <>
-          <button className="login-action" type="button" title="登录" aria-label={`登录 ${itemName(item)}`} onClick={() => onCredentialAction('login', item.credential)}><CirclePlay size={17} /></button>
-          <CopyButton label="复制密码" value={item.credential.password} />
-        </> : <button type="button" title="查看" aria-label={`打开 ${itemName(item)}`} onClick={() => onView(item)}><Eye size={17} /></button>}
-        <button type="button" title="更多操作" aria-label={`更多操作 ${itemName(item)}`} aria-haspopup="menu" aria-expanded={active} onClick={event => onContextMenu(event, item)}><MoreVertical size={17} /></button>
+          <button className="login-action" type="button" title={t("登录")} aria-label={t("登录 {0}", [itemName(item)])} onClick={() => onCredentialAction('login', item.credential)}><CirclePlay size={17} /></button>
+          <CopyButton label={t("复制密码")} value={item.credential.password} />
+        </> : <button type="button" title={t("查看")} aria-label={t("打开 {0}", [itemName(item)])} onClick={() => onView(item)}><Eye size={17} /></button>}
+        <button type="button" title={t("更多操作")} aria-label={t("更多操作 {0}", [itemName(item)])} aria-haspopup="menu" aria-expanded={active} onClick={event => onContextMenu(event, item)}><MoreVertical size={17} /></button>
       </span>
     </article>
   );
@@ -2893,7 +2891,7 @@ function FillImportPreviewDialog({
   );
   const initialMappingTemplate = compatibleMappingTemplates.find((template) => template.headerSignature === fillImportHeaderSignature(preview)) ?? null;
   const [activeTemplateId, setActiveTemplateId] = useState(initialMappingTemplate?.id ?? '');
-  const [mappingTemplateName, setMappingTemplateName] = useState(initialMappingTemplate?.name ?? `${defaultFillImportPrefix(preview.category)}映射模板`);
+  const [mappingTemplateName, setMappingTemplateName] = useState(initialMappingTemplate?.name ?? t("{0}映射模板", [defaultFillImportPrefix(preview.category)]));
   const [mappingOverrides, setMappingOverrides] = useState<Record<string, FillHeaderMappingOverride>>(() =>
     initialMappingTemplate ? fillImportOverridesRecord(initialMappingTemplate.overrides) : {}
   );
@@ -2941,8 +2939,8 @@ function FillImportPreviewDialog({
   const shownSamples = applyFillImportOptions(mappedPreview, { ...previewOptions, count: Math.min(4, effectiveCount) });
   const importAll = importOffset === 0 && effectiveCount >= totalImportable;
   const rangeLabel = effectiveCount
-    ? `将导入第 ${importOffset + 1} - ${importOffset + effectiveCount} 条资料`
-    : '当前没有可导入的资料';
+    ? t("将导入第 {0} - {1} 条资料", [importOffset + 1, importOffset + effectiveCount])
+    : t("当前没有可导入的资料");
 
   function updateMappingOverride(column: string, override?: FillHeaderMappingOverride) {
     setMappingOverrides((current) => {
@@ -3058,7 +3056,7 @@ function FillImportPreviewDialog({
   function saveCurrentMappingTemplate() {
     const now = Date.now();
     const existingTemplate = activeTemplateId ? mappingTemplates.find((template) => template.id === activeTemplateId) : undefined;
-    const templateName = mappingTemplateName.trim() || `${defaultFillImportPrefix(mappedPreview.category)}映射模板`;
+    const templateName = mappingTemplateName.trim() || t("{0}映射模板", [defaultFillImportPrefix(mappedPreview.category)]);
     const template: FillImportMappingTemplate = {
       id: existingTemplate?.id ?? crypto.randomUUID(),
       name: templateName,
@@ -3080,71 +3078,56 @@ function FillImportPreviewDialog({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="fill-import-dialog" role="dialog" aria-modal="true" aria-label="导入填表资料预览">
+      <section className="fill-import-dialog" role="dialog" aria-modal="true" aria-label={t("导入填表资料预览")}>
         <header>
           <span className="modal-glyph">
             <Upload size={23} />
           </span>
           <div>
-            <h2>导入填表资料</h2>
+            <h2>{t("导入填表资料")}</h2>
             <p>{preview.sourceName}</p>
           </div>
-          <button type="button" aria-label="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} onClick={onClose}>
             <X size={20} />
           </button>
         </header>
 
         <div className="fill-import-stats">
           <span>
-            <strong>{mappedPreview.totalRows}</strong>
-            总行数
-          </span>
+            <strong>{mappedPreview.totalRows}</strong>{t("总行数")}</span>
           <span>
-            <strong>{mappedPreview.importableRows}</strong>
-            可导入
-          </span>
+            <strong>{mappedPreview.importableRows}</strong>{t("可导入")}</span>
           <span>
-            <strong>{mappedPreview.fieldCount}</strong>
-            字段
-          </span>
+            <strong>{mappedPreview.fieldCount}</strong>{t("字段")}</span>
           <span>
-            <strong>{mappedPreview.countryCode}</strong>
-            国家
-          </span>
+            <strong>{mappedPreview.countryCode}</strong>{t("国家")}</span>
         </div>
 
         <div className="fill-import-summary-card">
           <div>
             <strong>{fillProfileCategoryLabel(mappedPreview.category)}</strong>
-            <p>
-              已自动识别 Excel 表头并映射为网页填表字段。敏感字段只会写入本地加密 Vault，不会上传到第三方。
-              {mappedPreview.importableRows > 1000 ? ' 文件较大，建议先分批导入，避免列表和弹窗变慢。' : ''}
+            <p>{t("已自动识别 Excel 表头并映射为网页填表字段。敏感字段只会写入本地加密 Vault，不会上传到第三方。")}{mappedPreview.importableRows > 1000 ? t(" 文件较大，建议先分批导入，避免列表和弹窗变慢。") : ''}
             </p>
           </div>
           {mappedPreview.sensitiveFieldCount ? (
             <em>
               <Shield size={16} />
-              {mappedPreview.sensitiveFieldCount} 个敏感字段
-            </em>
+              {mappedPreview.sensitiveFieldCount}{t(" 个敏感字段")}</em>
           ) : (
             <em className="safe">
-              <Check size={16} />
-              未检测到敏感字段
-            </em>
+              <Check size={16} />{t("未检测到敏感字段")}</em>
           )}
         </div>
 
-        <section className="fill-import-limit" aria-label="导入数量">
+        <section className="fill-import-limit" aria-label={t("导入数量")}>
           <div>
-            <h3>分批导入</h3>
-            <p>
-              先导入一部分测试字段匹配，确认没问题后再继续导入剩余资料。
-              {batchRecord ? ` 上次已导入到第 ${batchRecord.nextOffset} 条。` : ''}
+            <h3>{t("分批导入")}</h3>
+            <p>{t("先导入一部分测试字段匹配，确认没问题后再继续导入剩余资料。")}{batchRecord ? t(" 上次已导入到第 {0} 条。", [batchRecord.nextOffset]) : ''}
             </p>
           </div>
           <div className="fill-import-limit-control">
             <label>
-              <span>起始位置</span>
+              <span>{t("起始位置")}</span>
               <input
                 type="number"
                 min={1}
@@ -3156,10 +3139,10 @@ function FillImportPreviewDialog({
                   setImportCount((count) => Math.min(count, Math.max(0, totalImportable - nextOffset)));
                 }}
               />
-              <small>1 表示第一条</small>
+              <small>{t("1 表示第一条")}</small>
             </label>
             <label>
-              <span>本次导入</span>
+              <span>{t("本次导入")}</span>
               <input
                 type="number"
                 min={0}
@@ -3167,40 +3150,37 @@ function FillImportPreviewDialog({
                 value={importCount}
                 onChange={(event) => setImportCount(clampImportCount(Number(event.currentTarget.value)))}
               />
-              <small>/ 剩余 {Math.max(0, totalImportable - importOffset)} 条</small>
+              <small>{t("/ 剩余 ")}{Math.max(0, totalImportable - importOffset)}{t(" 条")}</small>
             </label>
             <div>
               {[100, 500, 1000]
                 .filter((count) => count < Math.max(0, totalImportable - importOffset))
                 .map((count) => (
                   <button key={count} type="button" onClick={() => setImportCount(clampImportCount(count))}>
-                    {count} 条
-                  </button>
+                    {count}{t(" 条")}</button>
                 ))}
-              <button type="button" onClick={() => setImportCount(Math.max(0, totalImportable - importOffset))}>
-                剩余全部
-              </button>
+              <button type="button" onClick={() => setImportCount(Math.max(0, totalImportable - importOffset))}>{t("剩余全部")}</button>
             </div>
           </div>
-          <strong>{importAll ? '将导入全部资料' : rangeLabel}</strong>
+          <strong>{importAll ? t("将导入全部资料") : rangeLabel}</strong>
         </section>
 
-        <section className="fill-import-naming" aria-label="命名和排序">
+        <section className="fill-import-naming" aria-label={t("命名和排序")}>
           <div>
-            <h3>名称和排序</h3>
-            <p>导入前统一重命名，方便你把不同批次、不同来源的资料区分开。</p>
+            <h3>{t("名称和排序")}</h3>
+            <p>{t("导入前统一重命名，方便你把不同批次、不同来源的资料区分开。")}</p>
           </div>
           <div className="fill-import-name-grid">
             <label>
-              <span>名称前缀</span>
-              <input value={namePrefix} onChange={(event) => setNamePrefix(event.currentTarget.value)} placeholder="例如 车险_" />
+              <span>{t("名称前缀")}</span>
+              <input value={namePrefix} onChange={(event) => setNamePrefix(event.currentTarget.value)} placeholder={t("例如 车险_")} />
             </label>
             <label>
-              <span>编号从</span>
+              <span>{t("编号从")}</span>
               <input type="number" min={0} value={numberStart} onChange={(event) => setNumberStart(Math.max(0, Number(event.currentTarget.value) || 0))} />
             </label>
             <label>
-              <span>编号位数</span>
+              <span>{t("编号位数")}</span>
               <input
                 type="number"
                 min={1}
@@ -3210,23 +3190,23 @@ function FillImportPreviewDialog({
               />
             </label>
             <label>
-              <span>排序方式</span>
+              <span>{t("排序方式")}</span>
               <select value={importOrder} onChange={(event) => setImportOrder(event.currentTarget.value as FillImportOrder)}>
-                <option value="source">按表格原顺序</option>
-                <option value="reverse">按表格反向</option>
-                <option value="titleAsc">按资料名称 A-Z</option>
-                <option value="titleDesc">按资料名称 Z-A</option>
+                <option value="source">{t("按表格原顺序")}</option>
+                <option value="reverse">{t("按表格反向")}</option>
+                <option value="titleAsc">{t("按资料名称 A-Z")}</option>
+                <option value="titleDesc">{t("按资料名称 Z-A")}</option>
               </select>
             </label>
           </div>
-          <strong>示例：{namePrefix ? `${namePrefix}${String(numberStart).padStart(numberPadding, '0')}` : shownSamples[0]?.title || '保留原名称'}</strong>
+          <strong>{t("示例：")}{namePrefix ? `${namePrefix}${String(numberStart).padStart(numberPadding, '0')}` : shownSamples[0]?.title || t("保留原名称")}</strong>
         </section>
 
-        <section className="fill-import-fields" aria-label="字段映射">
+        <section className="fill-import-fields" aria-label={t("字段映射")}>
           <div className="fill-import-field-head">
             <div>
-              <h3>字段映射</h3>
-              <p>识别不准的列可以改成指定字段，也可以跳过不导入。</p>
+              <h3>{t("字段映射")}</h3>
+              <p>{t("识别不准的列可以改成指定字段，也可以跳过不导入。")}</p>
             </div>
             {Object.keys(mappingOverrides).length ? (
               <button
@@ -3236,33 +3216,29 @@ function FillImportPreviewDialog({
                   setMappingOverrides({});
                   syncImportBatchDefaults(preview);
                 }}
-              >
-                恢复自动识别
-              </button>
+              >{t("恢复自动识别")}</button>
             ) : null}
           </div>
           <div className="fill-import-template-bar">
             <label>
-              <span>映射模板</span>
+              <span>{t("映射模板")}</span>
               <select value={activeTemplateId} onChange={(event) => applyMappingTemplate(event.currentTarget.value)}>
-                <option value="">自动识别 / 不套用模板</option>
+                <option value="">{t("自动识别 / 不套用模板")}</option>
                 {compatibleMappingTemplates.map((template) => (
                   <option key={template.id} value={template.id}>
-                    {template.name}{template.headerSignature === fillImportHeaderSignature(preview) ? ' · 表头匹配' : ''}
+                    {template.name}{template.headerSignature === fillImportHeaderSignature(preview) ? t(" · 表头匹配") : ''}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              <span>保存名称</span>
-              <input value={mappingTemplateName} onChange={(event) => setMappingTemplateName(event.currentTarget.value)} placeholder="例如 车险资料模板" />
+              <span>{t("保存名称")}</span>
+              <input value={mappingTemplateName} onChange={(event) => setMappingTemplateName(event.currentTarget.value)} placeholder={t("例如 车险资料模板")} />
             </label>
             <button type="button" onClick={saveCurrentMappingTemplate}>
-              <FolderPlus size={16} />
-              保存模板
-            </button>
+              <FolderPlus size={16} />{t("保存模板")}</button>
             <small>
-              {initialMappingTemplate ? `已自动套用：${initialMappingTemplate.name}` : compatibleMappingTemplates.length ? '可选择历史模板，也可保存当前映射。' : '当前还没有可用模板，调整字段后可保存。'}
+              {initialMappingTemplate ? t("已自动套用：{0}", [initialMappingTemplate.name]) : compatibleMappingTemplates.length ? t("可选择历史模板，也可保存当前映射。") : t("当前还没有可用模板，调整字段后可保存。")}
             </small>
           </div>
           <div className="fill-import-mapping-list">
@@ -3284,13 +3260,13 @@ function FillImportPreviewDialog({
                 <article className={header.key === '__skip' ? 'is-skipped' : ''} key={header.column}>
                   <div className="fill-import-mapping-source">
                     <strong>{header.column}</strong>
-                    <small>{sampleValue ? `样例：${sampleValue}` : '此列样例为空'}</small>
+                    <small>{sampleValue ? t("样例：{0}", [sampleValue]) : t("此列样例为空")}</small>
                   </div>
                   <div className="fill-import-mapping-target">
                     <select value={selectedValue} onChange={(event) => selectMappingPreset(header.column, event.currentTarget.value)}>
-                      <option value="__auto">自动识别：{originalHeader.label}</option>
-                      <option value="__custom">自定义字段</option>
-                      <option value="__skip">不导入此列</option>
+                      <option value="__auto">{t("自动识别：")}{originalHeader.label}</option>
+                      <option value="__custom">{t("自定义字段")}</option>
+                      <option value="__skip">{t("不导入此列")}</option>
                       {FILL_MAPPING_GROUPS.map((group) => {
                         const presets = FILL_FIELD_MAPPING_PRESETS.filter((preset) => preset.group === group);
                         if (!presets.length) return null;
@@ -3306,29 +3282,29 @@ function FillImportPreviewDialog({
                       })}
                     </select>
                     <span>
-                      {header.key === '__skip' ? '已跳过' : `${fillFieldGroupLabel(header.group)} · ${header.sensitivity === 'secret' ? '敏感' : header.sensitivity === 'private' ? '私密' : '普通'}`}
+                      {header.key === '__skip' ? t("已跳过") : `${fillFieldGroupLabel(header.group)} · ${header.sensitivity === 'secret' ? t("敏感") : header.sensitivity === 'private' ? t("私密") : t("普通")}`}
                     </span>
                   </div>
                   {isCustom ? (
                     <div className="fill-import-custom-grid">
                       <label>
-                        <span>字段 key</span>
+                        <span>{t("字段 key")}</span>
                         <input
                           value={override?.key ?? originalHeader.key}
                           onChange={(event) => updateCustomMapping(header.column, { key: event.currentTarget.value })}
-                          placeholder="例如 ownerEmail"
+                          placeholder={t("例如 ownerEmail")}
                         />
                       </label>
                       <label>
-                        <span>显示名称</span>
+                        <span>{t("显示名称")}</span>
                         <input
                           value={override?.label ?? originalHeader.label}
                           onChange={(event) => updateCustomMapping(header.column, { label: event.currentTarget.value })}
-                          placeholder="例如 负责人邮箱"
+                          placeholder={t("例如 负责人邮箱")}
                         />
                       </label>
                       <label>
-                        <span>分组</span>
+                        <span>{t("分组")}</span>
                         <select
                           value={override?.group ?? originalHeader.group}
                           onChange={(event) => updateCustomMapping(header.column, { group: event.currentTarget.value as FillFieldGroup })}
@@ -3341,14 +3317,14 @@ function FillImportPreviewDialog({
                         </select>
                       </label>
                       <label>
-                        <span>敏感级别</span>
+                        <span>{t("敏感级别")}</span>
                         <select
                           value={override?.sensitivity ?? originalHeader.sensitivity}
                           onChange={(event) => updateCustomMapping(header.column, { sensitivity: event.currentTarget.value as FillFieldSensitivity })}
                         >
                           {FILL_MAPPING_SENSITIVITY_OPTIONS.map((sensitivity) => (
                             <option key={sensitivity} value={sensitivity}>
-                              {sensitivity === 'secret' ? '敏感' : sensitivity === 'private' ? '私密' : '普通'}
+                              {sensitivity === 'secret' ? t("敏感") : sensitivity === 'private' ? t("私密") : t("普通")}
                             </option>
                           ))}
                         </select>
@@ -3361,15 +3337,15 @@ function FillImportPreviewDialog({
           </div>
         </section>
 
-        <section className="fill-import-samples" aria-label="资料预览">
-          <h3>资料预览</h3>
+        <section className="fill-import-samples" aria-label={t("资料预览")}>
+          <h3>{t("资料预览")}</h3>
           <div>
             {shownSamples.map((profile, index) => (
               <article key={`${profile.title}-${index}`}>
                 <span className={`item-kind fill ${fillProfileTone(profile)}`}>{fillProfileBadgeText(profile)}</span>
                 <div>
                   <strong>{profile.title}</strong>
-                  <small>{fillProfileSummary(profile)} · {profile.fields.length} 字段</small>
+                  <small>{fillProfileSummary(profile)} · {profile.fields.length}{t(" 字段")}</small>
                 </div>
               </article>
             ))}
@@ -3377,13 +3353,9 @@ function FillImportPreviewDialog({
         </section>
 
         <footer>
-          <button type="button" onClick={onClose}>
-            取消
-          </button>
+          <button type="button" onClick={onClose}>{t("取消")}</button>
           <button className="primary" type="button" onClick={() => onConfirm(mappedPreview, previewOptions)} disabled={!effectiveCount}>
-            <Check size={17} />
-            导入 {effectiveCount} 条
-          </button>
+            <Check size={17} />{t("导入 ")}{effectiveCount}{t(" 条")}</button>
         </footer>
       </section>
     </div>
@@ -3426,27 +3398,27 @@ const CREDENTIAL_EXPORT_FORMATS: Array<{ value: CredentialExportFormat; label: s
   {
     value: 'roboform-csv',
     label: 'RoboForm CSV',
-    description: '兼容 RoboForm 导入字段'
+    description: t("兼容 RoboForm 导入字段")
   },
   {
     value: 'chrome-csv',
     label: 'Chrome CSV',
-    description: 'Chrome 密码管理器格式'
+    description: t("Chrome 密码管理器格式")
   },
   {
     value: 'edge-csv',
     label: 'Edge CSV',
-    description: 'Edge 密码管理器格式'
+    description: t("Edge 密码管理器格式")
   },
   {
     value: 'generic-csv',
-    label: '通用 CSV',
-    description: '包含备注、文件夹和标签'
+    label: t("通用 CSV"),
+    description: t("包含备注、文件夹和标签")
   },
   {
     value: 'keypilot-json',
     label: 'KeyPilot JSON',
-    description: '保留 KeyPilot 字段结构'
+    description: t("保留 KeyPilot 字段结构")
   }
 ];
 
@@ -3502,21 +3474,21 @@ function CredentialExportDialog({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="fill-export-dialog" role="dialog" aria-modal="true" aria-label="选择要导出的账号">
+      <section className="fill-export-dialog" role="dialog" aria-modal="true" aria-label={t("选择要导出的账号")}>
         <header>
           <span className="modal-glyph">
             <KeyRound size={23} />
           </span>
           <div>
-            <h2>选择导出账号</h2>
-            <p>只导出你勾选的账号。可选择 RoboForm、Chrome/Edge、通用 CSV 或 KeyPilot JSON。</p>
+            <h2>{t("选择导出账号")}</h2>
+            <p>{t("只导出你勾选的账号。可选择 RoboForm、Chrome/Edge、通用 CSV 或 KeyPilot JSON。")}</p>
           </div>
-          <button type="button" aria-label="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} onClick={onClose}>
             <X size={20} />
           </button>
         </header>
 
-        <div className="credential-export-format" aria-label="导出格式">
+        <div className="credential-export-format" aria-label={t("导出格式")}>
           {CREDENTIAL_EXPORT_FORMATS.map((item) => (
             <button
               key={item.value}
@@ -3534,38 +3506,28 @@ function CredentialExportDialog({
         <div className="fill-export-toolbar">
           <label>
             <Search size={18} />
-            <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="搜索账号、网站、用户名、文件夹" />
+            <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={t("搜索账号、网站、用户名、文件夹")} />
           </label>
           <div>
             <button type="button" onClick={toggleFilteredCredentials} disabled={!filteredCredentials.length}>
-              {allFilteredSelected ? '取消筛选结果' : '全选筛选结果'}
+              {allFilteredSelected ? t("取消筛选结果") : t("全选筛选结果")}
             </button>
-            <button type="button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>
-              清空
-            </button>
+            <button type="button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>{t("清空")}</button>
           </div>
         </div>
 
         <div className="fill-export-summary" aria-live="polite">
           <span>
-            <strong>{selectedCredentials.length}</strong>
-            已选择
-          </span>
+            <strong>{selectedCredentials.length}</strong>{t("已选择")}</span>
           <span>
-            <strong>{selectedDomainCount}</strong>
-            网站
-          </span>
+            <strong>{selectedDomainCount}</strong>{t("网站")}</span>
           <span>
-            <strong>{selectedPasswordCount}</strong>
-            含密码
-          </span>
+            <strong>{selectedPasswordCount}</strong>{t("含密码")}</span>
           <span>
-            <strong>{filteredCredentials.length}</strong>
-            当前匹配
-          </span>
+            <strong>{filteredCredentials.length}</strong>{t("当前匹配")}</span>
         </div>
 
-        <div className="fill-export-list" role="group" aria-label="账号列表">
+        <div className="fill-export-list" role="group" aria-label={t("账号列表")}>
           {visibleCredentials.map((credential) => {
             const checked = selectedSet.has(credential.id);
             const folder = normalizeFolderLabel(credential.folder ?? ROOT_FOLDER_NAME);
@@ -3578,10 +3540,10 @@ function CredentialExportDialog({
                 <SiteIcon domain={domain || credential.title} url={credential.url} iconUrl={credential.iconUrl} />
                 <span>
                   <strong>{credential.title}</strong>
-                  <small>{credential.username || '无用户名'}</small>
+                  <small>{credential.username || t("无用户名")}</small>
                 </span>
-                <em>{folder}</em>
-                <small>{domain || '本地账号'} · {credential.password ? strength.label : '无密码'}</small>
+                <em>{displayFolderName(folder)}</em>
+                <small>{domain || t("本地账号")} · {credential.password ? t(strength.label) : t("无密码")}</small>
               </label>
             );
           })}
@@ -3589,31 +3551,22 @@ function CredentialExportDialog({
           {!visibleCredentials.length ? (
             <div className="fill-export-empty">
               <KeyRound size={30} />
-              <strong>没有匹配的账号</strong>
-              <p>换一个关键词，或者清空搜索后重新选择。</p>
+              <strong>{t("没有匹配的账号")}</strong>
+              <p>{t("换一个关键词，或者清空搜索后重新选择。")}</p>
             </div>
           ) : null}
 
           {hiddenFilteredCount ? (
-            <div className="fill-export-more">
-              还有 {hiddenFilteredCount} 条匹配账号未显示，继续输入关键词可以缩小范围。
-            </div>
+            <div className="fill-export-more">{t("还有 ")}{hiddenFilteredCount}{t(" 条匹配账号未显示，继续输入关键词可以缩小范围。")}</div>
           ) : null}
         </div>
 
         <footer>
-          <p>
-            导出文件会包含明文账号和密码。{selectedWeakCount ? `当前选择里有 ${selectedWeakCount} 条弱密码，` : ''}
-            请只保存在可信位置，用完后及时删除。
-          </p>
+          <p>{t("导出文件会包含明文账号和密码。")}{selectedWeakCount ? t("当前选择里有 {0} 条弱密码，", [selectedWeakCount]) : ''}{t("请只保存在可信位置，用完后及时删除。")}</p>
           <div>
-            <button type="button" onClick={onClose}>
-              取消
-            </button>
+            <button type="button" onClick={onClose}>{t("取消")}</button>
             <button className="primary" type="button" onClick={() => onConfirm(selectedCredentials, format)} disabled={!selectedCredentials.length}>
-              <Download size={17} />
-              导出 {selectedCredentials.length} 条
-            </button>
+              <Download size={17} />{t("导出 ")}{selectedCredentials.length}{t(" 条")}</button>
           </div>
         </footer>
       </section>
@@ -3671,16 +3624,16 @@ function FillProfileExportDialog({
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="fill-export-dialog" role="dialog" aria-modal="true" aria-label="选择要导出的填表资料">
+      <section className="fill-export-dialog" role="dialog" aria-modal="true" aria-label={t("选择要导出的填表资料")}>
         <header>
           <span className="modal-glyph">
             <Download size={23} />
           </span>
           <div>
-            <h2>选择导出资料</h2>
-            <p>只会导出你勾选的身份ID/填表资料，文件格式为 KeyPilot .kpfill。</p>
+            <h2>{t("选择导出资料")}</h2>
+            <p>{t("只会导出你勾选的身份ID/填表资料，文件格式为 KeyPilot .kpfill。")}</p>
           </div>
-          <button type="button" aria-label="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} onClick={onClose}>
             <X size={20} />
           </button>
         </header>
@@ -3688,38 +3641,28 @@ function FillProfileExportDialog({
         <div className="fill-export-toolbar">
           <label>
             <Search size={18} />
-            <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="搜索名称、文件夹、国家、字段内容" />
+            <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={t("搜索名称、文件夹、国家、字段内容")} />
           </label>
           <div>
             <button type="button" onClick={toggleFilteredProfiles} disabled={!filteredProfiles.length}>
-              {allFilteredSelected ? '取消筛选结果' : '全选筛选结果'}
+              {allFilteredSelected ? t("取消筛选结果") : t("全选筛选结果")}
             </button>
-            <button type="button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>
-              清空
-            </button>
+            <button type="button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>{t("清空")}</button>
           </div>
         </div>
 
         <div className="fill-export-summary" aria-live="polite">
           <span>
-            <strong>{selectedProfiles.length}</strong>
-            已选择
-          </span>
+            <strong>{selectedProfiles.length}</strong>{t("已选择")}</span>
           <span>
-            <strong>{selectedFieldCount}</strong>
-            字段
-          </span>
+            <strong>{selectedFieldCount}</strong>{t("字段")}</span>
           <span>
-            <strong>{selectedSensitiveCount}</strong>
-            敏感字段
-          </span>
+            <strong>{selectedSensitiveCount}</strong>{t("敏感字段")}</span>
           <span>
-            <strong>{filteredProfiles.length}</strong>
-            当前匹配
-          </span>
+            <strong>{filteredProfiles.length}</strong>{t("当前匹配")}</span>
         </div>
 
-        <div className="fill-export-list" role="group" aria-label="填表资料列表">
+        <div className="fill-export-list" role="group" aria-label={t("填表资料列表")}>
           {visibleProfiles.map((profile) => {
             const checked = selectedSet.has(profile.id);
             const folder = normalizeFolderLabel(profile.folder ?? ROOT_FOLDER_NAME);
@@ -3731,8 +3674,8 @@ function FillProfileExportDialog({
                   <strong>{profile.title}</strong>
                   <small>{fillProfileSummary(profile)}</small>
                 </span>
-                <em>{folder}</em>
-                <small>{profile.countryCode || '未设置'} · {fillProfileCategoryLabel(profile.category)} · {profile.fields.length} 字段</small>
+                <em>{displayFolderName(folder)}</em>
+                <small>{profile.countryCode || t("未设置")} · {fillProfileCategoryLabel(profile.category)} · {profile.fields.length}{t(" 字段")}</small>
               </label>
             );
           })}
@@ -3740,28 +3683,22 @@ function FillProfileExportDialog({
           {!visibleProfiles.length ? (
             <div className="fill-export-empty">
               <FileText size={30} />
-              <strong>没有匹配的资料</strong>
-              <p>换一个关键词，或者清空搜索后重新选择。</p>
+              <strong>{t("没有匹配的资料")}</strong>
+              <p>{t("换一个关键词，或者清空搜索后重新选择。")}</p>
             </div>
           ) : null}
 
           {hiddenFilteredCount ? (
-            <div className="fill-export-more">
-              还有 {hiddenFilteredCount} 条匹配资料未显示，继续输入关键词可以缩小范围。
-            </div>
+            <div className="fill-export-more">{t("还有 ")}{hiddenFilteredCount}{t(" 条匹配资料未显示，继续输入关键词可以缩小范围。")}</div>
           ) : null}
         </div>
 
         <footer>
-          <p>导出的 .kpfill 可发给可信的人导入 KeyPilot；里面包含明文字段值，请谨慎保存和传输。</p>
+          <p>{t("导出的 .kpfill 可发给可信的人导入 KeyPilot；里面包含明文字段值，请谨慎保存和传输。")}</p>
           <div>
-            <button type="button" onClick={onClose}>
-              取消
-            </button>
+            <button type="button" onClick={onClose}>{t("取消")}</button>
             <button className="primary" type="button" onClick={() => onConfirm(selectedProfiles)} disabled={!selectedProfiles.length}>
-              <Download size={17} />
-              导出 {selectedProfiles.length} 条
-            </button>
+              <Download size={17} />{t("导出 ")}{selectedProfiles.length}{t(" 条")}</button>
           </div>
         </footer>
       </section>
@@ -3782,10 +3719,10 @@ function TrashPanel({
     <section className="trash-panel">
       <header>
         <div>
-          <h2>回收站</h2>
-          <p>删除的项目会先保留在这里。恢复后会重新回到对应列表。</p>
+          <h2>{t("回收站")}</h2>
+          <p>{t("删除的项目会先保留在这里。恢复后会重新回到对应列表。")}</p>
         </div>
-        <span>{items.length} 个项目</span>
+        <span>{items.length}{t(" 个项目")}</span>
       </header>
 
       {items.length ? (
@@ -3800,17 +3737,13 @@ function TrashPanel({
                 </span>
               </span>
               <span>{deletedItemKindLabel(item)}</span>
-              <span>{deletedItemWebsite(item) || '本地资料'}</span>
-              <span>{new Date(item.deletedAt).toLocaleString('zh-CN')}</span>
+              <span>{deletedItemWebsite(item) || t("本地资料")}</span>
+              <span>{new Date(item.deletedAt).toLocaleString(getLanguage())}</span>
               <span className="trash-actions">
                 <button type="button" onClick={() => onRestore(item)}>
-                  <Undo2 size={16} />
-                  恢复
-                </button>
+                  <Undo2 size={16} />{t("恢复")}</button>
                 <button className="danger" type="button" onClick={() => onPurge(item)}>
-                  <Trash2 size={16} />
-                  永久删除
-                </button>
+                  <Trash2 size={16} />{t("永久删除")}</button>
               </span>
             </article>
           ))}
@@ -3818,8 +3751,8 @@ function TrashPanel({
       ) : (
         <div className="vault-empty">
           <Trash2 size={34} />
-          <strong>回收站是空的</strong>
-          <p>删除账号、保密笔记或个人信息后，会先显示在这里。</p>
+          <strong>{t("回收站是空的")}</strong>
+          <p>{t("删除账号、保密笔记或个人信息后，会先显示在这里。")}</p>
         </div>
       )}
     </section>
@@ -3861,9 +3794,9 @@ function CredentialDetailPane({
   onOpenTrash: () => void;
 }) {
   const strength = measurePasswordStrength(credential.password);
-  const maskedPassword = credential.password ? '•'.repeat(Math.min(12, Math.max(8, credential.password.length))) : '未保存密码';
-  const updatedAt = new Date(credential.updatedAt).toLocaleString('zh-CN');
-  const createdAt = new Date(credential.createdAt).toLocaleString('zh-CN');
+  const maskedPassword = credential.password ? '•'.repeat(Math.min(12, Math.max(8, credential.password.length))) : t("未保存密码");
+  const updatedAt = new Date(credential.updatedAt).toLocaleString(getLanguage());
+  const createdAt = new Date(credential.createdAt).toLocaleString(getLanguage());
   const [passwordVisible, setPasswordVisible] = useSecretVisibility();
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteDraft, setNoteDraft] = useState(credential.notes ?? '');
@@ -3874,16 +3807,16 @@ function CredentialDetailPane({
   const bindingTone = boundUsername && boundPassword && hasSubmitBinding ? 'ready' : boundFieldCount || hasSubmitBinding ? 'partial' : 'empty';
   const bindingLabel =
     bindingTone === 'ready'
-      ? '可用于一键登录'
+      ? t("可用于一键登录")
       : bindingTone === 'partial'
-        ? '绑定不完整'
-        : '尚未绑定';
+        ? t("绑定不完整")
+        : t("尚未绑定");
   const bindingHint =
     bindingTone === 'ready'
-      ? '已记录用户名框、密码框和登录按钮。遇到网站改版时，可先测试再重新绑定。'
+      ? t("已记录用户名框、密码框和登录按钮。遇到网站改版时，可先测试再重新绑定。")
       : bindingTone === 'partial'
-        ? '建议重新绑定一次，把用户名框、密码框和登录按钮都记录下来。'
-        : '还没有保存网页字段结构。一键登录会使用通用识别，复杂网站建议手动绑定。';
+        ? t("建议重新绑定一次，把用户名框、密码框和登录按钮都记录下来。")
+        : t("还没有保存网页字段结构。一键登录会使用通用识别，复杂网站建议手动绑定。");
 
   useEffect(() => {
     setPasswordVisible(false);
@@ -3897,68 +3830,48 @@ function CredentialDetailPane({
   }
 
   return (
-    <aside className="vault-detail-pane credential-detail-pane" aria-label={`查看 ${credential.title}`}>
+    <aside className="vault-detail-pane credential-detail-pane" aria-label={t("查看 {0}", [credential.title])}>
       <header className="detail-toolbar">
-        <button className="detail-return" type="button" aria-label="返回列表" onClick={onClose}><ArrowLeft size={18} /><span>返回列表</span></button>
-        <button type="button" aria-label="编辑" title="编辑" onClick={() => onEdit(credential)}>
+        <button className="detail-return" type="button" aria-label={t("返回列表")} onClick={onClose}><ArrowLeft size={18} /><span>{t("返回列表")}</span></button>
+        <button type="button" aria-label={t("编辑")} title={t("编辑")} onClick={() => onEdit(credential)}>
           <Settings2 size={20} />
         </button>
         <span className="detail-more-anchor">
-          <button type="button" aria-label="更多操作" title="更多操作" onClick={onToggleMore}>
+          <button type="button" aria-label={t("更多操作")} title={t("更多操作")} onClick={onToggleMore}>
             <MoreVertical size={21} />
           </button>
           {moreOpen ? (
-            <div className="detail-more-menu" role="menu" aria-label={`${credential.title} 更多操作`}>
+            <div className="detail-more-menu" role="menu" aria-label={t("{0} 更多操作", [credential.title])}>
               <button type="button" role="menuitem" onClick={() => onAction('goto', credential)}>
-                <ArrowUpRight size={18} />
-                在新标签页中查看
-              </button>
+                <ArrowUpRight size={18} />{t("在新标签页中查看")}</button>
 
 
               <button type="button" role="menuitem" onClick={() => window.print()}>
-                <Printer size={18} />
-                打印
-              </button>
-              <button type="button" role="menuitem" disabled title="当前账号保存在本地 Vault 主目录">
-                <FolderOpen size={18} />
-                打开文件所在位置
-              </button>
+                <Printer size={18} />{t("打印")}</button>
+              <button type="button" role="menuitem" disabled title={t("当前账号保存在本地 Vault 主目录")}>
+                <FolderOpen size={18} />{t("打开文件所在位置")}</button>
               <button type="button" role="menuitem" onClick={() => onEdit(credential)}>
-                <Settings2 size={18} />
-                重命名
-              </button>
+                <Settings2 size={18} />{t("重命名")}</button>
               <button type="button" role="menuitem" onClick={() => onTestBinding(credential)}>
-                <Eye size={18} />
-                测试绑定
-              </button>
+                <Eye size={18} />{t("测试绑定")}</button>
               <button type="button" role="menuitem" onClick={() => onBindFromWeb(credential)}>
-                <SlidersHorizontal size={18} />
-                绑定字段和按钮
-              </button>
+                <SlidersHorizontal size={18} />{t("绑定字段和按钮")}</button>
               <button type="button" role="menuitem" onClick={() => onMoveToFolder(credential)}>
-                <FolderOpen size={18} />
-                移动到文件夹
-              </button>
+                <FolderOpen size={18} />{t("移动到文件夹")}</button>
               <button type="button" role="menuitem" onClick={() => onClone(credential)}>
-                <Copy size={18} />
-                克隆
-              </button>
+                <Copy size={18} />{t("克隆")}</button>
               <button type="button" role="menuitem" onClick={() => onTogglePinned(credential)}>
                 <Pin size={18} />
-                {credential.pinned ? '取消固定' : '添加到固定栏'}
+                {credential.pinned ? t("取消固定") : t("添加到固定栏")}
               </button>
               <button className="danger" type="button" role="menuitem" onClick={() => onDelete(credential)}>
-                <Trash2 size={18} />
-                删除
-              </button>
+                <Trash2 size={18} />{t("删除")}</button>
               <button type="button" role="menuitem" onClick={onOpenTrash}>
-                <Undo2 size={18} />
-                恢复
-              </button>
+                <Undo2 size={18} />{t("恢复")}</button>
             </div>
           ) : null}
         </span>
-        <button type="button" aria-label="关闭" title="关闭" onClick={onClose}>
+        <button type="button" aria-label={t("关闭")} title={t("关闭")} onClick={onClose}>
           <X size={22} />
         </button>
       </header>
@@ -3972,58 +3885,52 @@ function CredentialDetailPane({
       <div className="detail-actions">
         <button
           type="button"
-          title="打开网站，填写账号和密码，并尝试点击登录按钮"
-          data-tip="打开网站，填写账号和密码，并尝试点击登录按钮"
+          title={t("打开网站，填写账号和密码，并尝试点击登录按钮")}
+          data-tip={t("打开网站，填写账号和密码，并尝试点击登录按钮")}
           onClick={() => onAction('login', credential)}
         >
-          <CirclePlay size={18} />
-          登录
-        </button>
+          <CirclePlay size={18} />{t("登录")}</button>
         <button
           type="button"
-          title="打开网站并填写账号密码，但不自动点击登录"
-          data-tip="打开网站并填写账号密码，但不自动点击登录"
+          title={t("打开网站并填写账号密码，但不自动点击登录")}
+          data-tip={t("打开网站并填写账号密码，但不自动点击登录")}
           onClick={() => onAction('fill', credential)}
         >
-          <FileText size={18} />
-          浏览并填写
-        </button>
-        <button type="button" title="只打开保存的网址，不填写内容" data-tip="只打开保存的网址，不填写内容" onClick={() => onAction('goto', credential)}>
-          <ArrowUpRight size={18} />
-          转到
-        </button>
+          <FileText size={18} />{t("浏览并填写")}</button>
+        <button type="button" title={t("只打开保存的网址，不填写内容")} data-tip={t("只打开保存的网址，不填写内容")} onClick={() => onAction('goto', credential)}>
+          <ArrowUpRight size={18} />{t("转到")}</button>
       </div>
 
       <dl className="detail-fields">
         <div>
-          <dt>URL 地址</dt>
+          <dt>{t("URL 地址")}</dt>
           <dd>
             <a href={credential.url} target="_blank" rel="noreferrer">{credential.domain || credential.url}</a>
           </dd>
         </div>
         <div>
-          <dt>登录名</dt>
+          <dt>{t("登录名")}</dt>
           <dd>
-            <span>{credential.username || '无用户名'}</span>
-            <CopyButton label="复制登录名" value={credential.username} sensitive={false} />
+            <span>{credential.username || t("无用户名")}</span>
+            <CopyButton label={t("复制登录名")} value={credential.username} sensitive={false} />
           </dd>
         </div>
         <div>
-          <dt>密码</dt>
+          <dt>{t("密码")}</dt>
           <dd>
-            <span>{passwordVisible ? credential.password || '未保存密码' : maskedPassword}</span>
+            <span>{passwordVisible ? credential.password || t("未保存密码") : maskedPassword}</span>
             <button
               type="button"
-              aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
-              title={passwordVisible ? '隐藏密码' : '显示密码'}
+              aria-label={passwordVisible ? t("隐藏密码") : t("显示密码")}
+              title={passwordVisible ? t("隐藏密码") : t("显示密码")}
               onClick={() => setPasswordVisible((visible) => !visible)}
             >
               {passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
-            <CopyButton label="复制密码" value={credential.password} />
+            <CopyButton label={t("复制密码")} value={credential.password} />
             <span className={`strength s${strength.score}`}>
               <Shield size={16} />
-              {strength.label}
+              {t(strength.label)}
             </span>
           </dd>
         </div>
@@ -4035,79 +3942,62 @@ function CredentialDetailPane({
       )}
       <section className="detail-notes">
         <div className="detail-notes-label">
-          <span>备注</span>
+          <span>{t("备注")}</span>
           {editingNotes ? (
             <span className="detail-note-actions">
               <button type="button" onClick={() => {
                 setNoteDraft(credential.notes ?? '');
                 setEditingNotes(false);
-              }}>
-                取消
-              </button>
-              <button className="primary" type="button" onClick={saveNoteDraft}>
-                保存
-              </button>
+              }}>{t("取消")}</button>
+              <button className="primary" type="button" onClick={saveNoteDraft}>{t("保存")}</button>
             </span>
           ) : (
-            <button type="button" onClick={() => setEditingNotes(true)}>
-              编辑
-            </button>
+            <button type="button" onClick={() => setEditingNotes(true)}>{t("编辑")}</button>
           )}
         </div>
         {editingNotes ? (
-          <textarea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} rows={5} placeholder="添加这个账号的备注" />
+          <textarea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} rows={5} placeholder={t("添加这个账号的备注")} />
         ) : (
-          <p>{credential.notes?.trim() || '无备注'}</p>
+          <p>{credential.notes?.trim() || t("无备注")}</p>
         )}
       </section>
 
-      <details className={`detail-binding is-${bindingTone}`} aria-label="自动登录绑定状态">
-        <summary>自动登录绑定 <span>{bindingLabel}</span></summary>
+      <details className={`detail-binding is-${bindingTone}`} aria-label={t("自动登录绑定状态")}>
+        <summary>{t("自动登录绑定 ")}<span>{bindingLabel}</span></summary>
         <div className="binding-summary">
           <p>{bindingHint}</p>
-          <p>匹配 URL：{credential.matchUrl || "自动使用网站域名"}</p>
+          <p>{t("匹配 URL：")}{credential.matchUrl || t("自动使用网站域名")}</p>
         </div>
-        <div className="binding-metrics" aria-label="绑定记录">
+        <div className="binding-metrics" aria-label={t("绑定记录")}>
           <span className={boundUsername ? 'ok' : ''}>
-            <Check size={14} />
-            用户名
-          </span>
+            <Check size={14} />{t("用户名")}</span>
           <span className={boundPassword ? 'ok' : ''}>
-            <Check size={14} />
-            密码
-          </span>
+            <Check size={14} />{t("密码")}</span>
           <span className={hasSubmitBinding ? 'ok' : ''}>
-            <CirclePlay size={14} />
-            登录按钮
-          </span>
+            <CirclePlay size={14} />{t("登录按钮")}</span>
           <span className={boundFieldCount ? 'ok' : ''}>
             <SlidersHorizontal size={14} />
-            {boundFieldCount || 0} 字段
-          </span>
+            {boundFieldCount || 0}{t(" 字段")}</span>
         </div>
         <div className="binding-actions">
           <button type="button" onClick={() => onTestBinding(credential)}>
-            <Eye size={16} />
-            测试绑定
-          </button>
+            <Eye size={16} />{t("测试绑定")}</button>
           <button type="button" onClick={() => onBindFromWeb(credential)}>
-            <SlidersHorizontal size={16} />
-            重新绑定
-          </button>
+            <SlidersHorizontal size={16} />{t("重新绑定")}</button>
         </div>
       </details>
 
       <section className="detail-meta">
         <div>
-          <span>文件夹</span>
-          <strong>{credential.folder || '主目录'}</strong>
+          <span>{t("文件夹")}</span>
+          <strong>{displayFolderName(credential.folder || ROOT_FOLDER_NAME)}</strong>
         </div>
         <div>
-          <span>创建时间</span>
+          <span>{t("创建时间")}</span>
           <strong>{createdAt}</strong>
         </div>
         <div>
-          <span>更新时间</span>
+          <span>{t("更新时间")}</span>
           <strong>{updatedAt}</strong>
         </div>
       </section>
@@ -4138,28 +4028,28 @@ function FillProfileDetailPane({
   }, [profile.id]);
 
   return (
-    <aside className="vault-detail-pane fill-profile-detail-pane" aria-label={`查看 ${profile.title}`}>
+    <aside className="vault-detail-pane fill-profile-detail-pane" aria-label={t("查看 {0}", [profile.title])}>
       <header className="fill-profile-detail-top">
         <span className={`fill-profile-avatar ${fillProfileTone(profile)}`}>{fillProfileBadgeText(profile)}</span>
         <strong>{profile.title}</strong>
         <span className="fill-profile-toolbar">
-          <button type="button" aria-label="复制全部资料" title="复制全部资料" onClick={() => onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'))}>
+          <button type="button" aria-label={t("复制全部资料")} title={t("复制全部资料")} onClick={() => onCopy(t("{0} 全部资料", [profile.title]), formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'))}>
             <Copy size={20} />
           </button>
-          <button type="button" aria-label="编辑" title="编辑" onClick={() => onEdit(profile)}>
+          <button type="button" aria-label={t("编辑")} title={t("编辑")} onClick={() => onEdit(profile)}>
             <Pencil size={20} />
           </button>
-          <button type="button" aria-label="删除" title="删除" onClick={() => onDelete(profile)}>
+          <button type="button" aria-label={t("删除")} title={t("删除")} onClick={() => onDelete(profile)}>
             <Trash2 size={20} />
           </button>
-          <button type="button" aria-label="关闭" title="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} title={t("关闭")} onClick={onClose}>
             <X size={22} />
           </button>
         </span>
       </header>
 
       <div className="fill-profile-detail-shell">
-        <nav className="fill-profile-section-nav" aria-label="资料分组">
+        <nav className="fill-profile-section-nav" aria-label={t("资料分组")}>
           {groups.map(([group, fields]) => (
             <button
               key={group}
@@ -4174,25 +4064,25 @@ function FillProfileDetailPane({
           ))}
           <button type="button" disabled>
             <Plus size={19} />
-            <span>添加信用卡</span>
+            <span>{t("添加信用卡")}</span>
           </button>
           <button type="button" disabled>
             <Plus size={19} />
-            <span>添加银行账户</span>
+            <span>{t("添加银行账户")}</span>
           </button>
         </nav>
 
         <section className="fill-profile-detail-content">
           <div className="fill-profile-title-block">
             <h2>{profile.title}</h2>
-            <p>{fillProfileCategoryLabel(profile.category)} · {profile.countryCode || '未设置国家'} · {profile.fields.length} 字段</p>
+            <p>{fillProfileCategoryLabel(profile.category)} · {profile.countryCode || t("未设置国家")} · {profile.fields.length}{t(" 字段")}</p>
           </div>
 
           <section className="fill-profile-field-panel">
             <header>
               <span>{fillFieldGroupIcon(activeGroup)}</span>
               <strong>{activeGroupLabel}</strong>
-              <button type="button" aria-label={`复制${activeGroupLabel}`} title={`复制${activeGroupLabel}`} onClick={() => onCopy(activeGroupLabel, activeFields.map((field) => `${field.label}: ${field.value}`).join('\n'), activeFields.some(field => field.sensitivity !== 'normal'))}>
+              <button type="button" aria-label={t("复制{0}", [activeGroupLabel])} title={t("复制{0}", [activeGroupLabel])} onClick={() => onCopy(activeGroupLabel, activeFields.map((field) => `${field.label}: ${field.value}`).join('\n'), activeFields.some(field => field.sensitivity !== 'normal'))}>
                 <Copy size={17} />
               </button>
             </header>
@@ -4203,8 +4093,8 @@ function FillProfileDetailPane({
                     <dt>{field.label}</dt>
                     <dd>
                       <SensitiveValue key={`${profile.id}-${field.key}-${field.value}`} field={field} />
-                      {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? '敏感' : '私密'}</em> : null}
-                      <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
+                      {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? t("敏感") : t("私密")}</em> : null}
+                      <button type="button" aria-label={t("复制 {0}", [field.label])} title={t("复制 {0}", [field.label])} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
                         <Copy size={16} />
                       </button>
                     </dd>
@@ -4212,22 +4102,22 @@ function FillProfileDetailPane({
                 ))}
               </dl>
             ) : (
-              <p className="fill-profile-no-fields">这个分组还没有字段。</p>
+              <p className="fill-profile-no-fields">{t("这个分组还没有字段。")}</p>
             )}
           </section>
 
           <section className="fill-profile-meta">
             <div>
-              <span>文件夹</span>
-              <strong>{profile.folder || ROOT_FOLDER_NAME}</strong>
+              <span>{t("文件夹")}</span>
+              <strong>{displayFolderName(profile.folder || ROOT_FOLDER_NAME)}</strong>
             </div>
             <div>
-              <span>来源</span>
+              <span>{t("来源")}</span>
               <strong>{profile.source || 'manual'}</strong>
             </div>
             <div>
-              <span>更新时间</span>
-              <strong>{new Date(profile.updatedAt).toLocaleString('zh-CN')}</strong>
+              <span>{t("更新时间")}</span>
+              <strong>{new Date(profile.updatedAt).toLocaleString(getLanguage())}</strong>
             </div>
           </section>
         </section>
@@ -4276,7 +4166,7 @@ function FillProfileEditPane({
       ...current,
       {
         key: `custom_${current.length + 1}`,
-        label: '新字段',
+        label: t("新字段"),
         value: '',
         group: 'custom',
         sensitivity: 'normal'
@@ -4293,7 +4183,7 @@ function FillProfileEditPane({
     const normalizedFields = fields
       .filter((field) => field.label.trim() || field.value.trim())
       .map((field, index) => {
-        const label = field.label.trim() || `字段 ${index + 1}`;
+        const label = field.label.trim() || t("字段 {0}", [index + 1]);
         const key = field.key.trim() || label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || `field_${index + 1}`;
         return {
           ...field,
@@ -4318,43 +4208,39 @@ function FillProfileEditPane({
   }
 
   return (
-    <aside className="vault-detail-pane fill-profile-edit-pane" aria-label={`编辑 ${profile.title}`}>
+    <aside className="vault-detail-pane fill-profile-edit-pane" aria-label={t("编辑 {0}", [profile.title])}>
       <form onSubmit={submit}>
         <header className="edit-header">
           <div className="edit-identity">
             <span className={`fill-profile-avatar ${fillProfileTone({ ...profile, category })}`}>{fillProfileBadgeText({ ...profile, title, category })}</span>
             <strong>{title || profile.title}</strong>
           </div>
-          <button type="button" aria-label="关闭" title="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} title={t("关闭")} onClick={onClose}>
             <X size={24} />
           </button>
         </header>
 
         <div className="edit-savebar">
-          <button type="button" onClick={onCancel}>
-            取消
-          </button>
+          <button type="button" onClick={onCancel}>{t("取消")}</button>
           <button className="primary" type="submit">
-            <Check size={17} />
-            保存
-          </button>
+            <Check size={17} />{t("保存")}</button>
         </div>
 
         <section className="fill-profile-edit-body">
           <section className="fill-profile-edit-card">
             <header>
-              <strong>资料信息</strong>
-              <span>这些信息会影响列表名称、分类和填表匹配。</span>
+              <strong>{t("资料信息")}</strong>
+              <span>{t("这些信息会影响列表名称、分类和填表匹配。")}</span>
             </header>
-            <EditField label="资料名称" value={title} onChange={setTitle} required />
+            <EditField label={t("资料名称")} value={title} onChange={setTitle} required />
             <FolderField value={folder} folders={folders} onChange={setFolder} />
             <div className="fill-profile-edit-grid">
               <label className="edit-field">
-                <span>国家</span>
+                <span>{t("国家")}</span>
                 <input value={countryCode} onChange={(event) => setCountryCode(event.currentTarget.value)} placeholder="US" />
               </label>
               <label className="edit-field">
-                <span>分类</span>
+                <span>{t("分类")}</span>
                 <select value={category} onChange={(event) => setCategory(event.currentTarget.value as FillProfile['category'])}>
                   {FILL_PROFILE_CATEGORIES.map((item) => (
                     <option key={item} value={item}>{fillProfileCategoryLabel(item)}</option>
@@ -4366,11 +4252,9 @@ function FillProfileEditPane({
 
           <section className="fill-profile-edit-card">
             <header>
-              <strong>字段</strong>
+              <strong>{t("字段")}</strong>
               <button type="button" onClick={addField}>
-                <Plus size={17} />
-                添加字段
-              </button>
+                <Plus size={17} />{t("添加字段")}</button>
             </header>
             <div className="fill-profile-field-editor-list">
               {fields.length ? (
@@ -4384,7 +4268,7 @@ function FillProfileEditPane({
                   />
                 ))
               ) : (
-                <p>还没有字段。添加字段后可以用于网页自动填表。</p>
+                <p>{t("还没有字段。添加字段后可以用于网页自动填表。")}</p>
               )}
             </div>
           </section>
@@ -4408,22 +4292,22 @@ function FillProfileFieldEditor({
   return (
     <article className="fill-profile-field-editor">
       <header>
-        <span>字段 {index + 1}</span>
-        <button type="button" aria-label={`删除字段 ${index + 1}`} title="删除字段" onClick={onRemove}>
+        <span>{t("字段 ")}{index + 1}</span>
+        <button type="button" aria-label={t("删除字段 {0}", [index + 1])} title={t("删除字段")} onClick={onRemove}>
           <Trash2 size={16} />
         </button>
       </header>
       <div className="fill-profile-field-editor-grid">
         <label className="edit-field">
-          <span>字段名</span>
+          <span>{t("字段名")}</span>
           <input value={field.label} onChange={(event) => onChange({ label: event.currentTarget.value })} />
         </label>
         <label className="edit-field">
-          <span>字段 Key</span>
+          <span>{t("字段 Key")}</span>
           <input value={field.key} onChange={(event) => onChange({ key: event.currentTarget.value })} />
         </label>
         <label className="edit-field">
-          <span>分组</span>
+          <span>{t("分组")}</span>
           <select value={field.group} onChange={(event) => onChange({ group: event.currentTarget.value as FillField['group'] })}>
             {FILL_FIELD_GROUPS.map((group) => (
               <option key={group} value={group}>{fillFieldGroupLabel(group)}</option>
@@ -4431,16 +4315,16 @@ function FillProfileFieldEditor({
           </select>
         </label>
         <label className="edit-field">
-          <span>敏感度</span>
+          <span>{t("敏感度")}</span>
           <select value={field.sensitivity} onChange={(event) => onChange({ sensitivity: event.currentTarget.value as FillField['sensitivity'] })}>
             {FILL_FIELD_SENSITIVITIES.map((sensitivity) => (
-              <option key={sensitivity} value={sensitivity}>{sensitivity === 'normal' ? '普通' : sensitivity === 'private' ? '私密' : '敏感'}</option>
+              <option key={sensitivity} value={sensitivity}>{sensitivity === 'normal' ? t("普通") : sensitivity === 'private' ? t("私密") : t("敏感")}</option>
             ))}
           </select>
         </label>
       </div>
       <label className="edit-field fill-profile-value-field">
-        <span>字段值</span>
+        <span>{t("字段值")}</span>
         <textarea value={field.value} onChange={(event) => onChange({ value: event.currentTarget.value })} rows={2} />
       </label>
     </article>
@@ -4513,56 +4397,48 @@ function CredentialEditPane({
   }
 
   return (
-    <aside className="vault-detail-pane edit-pane" aria-label={`编辑 ${credential.title}`}>
+    <aside className="vault-detail-pane edit-pane" aria-label={t("编辑 {0}", [credential.title])}>
       <form onSubmit={submit}>
         <header className="edit-header">
           <div className="edit-identity">
             <SiteIcon domain={credential.domain} url={credential.url} iconUrl={credential.iconUrl} />
             <strong>{credential.title}</strong>
           </div>
-          <button type="button" aria-label="关闭" title="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} title={t("关闭")} onClick={onClose}>
             <X size={24} />
           </button>
         </header>
 
         <div className="edit-savebar">
-          <button type="button" onClick={onCancel}>
-            取消
-          </button>
+          <button type="button" onClick={onCancel}>{t("取消")}</button>
           <button className="primary" type="submit">
-            <Check size={17} />
-            保存
-          </button>
+            <Check size={17} />{t("保存")}</button>
         </div>
 
         <section className="edit-fields">
-          <EditField label="名称" value={draft.title} onChange={(value) => setDraft((current) => ({ ...current, title: value }))} required />
-          <EditField label="转到 URL" value={draft.url} onChange={(value) => setDraft((current) => ({ ...current, url: value }))} required />
-          <EditField label="匹配 URL" value={draft.matchUrl} onChange={(value) => setDraft((current) => ({ ...current, matchUrl: value }))} placeholder="留空使用网站域名，或填写 *.example.com/*" />
-          <EditField label="登录名" value={draft.username} onChange={(value) => setDraft((current) => ({ ...current, username: value }))} />
+          <EditField label={t("名称")} value={draft.title} onChange={(value) => setDraft((current) => ({ ...current, title: value }))} required />
+          <EditField label={t("转到 URL")} value={draft.url} onChange={(value) => setDraft((current) => ({ ...current, url: value }))} required />
+          <EditField label={t("匹配 URL")} value={draft.matchUrl} onChange={(value) => setDraft((current) => ({ ...current, matchUrl: value }))} placeholder={t("留空使用网站域名，或填写 *.example.com/*")} />
+          <EditField label={t("登录名")} value={draft.username} onChange={(value) => setDraft((current) => ({ ...current, username: value }))} />
           <EditPasswordField
-            label="密码"
+            label={t("密码")}
             value={draft.password}
             visible={passwordVisible}
             onToggleVisible={() => setPasswordVisible((visible) => !visible)}
             onChange={(value) => setDraft((current) => ({ ...current, password: value }))}
             required
           />
-          <section className="edit-custom-fields" aria-label="自定义字段">
+          <section className="edit-custom-fields" aria-label={t("自定义字段")}>
             <header>
               <div>
-                <strong>字段</strong>
-                <span>手动维护额外字段，或打开网页点选用户名框、密码框和登录按钮。</span>
+                <strong>{t("字段")}</strong>
+                <span>{t("手动维护额外字段，或打开网页点选用户名框、密码框和登录按钮。")}</span>
               </div>
               <span className="custom-field-header-actions">
                 <button type="button" onClick={() => onBindFromWeb(credential)}>
-                  <SlidersHorizontal size={17} />
-                  网页点选绑定
-                </button>
+                  <SlidersHorizontal size={17} />{t("网页点选绑定")}</button>
                 <button type="button" onClick={addFormField}>
-                  <Plus size={17} />
-                  添加字段
-                </button>
+                  <Plus size={17} />{t("添加字段")}</button>
               </span>
             </header>
             {draft.formFields.length ? (
@@ -4578,11 +4454,11 @@ function CredentialEditPane({
                 ))}
               </div>
             ) : (
-              <p>这个登录项还没有额外字段。</p>
+              <p>{t("这个登录项还没有额外字段。")}</p>
             )}
           </section>
-          <EditField label="文件夹" value={draft.folder} onChange={(value) => setDraft((current) => ({ ...current, folder: value }))} />
-          <EditArea label="备注" value={draft.notes} onChange={(value) => setDraft((current) => ({ ...current, notes: value }))} />
+          <EditField label={t("文件夹")} value={draft.folder} onChange={(value) => setDraft((current) => ({ ...current, folder: value }))} />
+          <EditArea label={t("备注")} value={draft.notes} onChange={(value) => setDraft((current) => ({ ...current, notes: value }))} />
         </section>
       </form>
     </aside>
@@ -4634,29 +4510,29 @@ function CustomFieldEditor({
   return (
     <article className="custom-field-row">
       <div className="custom-field-kind">
-        <span>类型</span>
+        <span>{t("类型")}</span>
         <select value={fieldKind} onChange={(event) => changeKind(event.target.value as CredentialFormFieldKind)}>
-          <option value="text">文本</option>
-          <option value="username">登录名</option>
-          <option value="password">密码</option>
+          <option value="text">{t("文本")}</option>
+          <option value="username">{t("登录名")}</option>
+          <option value="password">{t("密码")}</option>
         </select>
       </div>
-      <EditField label="字段名称" value={field.label} onChange={(value) => onChange({ label: value, name: field.name || value })} />
+      <EditField label={t("字段名称")} value={field.label} onChange={(value) => onChange({ label: value, name: field.name || value })} />
       <label className="edit-field edit-password-field custom-field-value">
-        <span>字段值</span>
+        <span>{t("字段值")}</span>
         <input
           type={fieldKind === 'password' && !visible ? 'password' : 'text'}
           value={field.value}
           onChange={(event) => onChange({ value: event.target.value })}
-          placeholder={fieldKind === 'username' ? '默认使用登录名' : fieldKind === 'password' ? '默认使用密码' : ''}
+          placeholder={fieldKind === 'username' ? t("默认使用登录名") : fieldKind === 'password' ? t("默认使用密码") : ''}
         />
         {fieldKind === 'password' ? (
-          <button type="button" aria-label={visible ? '隐藏字段值' : '显示字段值'} title={visible ? '隐藏字段值' : '显示字段值'} onClick={() => setVisible((current) => !current)}>
+          <button type="button" aria-label={visible ? t("隐藏字段值") : t("显示字段值")} title={visible ? t("隐藏字段值") : t("显示字段值")} onClick={() => setVisible((current) => !current)}>
             {visible ? <EyeOff size={17} /> : <Eye size={17} />}
           </button>
         ) : null}
       </label>
-      <button className="custom-field-remove" type="button" aria-label={`删除字段 ${index + 1}`} title="删除字段" onClick={onRemove}>
+      <button className="custom-field-remove" type="button" aria-label={t("删除字段 {0}", [index + 1])} title={t("删除字段")} onClick={onRemove}>
         <X size={17} />
       </button>
     </article>
@@ -4682,7 +4558,7 @@ function EditPasswordField({
     <label className="edit-field edit-password-field">
       <span>{label}</span>
       <input type={visible ? 'text' : 'password'} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
-      <button type="button" aria-label={visible ? '隐藏密码' : '显示密码'} title={visible ? '隐藏密码' : '显示密码'} onClick={onToggleVisible}>
+      <button type="button" aria-label={visible ? t("隐藏密码") : t("显示密码")} title={visible ? t("隐藏密码") : t("显示密码")} onClick={onToggleVisible}>
         {visible ? <EyeOff size={17} /> : <Eye size={17} />}
       </button>
     </label>
@@ -4817,42 +4693,40 @@ function GeneratorPanel({ onCopy }: { onCopy: (password: string) => Promise<bool
       <header className="generator-hero">
         <span className="generator-glyph"><KeyRound size={22} /></span>
         <div>
-          <h2>密码生成器</h2>
-          <p>按网站规则生成强密码。复制后也可以在注册页通过 KeyPilot 图标直接填入。</p>
+          <h2>{t("密码生成器")}</h2>
+          <p>{t("按网站规则生成强密码。复制后也可以在注册页通过 KeyPilot 图标直接填入。")}</p>
         </div>
       </header>
 
       <div className="generator-output">
         <div className="generator-password" aria-live="polite">
-          {password ? <code>{password}</code> : <span className="generator-password-hint">请选择至少一种字符类型，或填写必须包含字符。</span>}
+          {password ? <code>{password}</code> : <span className="generator-password-hint">{t("请选择至少一种字符类型，或填写必须包含字符。")}</span>}
           <span className={`strength s${strength.score}`}>
             <Shield size={15} />
-            {password ? strength.label : '待生成'}
+            {password ? t(strength.label) : t("待生成")}
           </span>
         </div>
         <div className="generator-actions">
-          <button type="button" onClick={() => refresh()} aria-label="重新生成密码">
-            <RefreshCw size={17} />
-            重新生成
-          </button>
+          <button type="button" onClick={() => refresh()} aria-label={t("重新生成密码")}>
+            <RefreshCw size={17} />{t("重新生成")}</button>
           <button className="primary" type="button" onClick={copyPassword} disabled={!password}>
             {copied ? <Check size={17} /> : <Copy size={17} />}
-            {copied ? '已复制' : '复制'}
+            {copied ? t("已复制") : t("复制")}
           </button>
         </div>
       </div>
 
-      <div className="generator-presets" aria-label="密码预设">
-        <button type="button" onClick={() => applyPreset('balanced')}>标准强密码</button>
-        <button type="button" onClick={() => applyPreset('readable')}>易读少符号</button>
-        <button type="button" onClick={() => applyPreset('maximum')}>高强度</button>
+      <div className="generator-presets" aria-label={t("密码预设")}>
+        <button type="button" onClick={() => applyPreset('balanced')}>{t("标准强密码")}</button>
+        <button type="button" onClick={() => applyPreset('readable')}>{t("易读少符号")}</button>
+        <button type="button" onClick={() => applyPreset('maximum')}>{t("高强度")}</button>
       </div>
 
       <div className="generator-settings">
         <section className="generator-card length-card">
           <div className="generator-card-title">
-            <strong>长度</strong>
-            <span>当前 {options.length} 位</span>
+            <strong>{t("长度")}</strong>
+            <span>{t("当前 ")}{options.length}{t(" 位")}</span>
           </div>
           <div className="length-control">
             <input
@@ -4861,7 +4735,7 @@ function GeneratorPanel({ onCopy }: { onCopy: (password: string) => Promise<bool
               max={132}
               value={options.length}
               onChange={(event) => updateOptions({ length: Number(event.currentTarget.value) })}
-              aria-label="密码长度"
+              aria-label={t("密码长度")}
             />
             <input
               type="number"
@@ -4869,44 +4743,44 @@ function GeneratorPanel({ onCopy }: { onCopy: (password: string) => Promise<bool
               max={132}
               value={options.length}
               onChange={(event) => updateOptions({ length: Number(event.currentTarget.value) })}
-              aria-label="密码长度数值"
+              aria-label={t("密码长度数值")}
             />
           </div>
         </section>
 
         <section className="generator-card">
           <div className="generator-card-title">
-            <strong>字符类型</strong>
-            <span>{activeTypes} 类已启用</span>
+            <strong>{t("字符类型")}</strong>
+            <span>{activeTypes}{t(" 类已启用")}</span>
           </div>
           <div className="generator-switch-grid">
-            <GeneratorSwitch label="大写字母" hint="A-Z" checked={options.uppercase} onChange={(checked) => updateOptions({ uppercase: checked })} />
-            <GeneratorSwitch label="小写字母" hint="a-z" checked={options.lowercase} onChange={(checked) => updateOptions({ lowercase: checked })} />
-            <GeneratorSwitch label="数字" hint="0-9" checked={options.numbers} onChange={(checked) => updateOptions({ numbers: checked })} />
-            <GeneratorSwitch label="符号" hint="!@#$" checked={options.symbols} onChange={(checked) => updateOptions({ symbols: checked })} />
+            <GeneratorSwitch label={t("大写字母")} hint="A-Z" checked={options.uppercase} onChange={(checked) => updateOptions({ uppercase: checked })} />
+            <GeneratorSwitch label={t("小写字母")} hint="a-z" checked={options.lowercase} onChange={(checked) => updateOptions({ lowercase: checked })} />
+            <GeneratorSwitch label={t("数字")} hint="0-9" checked={options.numbers} onChange={(checked) => updateOptions({ numbers: checked })} />
+            <GeneratorSwitch label={t("符号")} hint="!@#$" checked={options.symbols} onChange={(checked) => updateOptions({ symbols: checked })} />
           </div>
         </section>
 
         <section className="generator-card">
           <div className="generator-card-title">
-            <strong>高级规则</strong>
-            <span>适配特殊网站</span>
+            <strong>{t("高级规则")}</strong>
+            <span>{t("适配特殊网站")}</span>
           </div>
           <div className="generator-rules">
             <label>
-              <span>必须包含字符</span>
+              <span>{t("必须包含字符")}</span>
               <input
                 value={options.requiredCharacters ?? ''}
                 onChange={(event) => updateOptions({ requiredCharacters: event.currentTarget.value })}
-                placeholder="例如：@#A9"
+                placeholder={t("例如：@#A9")}
               />
             </label>
             <label>
-              <span>排除字符</span>
+              <span>{t("排除字符")}</span>
               <input
                 value={options.excludeCharacters ?? ''}
                 onChange={(event) => updateOptions({ excludeCharacters: event.currentTarget.value })}
-                placeholder="例如：{}[]'&quot;"
+                placeholder={t("例如：{}[]'&quot;")}
               />
             </label>
           </div>
@@ -4914,12 +4788,12 @@ function GeneratorPanel({ onCopy }: { onCopy: (password: string) => Promise<bool
 
         <section className="generator-card">
           <div className="generator-card-title">
-            <strong>安全偏好</strong>
-            <span>减少输错和漏项</span>
+            <strong>{t("安全偏好")}</strong>
+            <span>{t("减少输错和漏项")}</span>
           </div>
           <div className="generator-switch-list">
-            <GeneratorSwitch label="排除相似字符" hint="不使用 I、l、1、O、0" checked={options.excludeSimilar} onChange={(checked) => updateOptions({ excludeSimilar: checked })} />
-            <GeneratorSwitch label="每类至少 1 个" hint="启用的类型都会出现" checked={options.requireEveryType !== false} onChange={(checked) => updateOptions({ requireEveryType: checked })} />
+            <GeneratorSwitch label={t("排除相似字符")} hint={t("不使用 I、l、1、O、0")} checked={options.excludeSimilar} onChange={(checked) => updateOptions({ excludeSimilar: checked })} />
+            <GeneratorSwitch label={t("每类至少 1 个")} hint={t("启用的类型都会出现")} checked={options.requireEveryType !== false} onChange={(checked) => updateOptions({ requireEveryType: checked })} />
           </div>
         </section>
       </div>
@@ -4975,14 +4849,10 @@ function SecurityPanel({
                   : security.items;
 
   return (
-    <section className="security-panel" aria-label="密码安全中心">
-      <nav className="security-tabs" aria-label="安全中心">
-        <button className={tab === 'overview' ? 'active' : ''} type="button" onClick={() => setTab('overview')}>
-          安全概览
-        </button>
-        <button className={tab === 'breach' ? 'active' : ''} type="button" onClick={() => setTab('breach')}>
-          泄露检测规划
-        </button>
+    <section className="security-panel" aria-label={t("密码安全中心")}>
+      <nav className="security-tabs" aria-label={t("安全中心")}>
+        <button className={tab === 'overview' ? 'active' : ''} type="button" onClick={() => setTab('overview')}>{t("安全概览")}</button>
+        <button className={tab === 'breach' ? 'active' : ''} type="button" onClick={() => setTab('breach')}>{t("泄露检测规划")}</button>
       </nav>
 
       {tab === 'overview' ? (
@@ -5002,31 +4872,31 @@ function SecurityPanel({
             </div>
 
             <div className="security-score-card">
-              <span className="security-score-label">您的安全分数：</span>
+              <span className="security-score-label">{t("您的安全分数：")}</span>
               <strong>{security.score}</strong>
               <em className={`security-level ${security.levelTone}`}>{security.level}</em>
               <SecurityScoreBar score={security.score} />
               <div className="security-recommendation">
-                <strong>推荐</strong>
+                <strong>{t("推荐")}</strong>
                 <p>{security.recommendation}</p>
               </div>
             </div>
           </section>
 
-          <div className="security-filter-tabs" role="tablist" aria-label="安全筛选">
-            <SecurityFilterButton label="风险" count={security.riskItems.length} active={filter === 'risk'} onClick={() => setFilter('risk')} />
-            <SecurityFilterButton label="弱的" count={security.weak} active={filter === 'weak'} onClick={() => setFilter('weak')} />
-            <SecurityFilterButton label="重用" count={security.reused} active={filter === 'reused'} onClick={() => setFilter('reused')} />
-            <SecurityFilterButton label="未绑定" count={security.unbound} active={filter === 'unbound'} onClick={() => setFilter('unbound')} />
-            <SecurityFilterButton label="久未更新" count={security.stale} active={filter === 'stale'} onClick={() => setFilter('stale')} />
-            <SecurityFilterButton label="所有" count={security.total} active={filter === 'all'} onClick={() => setFilter('all')} />
-            <SecurityFilterButton label="完全重复" count={security.exactDuplicates} active={filter === 'duplicates'} onClick={() => setFilter('duplicates')} />
-            <SecurityFilterButton label="排除" count={0} active={filter === 'excluded'} onClick={() => setFilter('excluded')} />
+          <div className="security-filter-tabs" role="tablist" aria-label={t("安全筛选")}>
+            <SecurityFilterButton label={t("风险")} count={security.riskItems.length} active={filter === 'risk'} onClick={() => setFilter('risk')} />
+            <SecurityFilterButton label={t("弱的")} count={security.weak} active={filter === 'weak'} onClick={() => setFilter('weak')} />
+            <SecurityFilterButton label={t("重用")} count={security.reused} active={filter === 'reused'} onClick={() => setFilter('reused')} />
+            <SecurityFilterButton label={t("未绑定")} count={security.unbound} active={filter === 'unbound'} onClick={() => setFilter('unbound')} />
+            <SecurityFilterButton label={t("久未更新")} count={security.stale} active={filter === 'stale'} onClick={() => setFilter('stale')} />
+            <SecurityFilterButton label={t("所有")} count={security.total} active={filter === 'all'} onClick={() => setFilter('all')} />
+            <SecurityFilterButton label={t("完全重复")} count={security.exactDuplicates} active={filter === 'duplicates'} onClick={() => setFilter('duplicates')} />
+            <SecurityFilterButton label={t("排除")} count={0} active={filter === 'excluded'} onClick={() => setFilter('excluded')} />
           </div>
 
           <SecurityTable
             rows={rows}
-            emptyLabel={filter === 'excluded' ? '还没有排除项' : '没有匹配的安全风险'}
+            emptyLabel={filter === 'excluded' ? t("还没有排除项") : t("没有匹配的安全风险")}
             onView={onView}
             onEdit={onEdit}
             onBind={onBind}
@@ -5040,13 +4910,13 @@ function SecurityPanel({
             <ShieldCheck size={30} />
           </span>
           <div>
-            <h2>数据泄露监控</h2>
-            <p>当前版本不把网站域名、用户名或密码发送到任何第三方服务。这里先保留监控入口，后续会支持用户明确开启后的本地优先检测流程。</p>
+            <h2>{t("数据泄露监控")}</h2>
+            <p>{t("当前版本不把网站域名、用户名或密码发送到任何第三方服务。这里先保留监控入口，后续会支持用户明确开启后的本地优先检测流程。")}</p>
           </div>
           <div className="breach-privacy-grid">
-            <span><Shield size={16} /> 本地强度检测</span>
-            <span><Lock size={16} /> 不上传密码</span>
-            <span><AlertTriangle size={16} /> 发现风险后再提醒</span>
+            <span><Shield size={16} />{t(" 本地强度检测")}</span>
+            <span><Lock size={16} />{t(" 不上传密码")}</span>
+            <span><AlertTriangle size={16} />{t(" 发现风险后再提醒")}</span>
           </div>
         </section>
       )}
@@ -5082,7 +4952,7 @@ function SecurityDonut({ segments }: { segments: SecurityLegendItem[] }) {
   let offset = 0;
 
   return (
-    <svg className="security-donut" viewBox="0 0 190 190" role="img" aria-label="密码强度分布">
+    <svg className="security-donut" viewBox="0 0 190 190" role="img" aria-label={t("密码强度分布")}>
       <circle className="security-donut-track" cx="95" cy="95" r={radius} />
       {segments.map((segment) => {
         const length = (segment.count / total) * circumference;
@@ -5113,7 +4983,7 @@ function SecurityDonut({ segments }: { segments: SecurityLegendItem[] }) {
 
 function SecurityScoreBar({ score }: { score: number }) {
   return (
-    <div className="security-score-track" aria-label={`安全分数 ${score}`}>
+    <div className="security-score-track" aria-label={t("安全分数 {0}", [score])}>
       <span className="danger" />
       <span className="warning" />
       <span className="ok" />
@@ -5149,14 +5019,14 @@ function SecurityTable({
   onCopyPassword: (credential: Credential) => void;
 }) {
   return (
-    <section className="security-table" aria-label="安全风险账号">
+    <section className="security-table" aria-label={t("安全风险账号")}>
       <header>
-        <span>名字</span>
-        <span>密码</span>
-        <span>密码强度</span>
-        <span>网页地址</span>
-        <span>建议</span>
-        <span>操作</span>
+        <span>{t("名字")}</span>
+        <span>{t("密码")}</span>
+        <span>{t("密码强度")}</span>
+        <span>{t("网页地址")}</span>
+        <span>{t("建议")}</span>
+        <span>{t("操作")}</span>
       </header>
       {rows.length ? (
         rows.map((item, index) => (
@@ -5175,7 +5045,7 @@ function SecurityTable({
         <div className="security-empty">
           <ShieldCheck size={24} />
           <strong>{emptyLabel}</strong>
-          <span>这里的分析只在本地 Vault 中完成。</span>
+          <span>{t("这里的分析只在本地 Vault 中完成。")}</span>
         </div>
       )}
     </section>
@@ -5202,16 +5072,16 @@ function SecurityTableRow({
   const { credential, strength } = item;
   const [passwordVisible, setPasswordVisible] = useSecretVisibility();
   const suggestion = item.isWeak
-    ? '换成更强密码'
+    ? t("换成更强密码")
     : item.isReused
-      ? '避免重复使用'
+      ? t("避免重复使用")
       : item.isUnbound
-        ? '绑定登录规则'
+        ? t("绑定登录规则")
         : item.missingUsername
-          ? '补全登录名'
+          ? t("补全登录名")
           : item.isStale
-            ? '建议核对更新'
-            : '状态良好';
+            ? t("建议核对更新")
+            : t("状态良好");
 
   return (
     <article className="security-row" style={{ '--row-delay': `${(index % 14) * 12}ms` } as CSSProperties}>
@@ -5219,16 +5089,16 @@ function SecurityTableRow({
         <SiteIcon domain={credential.domain} url={credential.url} iconUrl={credential.iconUrl} />
         <span>
           <strong>{credential.title}</strong>
-          <small>{credential.username || '无用户名'}</small>
+          <small>{credential.username || t("无用户名")}</small>
         </span>
       </span>
       <span className="security-password">
-        <code>{passwordVisible ? credential.password : credential.password ? '••••••••' : '未保存密码'}</code>
+        <code>{passwordVisible ? credential.password : credential.password ? '••••••••' : t("未保存密码")}</code>
         <button
           type="button"
-          aria-label={`${passwordVisible ? '隐藏' : '查看'} ${credential.title} 的密码`}
+          aria-label={t("{0} {1} 的密码", [passwordVisible ? t("隐藏") : t("查看"), credential.title])}
           aria-pressed={passwordVisible}
-          title={passwordVisible ? '隐藏密码' : '查看密码'}
+          title={passwordVisible ? t("隐藏密码") : t("查看密码")}
           disabled={!credential.password}
           onClick={() => setPasswordVisible(visible => !visible)}
         >
@@ -5238,30 +5108,30 @@ function SecurityTableRow({
       <span className="security-strength-cell">
         <em className={`security-strength s${strength.score}`}>
           <Shield size={15} />
-          {strength.label}
+          {t(strength.label)}
         </em>
       </span>
       <span className="security-url">{credential.domain || extractDomain(credential.url)}</span>
       <span className={item.isWeak || item.isReused || item.isUnbound || item.missingUsername || item.isStale ? 'security-suggestion warn' : 'security-suggestion'}>
         {suggestion}
-        <small>{securityRiskLabels(item).join(' · ') || '本地检查通过'}</small>
+        <small>{securityRiskLabels(item).join(' · ') || t("本地检查通过")}</small>
       </span>
       <span className="security-actions">
-        <button type="button" title="查看账号" aria-label={`查看账号 ${credential.title}`} onClick={() => onView(credential)}>
+        <button type="button" title={t("查看账号")} aria-label={t("查看账号 {0}", [credential.title])} onClick={() => onView(credential)}>
           <Eye size={16} />
         </button>
-        <button type="button" title="复制密码" aria-label={`复制 ${credential.title} 的密码`} onClick={() => onCopyPassword(credential)} disabled={!credential.password}>
+        <button type="button" title={t("复制密码")} aria-label={t("复制 {0} 的密码", [credential.title])} onClick={() => onCopyPassword(credential)} disabled={!credential.password}>
           <Copy size={16} />
         </button>
-        <button type="button" title="打开网站" aria-label={`打开网站 ${credential.title}`} onClick={() => onOpen(credential)} disabled={!credential.url}>
+        <button type="button" title={t("打开网站")} aria-label={t("打开网站 {0}", [credential.title])} onClick={() => onOpen(credential)} disabled={!credential.url}>
           <ArrowUpRight size={16} />
         </button>
         {item.isUnbound ? (
-          <button type="button" title="绑定登录字段" aria-label={`绑定登录字段 ${credential.title}`} onClick={() => onBind(credential)}>
+          <button type="button" title={t("绑定登录字段")} aria-label={t("绑定登录字段 {0}", [credential.title])} onClick={() => onBind(credential)}>
             <SlidersHorizontal size={16} />
           </button>
         ) : (
-          <button type="button" title="编辑账号" aria-label={`编辑账号 ${credential.title}`} onClick={() => onEdit(credential)}>
+          <button type="button" title={t("编辑账号")} aria-label={t("编辑账号 {0}", [credential.title])} onClick={() => onEdit(credential)}>
             <Pencil size={16} />
           </button>
         )}
@@ -5272,12 +5142,12 @@ function SecurityTableRow({
 
 function securityRiskLabels(item: SecurityItem): string[] {
   const labels: string[] = [];
-  if (item.isWeak) labels.push('弱密码');
-  if (item.isReused) labels.push(`重复使用 ${item.passwordUseCount} 次`);
-  if (item.isExactDuplicate) labels.push('账号重复');
-  if (item.isUnbound) labels.push('未绑定登录按钮');
-  if (item.missingUsername) labels.push('缺少用户名');
-  if (item.isStale) labels.push('久未更新');
+  if (item.isWeak) labels.push(t("弱密码"));
+  if (item.isReused) labels.push(t("重复使用 {0} 次", [item.passwordUseCount]));
+  if (item.isExactDuplicate) labels.push(t("账号重复"));
+  if (item.isUnbound) labels.push(t("未绑定登录按钮"));
+  if (item.missingUsername) labels.push(t("缺少用户名"));
+  if (item.isStale) labels.push(t("久未更新"));
   return labels;
 }
 
@@ -5346,7 +5216,7 @@ function analyzeSecurity(credentials: Credential[]) {
         )
       )
     : 100;
-  const level = score >= 85 ? '高' : score >= 65 ? '中' : '低';
+  const level = score >= 85 ? t("高") : score >= 65 ? t("中") : t("低");
   const levelTone = score >= 85 ? 'good' : score >= 65 ? 'warn' : 'bad';
   const riskItems = items
     .filter((item) => item.isWeak || item.isReused || item.isExactDuplicate || item.isUnbound || item.missingUsername || item.isStale)
@@ -5359,22 +5229,22 @@ function analyzeSecurity(credentials: Credential[]) {
         left.strength.score - right.strength.score
     );
   const legend = [
-    securityLegendItem('极强', excellent, total, '#22c55e'),
-    securityLegendItem('强', strong, total, '#84cc16'),
-    securityLegendItem('中', medium, total, '#f59e0b'),
-    securityLegendItem('弱', weak, total, '#ef4444')
+    securityLegendItem(t("极强"), excellent, total, '#22c55e'),
+    securityLegendItem(t("强"), strong, total, '#84cc16'),
+    securityLegendItem(t("中"), medium, total, '#f59e0b'),
+    securityLegendItem(t("弱"), weak, total, '#ef4444')
   ];
   const recommendation = weak
-    ? `发现 ${weak} 个弱密码。建议先用密码生成器替换这些密码。`
+    ? t("发现 {0} 个弱密码。建议先用密码生成器替换这些密码。", [weak])
     : reused
-      ? `发现 ${reused} 个账号重复使用密码。建议为重要网站设置不同密码。`
+      ? t("发现 {0} 个账号重复使用密码。建议为重要网站设置不同密码。", [reused])
       : unbound
-        ? `还有 ${unbound} 个账号没有完整登录规则。绑定字段和登录按钮后，一键登录会更稳定。`
+        ? t("还有 {0} 个账号没有完整登录规则。绑定字段和登录按钮后，一键登录会更稳定。", [unbound])
         : missingUsername
-          ? `还有 ${missingUsername} 个账号缺少登录名。补全后自动填写会更准确。`
+          ? t("还有 {0} 个账号缺少登录名。补全后自动填写会更准确。", [missingUsername])
           : stale
-            ? `还有 ${stale} 个账号超过一年未更新。建议核对密码和网站地址是否仍然有效。`
-            : '当前账号没有明显本地风险，继续保持独立强密码。';
+            ? t("还有 {0} 个账号超过一年未更新。建议核对密码和网站地址是否仍然有效。", [stale])
+            : t("当前账号没有明显本地风险，继续保持独立强密码。");
 
   return {
     total,
@@ -5415,14 +5285,12 @@ function PlaceholderPanel({ section }: { section: DashboardSection }) {
       <h2>{SECTION_LABELS[section]}</h2>
       <p>
         {section === 'authenticator'
-          ? '这里会管理 TOTP 动态验证码。当前版本先保留入口，避免和登录密码混在一起。'
+          ? t("这里会管理 TOTP 动态验证码。当前版本先保留入口，避免和登录密码混在一起。")
           : section === 'sharing'
-            ? '共享中心会用于团队共享账号，后续需要权限和同步能力。'
-            : '紧急访问会用于受信联系人恢复访问，后续需要独立授权流程。'}
+            ? t("共享中心会用于团队共享账号，后续需要权限和同步能力。")
+            : t("紧急访问会用于受信联系人恢复访问，后续需要独立授权流程。")}
       </p>
-      <button type="button" disabled>
-        即将支持
-      </button>
+      <button type="button" disabled>{t("即将支持")}</button>
     </section>
   );
 }
@@ -5454,7 +5322,7 @@ function ItemModal({
   const [loginPasswordVisible, setLoginPasswordVisible] = useSecretVisibility();
   const [siteLookup, setSiteLookup] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; message: string }>({
     status: 'idle',
-    message: '输入网址后自动识别站点标题和图标。'
+    message: t("输入网址后自动识别站点标题和图标。")
   });
   const [noteDraft, setNoteDraft] = useState(() => noteToDraft(modal.type === 'note' ? modal.note : undefined));
   const [identityDraft, setIdentityDraft] = useState(() =>
@@ -5463,7 +5331,7 @@ function ItemModal({
       : modal.type === 'contact'
         ? modal.identity
           ? identityToDraft(modal.identity)
-          : emptyIdentityDraft('联系人')
+          : emptyIdentityDraft(t("联系人"))
         : emptyIdentityDraft()
   );
   const [folderDraft, setFolderDraft] = useState(() => (modal.type === 'folder' ? modal.folder?.name ?? '' : ''));
@@ -5472,44 +5340,44 @@ function ItemModal({
   const title =
     modal.type === 'login'
       ? modal.credential
-        ? '编辑登录'
-        : '新建登录'
+        ? t("编辑登录")
+        : t("新建登录")
       : modal.type === 'note'
         ? modal.note
-          ? '编辑保密笔记'
-          : '新建保密笔记'
+          ? t("编辑保密笔记")
+          : t("新建保密笔记")
         : modal.type === 'identity'
           ? modal.identity
-            ? '编辑个人信息'
-            : '新建个人信息'
+            ? t("编辑个人信息")
+            : t("新建个人信息")
           : modal.type === 'contact'
             ? modal.identity
-              ? '编辑联系人'
-              : '新建联系人'
+              ? t("编辑联系人")
+              : t("新建联系人")
             : modal.type === 'folder'
               ? modal.folder
-                ? '重命名文件夹'
-                : '新建文件夹'
+                ? t("重命名文件夹")
+                : t("新建文件夹")
               : modal.type === 'moveFolder'
-                ? '移动文件夹内容'
-                : '移动到文件夹';
+                ? t("移动文件夹内容")
+                : t("移动到文件夹");
   const modalClass = `item-modal ${modal.type}-modal`;
   const modalEyebrow =
     modal.type === 'folder'
       ? modal.folder
-        ? '更新文件夹'
-        : '整理空间'
+        ? t("更新文件夹")
+        : t("整理空间")
       : modal.type === 'move'
-        ? '选择位置'
+        ? t("选择位置")
         : modal.type === 'moveFolder'
-          ? '选择位置'
+          ? t("选择位置")
         : modal.type === 'login'
-          ? '保存登录'
+          ? t("保存登录")
           : modal.type === 'note'
-            ? '加密笔记'
-            : '身份资料';
+            ? t("加密笔记")
+            : t("身份资料");
   const loginPreviewDomain = extractDomain(credentialDraft.url);
-  const loginPreviewTitle = credentialDraft.title.trim() || loginPreviewDomain || '新登录项';
+  const loginPreviewTitle = credentialDraft.title.trim() || loginPreviewDomain || t("新登录项");
   const loginStrength = measurePasswordStrength(credentialDraft.password);
 
   useEffect(() => {
@@ -5517,13 +5385,13 @@ function ItemModal({
 
     const rawUrl = credentialDraft.url.trim();
     if (!rawUrl || rawUrl.length < 4 || !rawUrl.includes('.')) {
-      setSiteLookup({ status: 'idle', message: '输入网址后自动识别站点标题和图标。' });
+      setSiteLookup({ status: 'idle', message: t("输入网址后自动识别站点标题和图标。") });
       return;
     }
 
     let cancelled = false;
     const requestedUrl = normalizeUrl(rawUrl);
-    setSiteLookup({ status: 'loading', message: '正在识别站点标题和图标...' });
+    setSiteLookup({ status: 'loading', message: t("正在识别站点标题和图标...") });
 
     const timer = window.setTimeout(() => {
       void fetchSiteMetadata(requestedUrl)
@@ -5549,14 +5417,14 @@ function ItemModal({
             status: metadata.ok ? 'done' : 'error',
             message: metadata.ok
               ? metadata.title
-                ? `已识别：${metadata.title}`
-                : '已识别图标，标题可手动填写。'
-              : '暂时无法读取标题，仍可手动保存。'
+                ? t("已识别：{0}", [metadata.title])
+                : t("已识别图标，标题可手动填写。")
+              : t("暂时无法读取标题，仍可手动保存。")
           });
         })
         .catch(() => {
           if (!cancelled) {
-            setSiteLookup({ status: 'error', message: '暂时无法读取标题，仍可手动保存。' });
+            setSiteLookup({ status: 'error', message: t("暂时无法读取标题，仍可手动保存。") });
           }
         });
     }, 520);
@@ -5585,7 +5453,7 @@ function ItemModal({
             <small>{modalEyebrow}</small>
             <h2>{title}</h2>
           </span>
-          <button type="button" aria-label="关闭" onClick={onClose}>
+          <button type="button" aria-label={t("关闭")} onClick={onClose}>
             <X size={18} />
           </button>
         </header>
@@ -5595,22 +5463,22 @@ function ItemModal({
               <FolderOpen size={24} />
             </span>
             <div>
-              <strong>把相同项目放在一起</strong>
-              <p>文件夹会保存到加密 Vault，之后可以在左侧直接查看。</p>
+              <strong>{t("把相同项目放在一起")}</strong>
+              <p>{t("文件夹会保存到加密 Vault，之后可以在左侧直接查看。")}</p>
             </div>
-            <Field label="文件夹名称" value={folderDraft} onChange={setFolderDraft} placeholder="例如：服务器、客户账号、工作" required />
+            <Field label={t("文件夹名称")} value={folderDraft} onChange={setFolderDraft} placeholder={t("例如：服务器、客户账号、工作")} required />
           </section>
         ) : modal.type === 'move' ? (
           <section className="move-folder-body">
             <div className="move-target">
               <ItemIcon item={modal.item} />
               <span>
-                <small>正在移动</small>
+                <small>{t("正在移动")}</small>
                 <strong>{itemName(modal.item)}</strong>
-                <em>当前文件夹：{itemFolder(modal.item)}</em>
+                <em>{t("当前文件夹：")}{itemFolder(modal.item)}</em>
               </span>
             </div>
-            <FolderField label="目标文件夹" value={moveFolder} folders={folders} onChange={setMoveFolder} />
+            <FolderField label={t("目标文件夹")} value={moveFolder} folders={folders} onChange={setMoveFolder} />
           </section>
         ) : modal.type === 'moveFolder' ? (
           <section className="move-folder-body">
@@ -5619,12 +5487,12 @@ function ItemModal({
                 <FolderOpen size={22} />
               </span>
               <span>
-                <small>正在移动文件夹内容</small>
+                <small>{t("正在移动文件夹内容")}</small>
                 <strong>{modal.folderName}</strong>
-                <em>原文件夹会删除，项目会进入目标文件夹。</em>
+                <em>{t("原文件夹会删除，项目会进入目标文件夹。")}</em>
               </span>
             </div>
-            <FolderField label="目标文件夹" value={moveFolder} folders={moveFolderOptions} onChange={setMoveFolder} />
+            <FolderField label={t("目标文件夹")} value={moveFolder} folders={moveFolderOptions} onChange={setMoveFolder} />
           </section>
         ) : modal.type === 'login' ? (
           <section className="login-create-body">
@@ -5632,12 +5500,10 @@ function ItemModal({
               <SiteIcon domain={loginPreviewDomain} url={credentialDraft.url} iconUrl={credentialDraft.iconUrl} />
               <span>
                 <strong>{loginPreviewTitle}</strong>
-                <small>{loginPreviewDomain || '输入网址后会自动识别域名'}</small>
+                <small>{loginPreviewDomain || t("输入网址后会自动识别域名")}</small>
               </span>
               <em>
-                <ShieldCheck size={15} />
-                本地加密
-              </em>
+                <ShieldCheck size={15} />{t("本地加密")}</em>
             </div>
             {!modal.credential ? (
               <p className={`site-lookup-status ${siteLookup.status}`}>
@@ -5648,24 +5514,24 @@ function ItemModal({
 
             <section className="login-fieldset">
               <header>
-                <span>网站</span>
-                <small>用于匹配网页和显示账号名称</small>
+                <span>{t("网站")}</span>
+                <small>{t("用于匹配网页和显示账号名称")}</small>
               </header>
               <div className="login-two-col">
-                <Field label="名称" value={credentialDraft.title} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, title: value }))} placeholder="例如：GitHub 工作号" required />
-                <Field label="网址" value={credentialDraft.url} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, url: value }))} placeholder="https://example.com/login" required />
+                <Field label={t("名称")} value={credentialDraft.title} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, title: value }))} placeholder={t("例如：GitHub 工作号")} required />
+                <Field label={t("网址")} value={credentialDraft.url} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, url: value }))} placeholder="https://example.com/login" required />
               </div>
             </section>
 
             <section className="login-fieldset">
               <header>
-                <span>凭据</span>
-                <small>保存登录名和密码，稍后用于一键填写</small>
+                <span>{t("凭据")}</span>
+                <small>{t("保存登录名和密码，稍后用于一键填写")}</small>
               </header>
               <div className="login-two-col">
-                <Field label="用户名" value={credentialDraft.username} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, username: value }))} placeholder="邮箱、用户名或手机号" />
+                <Field label={t("用户名")} value={credentialDraft.username} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, username: value }))} placeholder={t("邮箱、用户名或手机号")} />
                 <PasswordField
-                  label="密码"
+                  label={t("密码")}
                   value={credentialDraft.password}
                   visible={loginPasswordVisible}
                   onToggleVisible={() => setLoginPasswordVisible((visible) => !visible)}
@@ -5675,55 +5541,55 @@ function ItemModal({
               </div>
               <span className={`login-strength s${loginStrength.score}`}>
                 <Shield size={15} />
-                {credentialDraft.password ? `密码强度：${loginStrength.label}` : '输入密码后显示强度'}
+                {credentialDraft.password ? t("密码强度：{0}", [loginStrength.label]) : t("输入密码后显示强度")}
               </span>
             </section>
 
             <section className="login-fieldset">
               <header>
-                <span>归档</span>
-                <small>把账号放进指定文件夹，便于后续筛选</small>
+                <span>{t("归档")}</span>
+                <small>{t("把账号放进指定文件夹，便于后续筛选")}</small>
               </header>
               <FolderField value={credentialDraft.folder} folders={folders} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, folder: value }))} />
             </section>
 
             <section className="login-fieldset">
               <header>
-                <span>备注</span>
-                <small>可记录恢复邮箱、用途或安全提示</small>
+                <span>{t("备注")}</span>
+                <small>{t("可记录恢复邮箱、用途或安全提示")}</small>
               </header>
-              <TextArea label="备注" value={credentialDraft.notes} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, notes: value }))} placeholder="可选" rows={3} />
+              <TextArea label={t("备注")} value={credentialDraft.notes} onChange={(value) => setCredentialDraft((draft) => ({ ...draft, notes: value }))} placeholder={t("可选")} rows={3} />
             </section>
           </section>
         ) : modal.type === 'note' ? (
           <>
-            <Field label="标题" value={noteDraft.title} onChange={(value) => setNoteDraft((draft) => ({ ...draft, title: value }))} required />
+            <Field label={t("标题")} value={noteDraft.title} onChange={(value) => setNoteDraft((draft) => ({ ...draft, title: value }))} required />
             <FolderField value={noteDraft.folder} folders={folders} onChange={(value) => setNoteDraft((draft) => ({ ...draft, folder: value }))} />
-            <TextArea label="笔记" value={noteDraft.note} onChange={(value) => setNoteDraft((draft) => ({ ...draft, note: value }))} />
+            <TextArea label={t("笔记")} value={noteDraft.note} onChange={(value) => setNoteDraft((draft) => ({ ...draft, note: value }))} />
           </>
         ) : (
           <>
-            <Field label="资料名称" value={identityDraft.title} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, title: value }))} required />
+            <Field label={t("资料名称")} value={identityDraft.title} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, title: value }))} required />
             <FolderField value={identityDraft.folder} folders={folders} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, folder: value }))} />
-            <Field label="姓名" value={identityDraft.fullName} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, fullName: value }))} />
-            <Field label="邮箱" value={identityDraft.email} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, email: value }))} />
-            <Field label="电话" value={identityDraft.phone} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, phone: value }))} />
-            <Field label="公司" value={identityDraft.company} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, company: value }))} />
-            <Field label="地址" value={identityDraft.address} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, address: value }))} />
+            <Field label={t("姓名")} value={identityDraft.fullName} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, fullName: value }))} />
+            <Field label={t("邮箱")} value={identityDraft.email} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, email: value }))} />
+            <Field label={t("电话")} value={identityDraft.phone} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, phone: value }))} />
+            <Field label={t("公司")} value={identityDraft.company} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, company: value }))} />
+            <Field label={t("地址")} value={identityDraft.address} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, address: value }))} />
             <div className="modal-grid">
-              <Field label="城市" value={identityDraft.city} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, city: value }))} />
-              <Field label="地区" value={identityDraft.region} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, region: value }))} />
-              <Field label="邮编" value={identityDraft.postalCode} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, postalCode: value }))} />
-              <Field label="国家" value={identityDraft.country} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, country: value }))} />
+              <Field label={t("城市")} value={identityDraft.city} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, city: value }))} />
+              <Field label={t("地区")} value={identityDraft.region} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, region: value }))} />
+              <Field label={t("邮编")} value={identityDraft.postalCode} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, postalCode: value }))} />
+              <Field label={t("国家")} value={identityDraft.country} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, country: value }))} />
             </div>
-            <TextArea label="备注" value={identityDraft.notes} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, notes: value }))} />
+            <TextArea label={t("备注")} value={identityDraft.notes} onChange={(value) => setIdentityDraft((draft) => ({ ...draft, notes: value }))} />
           </>
         )}
         <footer>
-          <button type="button" onClick={onClose}>取消</button>
+          <button type="button" onClick={onClose}>{t("取消")}</button>
           <button className="primary" type="submit">
             <Check size={17} />
-            {modal.type === 'folder' ? (modal.folder ? '重命名' : '创建') : modal.type === 'move' || modal.type === 'moveFolder' ? '移动' : '保存'}
+            {modal.type === 'folder' ? (modal.folder ? t("重命名") : t("创建")) : modal.type === 'move' || modal.type === 'moveFolder' ? t("移动") : t("保存")}
           </button>
         </footer>
       </form>
@@ -5774,7 +5640,7 @@ function PasswordField({
       <span>{label}</span>
       <span className="password-entry-control">
         <input type={visible ? 'text' : 'password'} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
-        <button type="button" aria-label={visible ? '隐藏密码' : '显示密码'} title={visible ? '隐藏密码' : '显示密码'} onClick={onToggleVisible}>
+        <button type="button" aria-label={visible ? t("隐藏密码") : t("显示密码")} title={visible ? t("隐藏密码") : t("显示密码")} onClick={onToggleVisible}>
           {visible ? <EyeOff size={17} /> : <Eye size={17} />}
         </button>
       </span>
@@ -5782,7 +5648,7 @@ function PasswordField({
   );
 }
 
-function FolderField({ label = '文件夹', value, folders, onChange }: { label?: string; value: string; folders: string[]; onChange: (value: string) => void }) {
+function FolderField({ label = t("文件夹"), value, folders, onChange }: { label?: string; value: string; folders: string[]; onChange: (value: string) => void }) {
   const normalizedValue = normalizeFolderLabel(value);
 
   return (
@@ -5799,12 +5665,12 @@ function FolderField({ label = '文件夹', value, folders, onChange }: { label?
             onClick={() => onChange(folder)}
           >
             <FolderOpen size={16} />
-            <span>{folder}</span>
+            <span>{displayFolderName(folder)}</span>
           </button>
         ))}
       </div>
-      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="输入新文件夹名称" />
-      <small>选择已有文件夹，或直接输入一个新名称。</small>
+      <input value={isRootFolder(value) ? '' : value} onChange={(event) => onChange(event.target.value)} placeholder={t("输入新文件夹名称")} />
+      <small>{t("选择已有文件夹，或直接输入一个新名称。")}</small>
     </div>
   );
 }

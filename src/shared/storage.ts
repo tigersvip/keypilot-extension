@@ -1,4 +1,5 @@
 import type { VaultEncrypted, VaultPlain } from './types';
+import { LANGUAGE_KEY, normalizeLanguage } from './language';
 import { buildReminderIndex, REMINDER_INDEX_KEY, updateReminderIndex } from './reminders';
 export const VAULT_STORAGE_KEY = 'keypilot.encryptedVault';
 export const UNLOCKED_SESSION_KEY = 'keypilot.unlockedSession';
@@ -37,8 +38,9 @@ export async function saveEncryptedVault(vault: VaultEncrypted, plain?: VaultPla
   if (!plain) return write(VAULT_STORAGE_KEY, vault);
   // Publish ciphertext and its content-free schedule together, under the receipt lock.
   await updateReminderIndex(previous => buildReminderIndex(plain, vault.kdf.salt, replaceReminders ? null : previous), async index => {
-    if (globalThis.chrome?.storage?.local) await chrome.storage.local.set({ [VAULT_STORAGE_KEY]: vault, [REMINDER_INDEX_KEY]: index });
-    else { await write(VAULT_STORAGE_KEY, vault); await write(REMINDER_INDEX_KEY, index); }
+    const language = normalizeLanguage(plain.settings.language);
+    if (globalThis.chrome?.storage?.local) await chrome.storage.local.set({ [VAULT_STORAGE_KEY]: vault, [REMINDER_INDEX_KEY]: index, [LANGUAGE_KEY]: language });
+    else { await write(VAULT_STORAGE_KEY, vault); await write(REMINDER_INDEX_KEY, index); window.localStorage.setItem(LANGUAGE_KEY, language); }
   });
 }
 export const getSessionState = () => read<SessionState>(SESSION_STATE_KEY, true);

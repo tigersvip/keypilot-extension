@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { copyProtectedText } from './clipboard';
@@ -18,14 +19,14 @@ export function CopyButton({ value, label, sensitive = true }: { value: string; 
     setBusy(true); setMessage('');
     try {
       const copied = value ? await copyProtectedText(value, sensitive) : false;
-      if (alive.current && copied) setMessage('已复制');
+      if (alive.current && copied) setMessage(t("已复制"));
     } catch {
-      if (alive.current) setMessage('复制失败，请重试');
+      if (alive.current) setMessage(t("复制失败，请重试"));
     } finally { if (alive.current) setBusy(false); }
   }
   return <span className="kp-copy-control">
     <button type="button" aria-label={label} title={label} disabled={busy || !value} onClick={() => void copy()}>
-      {message === '已复制' ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
+      {message === t('已复制') ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
     </button>
     <span className="kp-copy-feedback" role="status">{message}</span>
   </span>;

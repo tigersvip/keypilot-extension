@@ -1,0 +1,17 @@
+{
+  "extensionName": {
+    "message": "KeyPilot"
+  },
+  "extensionDescription": {
+    "message": "ローカル優先のパスワード管理、フォーム入力、ブラウザーのリマインダー。"
+  },
+  "fillCommand": {
+    "message": "アカウントまたは個人情報を入力（フォームを自動検出）"
+  },
+  "lockCommand": {
+    "message": "すべての KeyPilot ページをロック"
+  },
+  "searchCommand": {
+    "message": "保管庫を開いて検索"
+  }
+}
