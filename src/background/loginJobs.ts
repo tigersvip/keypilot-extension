@@ -6,6 +6,7 @@ import type { Credential, FillCredentialPayload, FillCredentialResult, UnlockedV
 const ALARM = 'keypilot-login-jobs';
 let writes: Promise<unknown> = Promise.resolve();
 const running = new Set<string>();
+const rerun = new Set<string>();
 export interface ManagedLoginGuard {
   documentId: string;
   url: string;
@@ -70,7 +71,9 @@ export function setupLoginJobs(
   fill: (tabId: number, payload: FillCredentialPayload, guard: ManagedLoginGuard) => Promise<FillCredentialResult>
 ) {
   async function run(id: string) {
-    if (running.has(id)) return;
+    // Navigation and tab completion can arrive in either order. Keep one fresh
+    // check if the later event arrives while an earlier status read is pending.
+    if (running.has(id)) { rerun.add(id); return; }
     running.add(id);
     try {
       const job = (await readJobs())[id];
@@ -124,7 +127,10 @@ export function setupLoginJobs(
       } else await stop(id,'页面暂时无法自动填写，请返回网站后使用插件手动选择账号。');
     } catch {
       await stop(id,'本次自动登录未完成，请重新解锁密码库并发起登录。').catch(()=>undefined);
-    } finally { running.delete(id); }
+    } finally {
+      running.delete(id);
+      if(rerun.delete(id))void run(id).catch(()=>undefined);
+    }
   }
   async function runForTab(tabId: number) {
     for (const job of Object.values(await readJobs())) if (job.tabId === tabId && loginJobActive(job)) await run(job.id);
@@ -143,6 +149,7 @@ export function setupLoginJobs(
     })().catch(()=>undefined);
   });
   chrome.webNavigation.onCompleted.addListener(details=>{if(details.frameId===0)void runForTab(details.tabId).catch(()=>undefined);});
+  chrome.tabs.onUpdated.addListener((tabId,changes)=>{if(changes.status==='complete')void runForTab(tabId).catch(()=>undefined);});
   chrome.tabs.onRemoved.addListener(tabId=>{
     void changeJobs(jobs=>{for(const job of Object.values(jobs))if(job.tabId===tabId&&loginJobActive(job)){job.phase='cancelled';job.message='目标标签页已关闭。';job.updatedAt=Date.now();}}).catch(()=>undefined);
   });

@@ -88,6 +88,24 @@ test('certificate wait resumes on a normal document, using the latest saved pass
   await expect(page.locator('#result')).toHaveText('1');
 });
 
+test('tab completion arriving during a stale loading check resumes once without waiting for an alarm',async()=>{
+  const {page,job}=await seedWait();
+  await worker.evaluate(tabId=>{
+    const get=chrome.tabs.get.bind(chrome.tabs);let delayed=false;
+    (chrome.tabs as any).get=async(id:number,callback?:(tab:chrome.tabs.Tab)=>void)=>{
+      if(typeof callback==='function'){get(id,callback);return;}
+      const tab=await get(id);
+      if(id===tabId&&tab.url?.startsWith('https://login.example.test/')&&!delayed){
+        delayed=true;await new Promise(resolve=>setTimeout(resolve,400));return {...tab,status:'loading'};
+      }
+      return tab;
+    };
+  },job.tabId);
+  await page.goto(url);await expect.poll(async()=>(await jobs())[job.id]?.phase).toBe('done');
+  await expect(page.locator('#password')).toHaveValue(credential.password);await expect(page.locator('#result')).toHaveText('1');
+  await page.waitForTimeout(1000);await expect(page.locator('#result')).toHaveText('1');
+});
+
 test('locked vault pauses the continuation, then unlocking resumes it', async () => {
   const {page}=await seedWait();
   await worker.evaluate(async () => {await chrome.storage.session.remove(['keypilot.unlockedSession','keypilot.sessionState']);});
