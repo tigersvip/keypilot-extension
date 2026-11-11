@@ -1,9 +1,16 @@
+import { validateAutoTotpOrigins, validateSiteLoginSettings } from './loginSettings';
+import { applyReminderReceipts, syncReminderIndex } from './reminders';
+import { validateCaptchaRules } from './captchaRules';
+import { mergeVaultChanges } from './vaultMerge';
+import { migrateFillProfilePrivacy } from './fillPrivacy';
 import { createEmptyVault, defaultSettings } from './defaults';
 import { domainsMatch, extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from './domain';
 import { getRootFaviconUrl } from './icons';
+import { capturePasswordChanges, rememberPreviousPassword } from './credentialSecurity';
 import {
   attachRecoveryToEncryptedVault,
   createEncryptedVault,
+  decryptVaultWithKey,
   encryptVaultWithExistingKey,
   exportVaultKey,
   importVaultKey,
@@ -11,6 +18,9 @@ import {
   unlockEncryptedVaultWithRecoveryCode
 } from './crypto';
 import {
+  withVaultLock,
+  getSessionState,
+  isVaultSessionActive,
   clearUnlockedVaultCache,
   getEncryptedVault,
   getUnlockedVaultCache,
@@ -42,54 +52,64 @@ export async function hasVault(): Promise<boolean> {
 }
 
 export async function createVaultSession(masterPassword: string, recoveryCode?: string): Promise<UnlockedVaultSession> {
-  const { vault } = await ensureSaveInboxKeyPair(createEmptyVault());
-  const { encryptedVault, key } = await createEncryptedVault(masterPassword, vault, recoveryCode);
-  await saveEncryptedVault(encryptedVault);
-  const session = { key, vault, encryptedVault };
-  await cacheVaultSession(session);
-  return session;
+  return withVaultLock(async () => {
+    if (masterPassword.length < 8) throw new Error('MASTER_PASSWORD_TOO_SHORT');
+    if (await getEncryptedVault()) throw new Error('VAULT_ALREADY_EXISTS');
+    const { vault } = await ensureSaveInboxKeyPair(createEmptyVault());
+    const { encryptedVault, key } = await createEncryptedVault(masterPassword, vault, recoveryCode);
+    await saveEncryptedVault(encryptedVault, vault);
+    const session = { key, vault, encryptedVault, sessionId: crypto.randomUUID() };
+    await cacheVaultSession(session);
+    return session;
+  });
 }
 
 export async function unlockVaultSession(masterPassword: string, encryptedVault?: VaultEncrypted): Promise<UnlockedVaultSession> {
-  const storedVault = encryptedVault ?? (await getEncryptedVault());
+  return withVaultLock(async () => {
+    const storedVault = encryptedVault ?? (await getEncryptedVault());
 
-  if (!storedVault) {
-    throw new Error('VAULT_NOT_FOUND');
-  }
+    if (!storedVault) {
+      throw new Error('VAULT_NOT_FOUND');
+    }
 
-  const { vault: rawVault, key } = await unlockEncryptedVault(masterPassword, storedVault);
-  return prepareUnlockedVaultSession(key, storedVault, rawVault);
+    const { vault: rawVault, key } = await unlockEncryptedVault(masterPassword, storedVault);
+    return prepareUnlockedVaultSession(key, storedVault, rawVault);
+  });
 }
 
 export async function unlockVaultWithRecoveryCode(recoveryCode: string, encryptedVault?: VaultEncrypted): Promise<UnlockedVaultSession> {
-  const storedVault = encryptedVault ?? (await getEncryptedVault());
+  return withVaultLock(async () => {
+    const storedVault = encryptedVault ?? (await getEncryptedVault());
 
-  if (!storedVault) {
-    throw new Error('VAULT_NOT_FOUND');
-  }
+    if (!storedVault) {
+      throw new Error('VAULT_NOT_FOUND');
+    }
 
-  const { vault: rawVault, key } = await unlockEncryptedVaultWithRecoveryCode(recoveryCode, storedVault);
-  return prepareUnlockedVaultSession(key, storedVault, rawVault);
+    const { vault: rawVault, key } = await unlockEncryptedVaultWithRecoveryCode(recoveryCode, storedVault);
+    return prepareUnlockedVaultSession(key, storedVault, rawVault);
+  });
 }
 
-function normalizeVault(vault: VaultPlain): VaultPlain {
+export function normalizeVault(vault: VaultPlain): VaultPlain {
   const settings = {
     ...defaultSettings,
-    ...vault.settings
+    ...vault.settings,
+    // Three-way setting merges represent removed map entries as undefined.
+    ...(vault.settings.siteLoginSettings ? {siteLoginSettings: JSON.parse(JSON.stringify(vault.settings.siteLoginSettings))} : {}),
+    captchaSiteRules: Object.fromEntries(Object.entries(vault.settings.captchaSiteRules??{}).filter(([,rule])=>rule!==undefined))
   };
-
-  if (settings.lockOnStartup && !settings.lockOnStartupUserSet) {
-    settings.lockOnStartup = false;
-    settings.autoLockMinutes = 0;
-  }
 
   return {
     ...vault,
+    totpAccounts: vault.totpAccounts ?? [],
+    reminders: vault.reminders ?? [],
     secureNotes: vault.secureNotes ?? [],
     identities: vault.identities ?? [],
-    fillProfiles: vault.fillProfiles ?? [],
+    fillProfiles: (vault.fillProfiles ?? []).map(migrateFillProfilePrivacy),
     folders: vault.folders ?? [],
-    deletedItems: vault.deletedItems ?? [],
+    deletedItems: (vault.deletedItems ?? []).map(item => item.kind === 'fillProfile'
+      ? { ...item, item: migrateFillProfilePrivacy(item.item) }
+      : item),
     settings
   };
 }
@@ -266,15 +286,16 @@ async function prepareUnlockedVaultSession(
   encryptedVault: VaultEncrypted,
   rawVault: VaultPlain
 ): Promise<UnlockedVaultSession> {
-  const prepared = await ensureSaveInboxKeyPair(rawVault);
+  const receivedVault = await applyReminderReceipts(rawVault, encryptedVault.kdf.salt);
+  const prepared = await ensureSaveInboxKeyPair(receivedVault);
   const pending = await importPendingSaveInbox(prepared.vault);
   const saveInboxPublicKey = getSaveInboxPublicKeyFromVault(pending.vault.saveInboxKeyPair);
   const publicKeyChanged = saveInboxPublicKey?.keyId !== encryptedVault.saveInboxPublicKey?.keyId;
   let nextEncryptedVault = encryptedVault;
 
-  if (prepared.changed || pending.changed || publicKeyChanged) {
+  if (JSON.stringify(rawVault.reminders) !== JSON.stringify(receivedVault.reminders) || prepared.changed || pending.changed || publicKeyChanged) {
     nextEncryptedVault = await encryptVaultWithExistingKey(key, encryptedVault, pending.vault);
-    await saveEncryptedVault(nextEncryptedVault);
+    await saveEncryptedVault(nextEncryptedVault, pending.vault);
   }
 
   if (pending.consumedIds.length) {
@@ -282,6 +303,7 @@ async function prepareUnlockedVaultSession(
   }
 
   const session = {
+    sessionId: crypto.randomUUID(),
     key,
     vault: pending.vault,
     encryptedVault: nextEncryptedVault,
@@ -292,106 +314,98 @@ async function prepareUnlockedVaultSession(
   return session;
 }
 
-export async function persistVaultSession(session: UnlockedVaultSession, vault: VaultPlain): Promise<UnlockedVaultSession> {
-  const prepared = await ensureSaveInboxKeyPair(normalizeVault(vault));
-  const encryptedVault = await encryptVaultWithExistingKey(session.key, session.encryptedVault, prepared.vault);
-  await saveEncryptedVault(encryptedVault);
-  const nextSession = {
-    key: session.key,
-    vault: prepared.vault,
-    encryptedVault
-  };
-  await cacheVaultSession(nextSession);
-  return nextSession;
+export async function assertVaultSession(session: UnlockedVaultSession): Promise<void> {
+  const cache = await getUnlockedVaultCache();
+  if (!session.sessionId || cache?.sessionId !== session.sessionId) throw new Error('VAULT_LOCKED');
 }
-
-export async function changeVaultMasterPassword(
-  session: UnlockedVaultSession,
-  currentMasterPassword: string,
-  nextMasterPassword: string,
-  recoveryCode?: string
-): Promise<UnlockedVaultSession> {
+export async function persistVaultSession(session: UnlockedVaultSession, vault: VaultPlain): Promise<UnlockedVaultSession> {
+  return withVaultLock(async () => {
+    await assertVaultSession(session);
+    const currentEncrypted = await getEncryptedVault();
+    if (!currentEncrypted || currentEncrypted.kdf.salt !== session.encryptedVault.kdf.salt) throw new Error('VAULT_LOCKED');
+    const current = await decryptVaultWithKey(session.key, currentEncrypted);
+    const merged = capturePasswordChanges(current, mergeVaultChanges(normalizeVault(session.vault), normalizeVault(vault), normalizeVault(current)));
+    const prepared = await ensureSaveInboxKeyPair(await applyReminderReceipts(merged, currentEncrypted.kdf.salt));
+    validateCaptchaRules(prepared.vault.settings.captchaSiteRules);
+    validateAutoTotpOrigins(prepared.vault.settings.autoTotpOrigins);
+    validateSiteLoginSettings(prepared.vault.settings.siteLoginSettings);
+    const encryptedVault = await encryptVaultWithExistingKey(session.key, currentEncrypted, prepared.vault);
+    await saveEncryptedVault(encryptedVault, prepared.vault);
+    const nextSession = { ...session, vault: prepared.vault, encryptedVault };
+    await cacheVaultSession(nextSession);
+    return nextSession;
+  });
+}
+export async function changeVaultMasterPassword(session: UnlockedVaultSession, currentMasterPassword: string, nextMasterPassword: string, recoveryCode?: string): Promise<UnlockedVaultSession> {
   await unlockEncryptedVault(currentMasterPassword, session.encryptedVault);
   return resetVaultMasterPassword(session, nextMasterPassword, recoveryCode);
 }
-
-export async function resetVaultMasterPassword(
-  session: UnlockedVaultSession,
-  nextMasterPassword: string,
-  recoveryCode?: string
-): Promise<UnlockedVaultSession> {
-  const prepared = await ensureSaveInboxKeyPair(normalizeVault(session.vault));
-  const { encryptedVault, key } = await createEncryptedVault(nextMasterPassword, prepared.vault, recoveryCode);
-  await saveEncryptedVault(encryptedVault);
-  const nextSession = {
-    key,
-    vault: prepared.vault,
-    encryptedVault
-  };
-  await cacheVaultSession(nextSession);
-  return nextSession;
-}
-
-export async function enableVaultRecovery(session: UnlockedVaultSession, recoveryCode: string): Promise<UnlockedVaultSession> {
-  const encryptedVault = await attachRecoveryToEncryptedVault(session.key, session.encryptedVault, recoveryCode);
-  await saveEncryptedVault(encryptedVault);
-  const nextSession = {
-    ...session,
-    encryptedVault
-  };
-  await cacheVaultSession(nextSession);
-  return nextSession;
-}
-
-export async function disableVaultRecovery(session: UnlockedVaultSession): Promise<UnlockedVaultSession> {
-  const { recovery: _recovery, ...encryptedVault } = session.encryptedVault;
-  await saveEncryptedVault(encryptedVault);
-  const nextSession = {
-    ...session,
-    encryptedVault
-  };
-  await cacheVaultSession(nextSession);
-  return nextSession;
-}
-
-export async function cacheVaultSession(session: UnlockedVaultSession): Promise<void> {
-  if (session.vault.settings.highSecurityMode || session.vault.settings.lockOnStartup) {
-    await clearUnlockedVaultCache();
-    return;
-  }
-
-  await saveUnlockedVaultCache({
-    vault: session.vault,
-    encryptedVault: session.encryptedVault,
-    exportedKey: await exportVaultKey(session.key),
-    cachedAt: Date.now()
+export async function resetVaultMasterPassword(session: UnlockedVaultSession, nextMasterPassword: string, recoveryCode?: string): Promise<UnlockedVaultSession> {
+  if (nextMasterPassword.length < 8) throw new Error('MASTER_PASSWORD_TOO_SHORT');
+  return withVaultLock(async () => {
+    await assertVaultSession(session);
+    const current = await getEncryptedVault();
+    if (!current || current.kdf.salt !== session.encryptedVault.kdf.salt) throw new Error('VAULT_LOCKED');
+    const vault = normalizeVault(await applyReminderReceipts(await decryptVaultWithKey(session.key, current), current.kdf.salt));
+    const { encryptedVault, key } = await createEncryptedVault(nextMasterPassword, vault, recoveryCode);
+    await saveEncryptedVault(encryptedVault, vault);
+    const nextSession = { key, vault, encryptedVault, sessionId: crypto.randomUUID() };
+    await cacheVaultSession(nextSession);
+    return nextSession;
   });
 }
-
-export async function restoreCachedVaultSession(): Promise<UnlockedVaultSession | null> {
-  const cache = await getUnlockedVaultCache();
-
-  if (!cache) {
-    return null;
-  }
-
-  if (cache.vault.settings.highSecurityMode || cache.vault.settings.lockOnStartup) {
-    await clearUnlockedVaultCache();
-    return null;
-  }
-
-  const autoLockMinutes = cache.vault.settings.autoLockMinutes;
-
-  if (autoLockMinutes > 0 && Date.now() - cache.cachedAt > autoLockMinutes * 60 * 1000) {
-    await clearUnlockedVaultCache();
-    return null;
-  }
-
-  return prepareUnlockedVaultSession(await importVaultKey(cache.exportedKey), cache.encryptedVault, cache.vault);
+export async function enableVaultRecovery(session: UnlockedVaultSession, recoveryCode: string): Promise<UnlockedVaultSession> {
+  return updateRecovery(session, recoveryCode);
 }
-
+export async function disableVaultRecovery(session: UnlockedVaultSession): Promise<UnlockedVaultSession> {
+  return updateRecovery(session);
+}
+async function updateRecovery(session: UnlockedVaultSession, code?: string): Promise<UnlockedVaultSession> {
+  return withVaultLock(async () => {
+    await assertVaultSession(session);
+    const current = await getEncryptedVault();
+    if (!current || current.kdf.salt !== session.encryptedVault.kdf.salt) throw new Error('VAULT_LOCKED');
+    const { recovery: _recovery, ...withoutRecovery } = current;
+    const encryptedVault = code ? await attachRecoveryToEncryptedVault(session.key, current, code) : withoutRecovery;
+    const nextSession = { ...session, encryptedVault, vault: normalizeVault(await decryptVaultWithKey(session.key, current)) };
+    await saveEncryptedVault(encryptedVault, nextSession.vault);
+    await cacheVaultSession(nextSession);
+    return nextSession;
+  });
+}
+export async function cacheVaultSession(session: UnlockedVaultSession): Promise<void> {
+  await syncReminderIndex(session.vault, session.encryptedVault.kdf.salt);
+  session.sessionId ??= crypto.randomUUID();
+  await saveUnlockedVaultCache({
+    vault: session.vault, encryptedVault: session.encryptedVault,
+    exportedKey: await exportVaultKey(session.key), cachedAt: Date.now(), sessionId: session.sessionId
+  });
+}
+export async function restoreCachedVaultSession(): Promise<UnlockedVaultSession | null> {
+  return withVaultLock(async () => {
+    const cache = await getUnlockedVaultCache();
+    if (!cache) { await clearUnlockedVaultCache(); return null; }
+    const encryptedVault = await getEncryptedVault();
+    if (!encryptedVault || encryptedVault.kdf.salt !== cache.encryptedVault.kdf.salt) return null;
+    const key = await importVaultKey(cache.exportedKey);
+    const vault = encryptedVault.encryptedData === cache.encryptedVault.encryptedData ? cache.vault : await decryptVaultWithKey(key, encryptedVault);
+    return { key, vault: normalizeVault(await applyReminderReceipts(vault, encryptedVault.kdf.salt)), encryptedVault, sessionId: cache.sessionId };
+  });
+}
 export async function clearVaultSessionCache(): Promise<void> {
-  await clearUnlockedVaultCache();
+  await withVaultLock(clearUnlockedVaultCache);
+}
+export async function clearExpiredSession(sessionId: string): Promise<void> {
+  await withVaultLock(async () => {
+    const state = await getSessionState();
+    if (state?.id === sessionId && !await isVaultSessionActive(sessionId)) await clearUnlockedVaultCache();
+  });
+}
+export async function touchVaultActivity(sessionId: string): Promise<void> {
+  await withVaultLock(async () => {
+    const cache = await getUnlockedVaultCache();
+    if (cache?.sessionId === sessionId) await saveUnlockedVaultCache({ ...cache, cachedAt: Date.now() });
+  });
 }
 
 export function buildCredential(input: {
@@ -735,13 +749,15 @@ export function updateCredentialInVault(vault: VaultPlain, credential: Credentia
     credentials: vault.credentials.map((item) =>
       item.id === credential.id
         ? {
-            ...credential,
+            ...rememberPreviousPassword(item, {
+              ...credential,
+              formFields: credential.formFields?.filter((field) => field.value).slice(0, 40)
+            }),
             domain: extractDomain(credential.url),
             matchUrl,
             matchDomain: matchUrl ? extractMatchDomain(matchUrl) : undefined,
             iconUrl: credential.iconUrl?.trim() || undefined,
             iconType: credential.iconType ?? (credential.iconUrl ? 'favicon' : 'default'),
-            formFields: credential.formFields?.filter((field) => field.value).slice(0, 40),
             formProfile: credential.formProfile,
             updatedAt: Date.now()
           }

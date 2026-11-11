@@ -1,0 +1,7 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23245cd8'/%3E%3Ctext x='8' y='24' fill='white' font-size='23' font-family='sans-serif'%3EK%3C/text%3E%3C/svg%3E"><title>KeyPilot · 轻量数字识别验证</title></head><body><main>
+<header><span class="brand">KeyPilot 实验室</span><span class="tag">独立验证页 v2 · 数字引擎已接入 1.8.1</span><h1>先看实际图片，识别是否可靠</h1><p>用于验证纯色、渐变和轻度背景干扰的数字验证码。所有图片只在当前页面内处理，关闭后清除。</p></header>
+<section class="controls"><label class="picker">选择验证码图片<input id="files" type="file" accept="image/png,image/jpeg,image/webp,image/bmp" multiple></label><label>已知位数<select id="length"><option value="">自动分离字符</option><option value="4">4 位</option><option value="5">5 位</option><option value="6">6 位</option></select></label><button id="demo">试用示例</button><button id="background-demo">试用背景示例</button><button id="clear">清空</button></section>
+<p id="status" role="status">正在加载本地数字模板…</p><p class="notice">只验证数字 0–9。示例是合成图片，不代表真实网站准确率。遮挡、粘连或复杂干扰仍可能失败或误读；请逐位核对。不会自动填写网站或点击登录。</p>
+<section id="summary" aria-live="polite"></section><section id="results" aria-label="识别结果"></section>
+<section id="empty"><h2>放入你遇到的失败图片</h2><p>保留原始尺寸。可以一次选择多张图片，并填写“正确答案”统计整张正确率。</p><p>更改位数后会重新识别；指定四位时，三位结果会明确提示不匹配。</p></section>
+</main><script type="module" src="./app.ts"></script></body></html>

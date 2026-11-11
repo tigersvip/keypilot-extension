@@ -1,0 +1,1 @@
+document.querySelector('#load-form').onclick=()=>setTimeout(()=>{document.querySelector('#dynamic').innerHTML='<form><label>用户名<input name="username" autocomplete="username"></label><label>密码<input name="password" type="password" autocomplete="current-password"></label><button type="submit">登录</button></form>';document.querySelector('form').onsubmit=e=>e.preventDefault();},150);

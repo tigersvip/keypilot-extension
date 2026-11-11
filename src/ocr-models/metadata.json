@@ -1,0 +1,75 @@
+{
+  "ddddocrCommit": "c40f56f95412e10bcb9bd0bd24411e92f896d238",
+  "ddddocrSourceSha256": "b8f2ad9cbc1f2e3922a6cb9459e30824e7e2467f3fb4fd61420640e34ea0bf68",
+  "tessdataFastCommit": "87416418657359cb625c412a48b6e1d6d41c29bd",
+  "tessdataSourceSha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
+  "changes": "ASCII output and encoder retained unchanged; added synthetic-trained 63-class letter/digit and 17-class arithmetic uint8 heads sharing the frozen encoder. Tesseract LSTM dictionary sections removed.",
+  "modelUncompressedBytes": 5346935,
+  "tessdataUncompressedBytes": 409234,
+  "assets": {
+    "captcha-ascii.json": {
+      "bytes": 382,
+      "sha256": "678d3712bc181d3d5e45f09f296f317cb65a09fe7fe83b87ef3bd7334eee1e28"
+    },
+    "captcha-ascii.onnx.gz": {
+      "bytes": 3728633,
+      "sha256": "7c39694bfaa5c06b788141145d534534fd3cb05c453ca9a054353e2b78ce2cd0"
+    },
+    "eng.traineddata.gz": {
+      "bytes": 364598,
+      "sha256": "9a92ddd79d8574d36f86d2171d89d7589a3f958cae6e0406e905d76812e5d697"
+    }
+  },
+  "reviewHead": {
+    "encoder": "frozen ddddocr common_old ASCII encoder; original output retained",
+    "classes": "CTC blank and 62 ASCII letters/digits, in original alphabet order",
+    "training": "3000 synthetic images; nine fonts; clean, touching, overlap, warp, lines, mixed",
+    "imageSeed": 202611186,
+    "optimizerSeed": 186,
+    "epochs": 9,
+    "optimizer": "AdamW, lr=0.0003, weight_decay=0.001, batch=48; CTC loss + 0.1*mean((W-W0)^2), gradient norm <=5",
+    "runtimeWeights": "uint8 per-tensor affine quantization; shared original activation quantization",
+    "developmentSet": "192 synthetic images, seed 202611111; checkpoint selection only, no image used for training",
+    "trainingRuntime": "PyTorch 2.7.0+cpu, Python 3.12; development only",
+    "scripts": [
+      "tools/ocr/render-head-training.mts",
+      "tools/ocr/train-review-head.py"
+    ],
+    "checkpointBytes": 37631,
+    "checkpointSha256": "1cf3d65acfecaf9d4ae6a94ac41743fc7db39d71317bb038b9200c09eef05a24"
+  },
+  "arithmeticHead": {
+    "encoder": "frozen ddddocr common_old encoder; original and letter/digit outputs retained",
+    "classes": [
+      "",
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "+",
+      "-",
+      "*",
+      "/",
+      "=",
+      "?"
+    ],
+    "training": "2000 locally rendered arithmetic expressions; four fonts, light/dark backgrounds, small rotation and sparse lines",
+    "imageSeed": 202611187,
+    "optimizerSeed": 187,
+    "epochs": 12,
+    "optimizer": "AdamW, lr=0.0003, weight_decay=0.001, batch=48; CTC loss + 0.1*mean((W-W0)^2), gradient norm <=5",
+    "runtimeWeights": "uint8 per-tensor affine quantization; shared original activation quantization",
+    "scripts": [
+      "tools/ocr/benchmark-arithmetic.mts --render-only",
+      "tools/ocr/train-review-head.py --arithmetic"
+    ],
+    "checkpointBytes": 10881,
+    "checkpointSha256": "2c0b870cbc5d5be7ca0b98ec82de1a4df331db42c3f7d0f4cf7d4d516cbd7b7d"
+  }
+}

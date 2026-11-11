@@ -1,3 +1,13 @@
+import { siteLoginSettings, siteAllowsSubmit } from '../shared/loginSettings';
+import { setSavePromptBadge } from './reminders';
+import { setupLoginJobs, type ManagedLoginGuard } from './loginJobs';
+import { setupCaptcha } from './captcha';
+import { authorizeLoginSubmit, continueLoginTotp } from './loginContinuation';
+import { sameLoginTarget } from '../shared/loginJob';
+import type { FillChoice, QuickFillProbe, QuickFillTarget } from '../shared/quickFill';
+import { ensureOffscreenDocument } from './offscreen';
+import { getSessionState, handleSecureCacheMessage, isVaultSessionActive } from '../shared/storage';
+import { generateTotp, totpSecondsRemaining } from '../shared/totp';
 import { credentialMatchesUrl, domainsMatch, extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from '../shared/domain';
 import { appendDiagnosticLogEntry, clearDiagnosticLogEntries, getDiagnosticLogEntries } from '../shared/diagnosticsLog';
 import { getRootFaviconUrl, toHttpIconUrl } from '../shared/icons';
@@ -35,6 +45,9 @@ import type {
   InlineDiagnosticsResult,
   InlineFrameDiagnostic,
   InlineCredentialSummary,
+  InlineSilentRule,
+  InlineSilentRuleReason,
+  InlineSilentRuleSummary,
   ManualBindingResult,
   PendingLoginCandidate,
   RecognitionRuleApplyRequest,
@@ -48,12 +61,6 @@ import type {
   SubmitRepairAction,
   UnlockedVaultSession
 } from '../shared/types';
-
-interface PendingFill {
-  credential: FillCredentialPayload;
-  createdAt: number;
-  attempts: number;
-}
 
 interface PendingBinding {
   credentialId: string;
@@ -74,7 +81,8 @@ interface StagedLoginCandidate {
 
 type FrameCredential = Pick<Credential, 'domain' | 'url' | 'matchUrl' | 'matchDomain'>;
 
-const pendingFills = new Map<number, PendingFill>();
+const openManagedLogin = setupLoginJobs(credentialToFillPayload, fillTabBestFrame);
+setupCaptcha();
 const pendingBindings = new Map<number, PendingBinding>();
 const pendingBindingTests = new Map<number, PendingBindingTest>();
 const pendingSubmitOutcomes = new Map<number, SubmitOutcome>();
@@ -83,6 +91,8 @@ const recordedSubmitOutcomeKeys = new Set<string>();
 const SUBMIT_OUTCOME_TTL = 30000;
 const STAGED_CANDIDATE_TTL = 90000;
 const SITE_RULE_LIMIT = 120;
+const INLINE_SILENT_RULE_LIMIT = 120;
+const INLINE_SILENT_RULE_TTL = 1000 * 60 * 60 * 24 * 90;
 const DEFAULT_REPAIR_ACTIONS: SubmitRepairAction[] = ['commit-fields', 'wait-enabled-click', 'retry-click', 'click-nearby', 'enter-password', 'request-submit'];
 const FAILED_LOGIN_REDIRECT_PATTERN = /(?:^|[?&#/])(error|err|failed|failure|invalid|denied|captcha|verify|verification|locked|disabled)(?:[=&#/]|$)/i;
 const CONTENT_SCRIPT_FILE = 'content.js';
@@ -109,7 +119,7 @@ interface SaveCandidateContext {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  void chrome.action.setBadgeText({ text: '' });
+  setSavePromptBadge(false);
   scheduleOpenTabContentInjection();
 });
 
@@ -336,6 +346,164 @@ function isInlineHiddenForTab(session: UnlockedVaultSession, tabUrl?: string): b
   return domainMatchesList(tabDomain, session.vault.settings.inlineBlacklist ?? []);
 }
 
+function currentPathPatternFromUrl(value?: string): string | undefined {
+  if (!value || !/^https?:\/\//i.test(value)) return undefined;
+
+  try {
+    const url = new URL(value);
+    const pathname = url.pathname || '/';
+    if (pathname === '/') return undefined;
+    if (pathname.split('/').filter(Boolean).length <= 1) return pathname;
+    return pathname.replace(/\/[^/]*$/, '/*');
+  } catch {
+    return undefined;
+  }
+}
+
+function inlineSilentRulePathMatches(rule: InlineSilentRule, urlOrDomain?: string): boolean {
+  const pattern = normalizeRulePathPattern(rule.pathPattern);
+  if (!pattern) return true;
+  if (!urlOrDomain || !/^https?:\/\//i.test(urlOrDomain)) return false;
+
+  try {
+    const path = new URL(urlOrDomain).pathname || '/';
+    if (pattern.endsWith('*')) return path.startsWith(pattern.slice(0, -1));
+    return path === pattern || path.startsWith(`${pattern.replace(/\/$/, '')}/`);
+  } catch {
+    return false;
+  }
+}
+
+function activeInlineSilentRules(rules: InlineSilentRule[] = [], now = Date.now()): InlineSilentRule[] {
+  return rules.filter((rule) => !rule.expiresAt || rule.expiresAt > now);
+}
+
+function selectInlineSilentRule(session: UnlockedVaultSession, tabUrl?: string): InlineSilentRule | undefined {
+  if (session.vault.settings.autoSilentInline === false) return undefined;
+
+  const tabDomain = getTabDomain(tabUrl);
+  if (!tabDomain) return undefined;
+
+  return activeInlineSilentRules(session.vault.settings.inlineSilentRules ?? [])
+    .filter((rule) => domainsMatch(rule.domain, tabDomain))
+    .filter((rule) => inlineSilentRulePathMatches(rule, tabUrl))
+    .sort((left, right) => {
+      const leftPathSpecificity = normalizeRulePathPattern(left.pathPattern)?.length ?? 0;
+      const rightPathSpecificity = normalizeRulePathPattern(right.pathPattern)?.length ?? 0;
+      if (leftPathSpecificity !== rightPathSpecificity) return rightPathSpecificity - leftPathSpecificity;
+      if (left.matchCount !== right.matchCount) return right.matchCount - left.matchCount;
+      return right.updatedAt - left.updatedAt;
+    })[0];
+}
+
+function toInlineSilentRuleSummary(rule?: InlineSilentRule): InlineSilentRuleSummary | undefined {
+  if (!rule) return undefined;
+
+  return {
+    id: rule.id,
+    domain: rule.domain,
+    pathPattern: rule.pathPattern,
+    reason: rule.reason,
+    source: rule.source ?? 'auto',
+    title: rule.title,
+    lastUrl: rule.lastUrl,
+    confidence: rule.confidence,
+    matchCount: rule.matchCount,
+    updatedAt: rule.updatedAt,
+    lastMatchedAt: rule.lastMatchedAt,
+    expiresAt: rule.expiresAt
+  };
+}
+
+function sanitizeInlineSilentReason(value: unknown): InlineSilentRuleReason {
+  return value === 'empty-page' || value === 'no-form-context' || value === 'no-inline-anchor' || value === 'passive-form' || value === 'manual-hide'
+    ? value
+    : 'no-inline-anchor';
+}
+
+function sanitizeInlineSilentSource(value: unknown): InlineSilentRule['source'] {
+  return value === 'manual' ? 'manual' : 'auto';
+}
+
+function sanitizeInlineSilentTitle(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const title = value.replace(/\s+/g, ' ').trim();
+  return title ? title.slice(0, 120) : undefined;
+}
+
+function removeInlineSilentRule(
+  vault: UnlockedVaultSession['vault'],
+  input: {
+    url?: string;
+    ruleId?: unknown;
+  }
+): { vault: UnlockedVaultSession['vault']; removedCount: number } {
+  const activeRules = activeInlineSilentRules(vault.settings.inlineSilentRules ?? []);
+  const ruleId = typeof input.ruleId === 'string' ? input.ruleId : undefined;
+  const domain = getTabDomain(input.url);
+
+  if (!ruleId && !domain) {
+    return { vault, removedCount: 0 };
+  }
+
+  const inlineSilentRules = activeRules.filter((rule) => {
+    if (ruleId) return rule.id !== ruleId;
+    return !(domain && domainsMatch(rule.domain, domain) && inlineSilentRulePathMatches(rule, input.url));
+  });
+  const removedCount = activeRules.length - inlineSilentRules.length;
+
+  return {
+    vault: removedCount ? upsertVaultSettings(vault, { inlineSilentRules }) : vault,
+    removedCount
+  };
+}
+
+function upsertInlineSilentRule(
+  vault: UnlockedVaultSession['vault'],
+  input: {
+    url?: string;
+    reason?: unknown;
+    confidence?: unknown;
+    source?: unknown;
+    title?: unknown;
+  }
+): UnlockedVaultSession['vault'] {
+  const domain = getTabDomain(input.url);
+  if (!domain) return vault;
+
+  const now = Date.now();
+  const source = sanitizeInlineSilentSource(input.source);
+  const pathPattern = currentPathPatternFromUrl(input.url);
+  if (!pathPattern && source !== 'manual') return vault;
+  const reason = sanitizeInlineSilentReason(input.reason);
+  const confidence = Math.max(0, Math.min(1, Number(input.confidence) || 0.75));
+  const activeRules = activeInlineSilentRules(vault.settings.inlineSilentRules ?? [], now);
+  const existing = activeRules.find((rule) => domainsMatch(rule.domain, domain) && (normalizeRulePathPattern(rule.pathPattern) ?? '') === (pathPattern ?? ''));
+  const nextRule: InlineSilentRule = {
+    id: existing?.id ?? crypto.randomUUID(),
+    domain,
+    pathPattern,
+    reason,
+    source,
+    title: sanitizeInlineSilentTitle(input.title) ?? existing?.title,
+    lastUrl: input.url && /^https?:\/\//i.test(input.url) ? input.url : existing?.lastUrl,
+    confidence: Math.max(existing?.confidence ?? 0, confidence),
+    matchCount: (existing?.matchCount ?? 0) + 1,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    lastMatchedAt: now,
+    expiresAt: source === 'manual' ? undefined : now + INLINE_SILENT_RULE_TTL
+  };
+  const inlineSilentRules = [nextRule, ...activeRules.filter((rule) => rule.id !== nextRule.id)]
+    .sort((left, right) => {
+      if (left.matchCount !== right.matchCount) return right.matchCount - left.matchCount;
+      return right.updatedAt - left.updatedAt;
+    })
+    .slice(0, INLINE_SILENT_RULE_LIMIT);
+
+  return upsertVaultSettings(vault, { inlineSilentRules });
+}
+
 function toInlineSummary(credential: Credential): InlineCredentialSummary {
   return {
     id: credential.id,
@@ -356,6 +524,7 @@ function fillFieldValue(profile: FillProfile, key: string): string {
 }
 
 function fillProfileInlineSummary(profile: FillProfile): string {
+  profile = { ...profile, fields: profile.fields.filter(field => field.sensitivity === 'normal') };
   const fullName =
     fillFieldValue(profile, 'fullName') ||
     [fillFieldValue(profile, 'firstName'), fillFieldValue(profile, 'lastName')].filter(Boolean).join(' ');
@@ -506,6 +675,7 @@ function mergeCredentialFields(credential: Credential, siteRule?: SiteRule): Cre
 }
 
 function credentialToFillPayload(credential: Credential, autoSubmit = false, vault?: UnlockedVaultSession['vault'], targetUrl = credential.url): FillCredentialPayload {
+  if(vault && siteLoginSettings(vault.settings,targetUrl).fillEnabled===false)throw new Error('此网站已关闭账号填写，请在账号详情的“此网站设置”中开启。');
   const siteRule = selectSiteRule(vault, targetUrl || credential.url || credential.domain);
 
   return {
@@ -514,7 +684,8 @@ function credentialToFillPayload(credential: Credential, autoSubmit = false, vau
     domain: credential.domain,
     username: credential.username,
     password: credential.password,
-    autoSubmit,
+    loginRequested: autoSubmit,
+    autoSubmit: autoSubmit && Boolean(vault && siteAllowsSubmit(vault.settings,targetUrl)),
     formFields: mergeCredentialFields(credential, siteRule),
     formProfile: siteRule?.formProfile ?? credential.formProfile,
     siteRuleId: siteRule?.id,
@@ -640,19 +811,19 @@ function recordSiteRuleOutcome(session: UnlockedVaultSession, outcome: SubmitOut
 
   const withRule = upsertSiteRuleFromForm(session.vault, {
     domain: credential.domain,
-    url: outcome.url || credential.url,
+    url: credential.url,
     formFields: credential.formFields,
     formProfile: credential.formProfile,
     source: 'auto-repair'
   });
   const rules = withRule.settings.siteRules ?? [];
-  const success = outcome.status === 'navigated' || outcome.status === 'successLikely';
-  const failed = outcome.status === 'stillOnLogin' || outcome.status === 'errorVisible' || outcome.status === 'blocked' || outcome.status === 'unknown';
+  // Navigation and disappearing forms cannot establish an authenticated session.
+  const failed = outcome.status === 'errorVisible';
   const siteRules = rules.map((rule) =>
     domainsMatch(rule.domain, credential.domain)
       ? {
           ...rule,
-          successCount: (rule.successCount ?? 0) + (success ? 1 : 0),
+          successCount: rule.successCount ?? 0,
           failureCount: (rule.failureCount ?? 0) + (failed ? 1 : 0),
           lastOutcome: outcome.status,
           updatedAt: Date.now()
@@ -667,9 +838,8 @@ async function resolveFillPayload(payload: FillCredentialPayload, targetUrl?: st
   const session = await restoreCachedVaultSession();
   const credential = session?.vault.credentials.find((item) => item.id === payload.id);
 
-  if (!session || !credential) {
-    return payload;
-  }
+  if (!session || !credential) throw new Error(session?'NO_MATCHING_CREDENTIAL':'VAULT_LOCKED');
+  if(targetUrl && !credentialMatchesUrl(credential,targetUrl))throw new Error('NO_MATCHING_CREDENTIAL');
 
   return credentialToFillPayload(credential, payload.autoSubmit, session.vault, targetUrl ?? payload.url);
 }
@@ -700,7 +870,7 @@ function markPendingSubmitNavigated(tabId: number, url?: string) {
   pendingSubmitOutcomes.set(tabId, {
     ...outcome,
     status: 'navigated',
-    message: '页面已跳转，登录可能已成功。',
+    message: '页面已跳转，登录结果尚未确认。',
     url: url ?? outcome.url,
     checkedAt: Date.now()
   });
@@ -710,6 +880,8 @@ function getInlineMatchesFromSession(session: UnlockedVaultSession, tabUrl?: str
   return session.vault.credentials
     .filter((credential) => credentialMatchesTab(credential, tabUrl))
     .sort((left, right) => {
+      const preferred=siteLoginSettings(session.vault.settings,tabUrl ?? '').defaultCredentialId;
+      if((left.id===preferred)!==(right.id===preferred))return left.id===preferred?-1:1;
       if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
       return (right.lastUsedAt ?? right.updatedAt) - (left.lastUsedAt ?? left.updatedAt);
     })
@@ -722,6 +894,8 @@ function getInlineMatchesForUrls(session: UnlockedVaultSession, urls: Array<stri
   return session.vault.credentials
     .filter((credential) => matchUrls.some((url) => credentialMatchesTab(credential, url)))
     .sort((left, right) => {
+      const preferred=matchUrls.map(url=>siteLoginSettings(session.vault.settings,url).defaultCredentialId).find(Boolean);
+      if((left.id===preferred)!==(right.id===preferred))return left.id===preferred?-1:1;
       if (left.pinned !== right.pinned) return left.pinned ? -1 : 1;
       return (right.lastUsedAt ?? right.updatedAt) - (left.lastUsedAt ?? left.updatedAt);
     })
@@ -742,21 +916,30 @@ function getInlineFillProfiles(session: UnlockedVaultSession, tabUrl?: string): 
     .map((profile) => toInlineFillProfileSummary(profile, tabUrl));
 }
 
-async function getInlineState(urls: Array<string | undefined>): Promise<{ hidden: boolean; matches: InlineCredentialSummary[]; fillProfiles: InlineFillProfileSummary[]; siteRule?: SiteRuleSummary }> {
+async function getInlineState(urls: Array<string | undefined>): Promise<{ hidden: boolean; matches: InlineCredentialSummary[]; fillProfiles: InlineFillProfileSummary[]; silentRule?: InlineSilentRuleSummary; siteRule?: SiteRuleSummary }> {
   const session = await restoreCachedVaultSession();
 
   if (!session) {
     throw new Error('VAULT_LOCKED');
   }
 
-  const hidden = urls.some((url) => isInlineHiddenForTab(session, url));
   const targetUrl = urls.find((url): url is string => Boolean(url));
+  const activeSilentRules = activeInlineSilentRules(session.vault.settings.inlineSilentRules ?? []);
+  if (activeSilentRules.length !== (session.vault.settings.inlineSilentRules ?? []).length) {
+    await persistVaultSession(session, upsertVaultSettings(session.vault, { inlineSilentRules: activeSilentRules }));
+  }
+
+  const silentRule = selectInlineSilentRule(session, targetUrl);
+  const hidden =
+    urls.some((url) => isInlineHiddenForTab(session, url)) ||
+    Boolean(silentRule);
   const siteRule = selectSiteRule(session.vault, targetUrl);
 
   return {
     hidden,
     matches: hidden ? [] : getInlineMatchesForUrls(session, urls),
     fillProfiles: hidden ? [] : getInlineFillProfiles(session, targetUrl),
+    silentRule: toInlineSilentRuleSummary(silentRule),
     siteRule: toSiteRuleSummary(siteRule)
   };
 }
@@ -770,6 +953,8 @@ async function getInlineCredentialForEdit(
   if (!session) {
     throw new Error('VAULT_LOCKED');
   }
+
+  if (session.vault.settings.requireMasterPasswordForReveal) return {ok:false,error:'REAUTH_REQUIRED'};
 
   if (!credentialId) {
     return { ok: false, error: 'MISSING_CREDENTIAL_ID' };
@@ -848,7 +1033,8 @@ async function saveInlineCredentialEdit(
 async function handleInlineCredentialCommand(
   tabUrl: string | undefined,
   credentialId: string | undefined,
-  command: InlineCredentialCommand | undefined
+  command: InlineCredentialCommand | undefined,
+  pageTitle?: unknown
 ): Promise<InlineCredentialCommandResult> {
   const session = await restoreCachedVaultSession();
 
@@ -867,9 +1053,15 @@ async function handleInlineCredentialCommand(
       return { ok: false, error: 'NO_ACTIVE_DOMAIN' };
     }
 
-    const inlineBlacklist = Array.from(new Set([...(session.vault.settings.inlineBlacklist ?? []), tabDomain]));
-    await persistVaultSession(session, upsertVaultSettings(session.vault, { inlineBlacklist }));
-    return { ok: true, hidden: true, message: '已在此域隐藏 KeyPilot 网页内图标。' };
+    const nextVault = upsertInlineSilentRule(session.vault, {
+      url: tabUrl,
+      reason: 'manual-hide',
+      confidence: 1,
+      source: 'manual',
+      title: pageTitle
+    });
+    await persistVaultSession(session, nextVault);
+    return { ok: true, hidden: true, message: '已在此页面隐藏 KeyPilot 网页内图标，可在设置中恢复。' };
   }
 
   const credential = session.vault.credentials.find((item) => item.id === credentialId);
@@ -900,7 +1092,37 @@ async function handleInlineCredentialCommand(
   return { ok: false, error: 'INVALID_INLINE_COMMAND' };
 }
 
-function sendFillMessage(tabId: number, frameId: number | undefined, credential: FillCredentialPayload): Promise<FillCredentialResult> {
+async function fillTotpInTab(accountId: string, tabId: number, sessionId: string) {
+  const session = await restoreCachedVaultSession();
+  if (!session || session.sessionId!==sessionId) throw new Error('VAULT_LOCKED');
+  const account = session.vault.totpAccounts?.find(item=>item.id===accountId && !item.deletedAt);
+  const credential = session.vault.credentials.find(item=>item.id===account?.credentialId);
+  const tab = await getTabById(tabId);
+  if (!account || !credential) throw new Error('OTP_NOT_LINKED');
+  if (!tab?.url || !credentialMatchesUrl(credential,tab.url)) throw new Error('OTP_SITE_MISMATCH');
+  if (new URL(credential.url).protocol==='https:' && new URL(tab.url).protocol!=='https:') throw new Error('OTP_SITE_MISMATCH');
+  await ensureContentScriptInTab(tabId,tab.url);
+  const origin = new URL(tab.url).origin;
+  const frames = (await getTabFrames(tab)).filter(frame=>new URL(frame.url).origin===origin);
+  const matches = [];
+  for (const frame of frames) {
+    const response = await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_PROBE_TOTP',digits:account.digits,expectedUrl:frame.url},{frameId:frame.frameId}).catch(()=>null);
+    if (response?.count>1) throw new Error('OTP_AMBIGUOUS');
+    if (response?.count===1) matches.push(frame);
+  }
+  if (matches.length!==1) throw new Error(matches.length?'OTP_AMBIGUOUS':'OTP_NOT_FOUND');
+  if (!await isVaultSessionActive(sessionId)) throw new Error('VAULT_LOCKED');
+  const latest = await restoreCachedVaultSession();
+  const latestAccount = latest?.vault.totpAccounts?.find(item=>item.id===accountId && !item.deletedAt);
+  if (latest?.sessionId!==sessionId || JSON.stringify(latestAccount)!==JSON.stringify(account) || JSON.stringify(latest.vault.credentials.find(item=>item.id===credential.id))!==JSON.stringify(credential)) throw new Error('VAULT_LOCKED');
+  const now = Date.now();
+  if (totpSecondsRemaining(account.period,now)<=Math.min(5,account.period/2)) throw new Error('OTP_EXPIRING');
+  const code = await generateTotp(account,now);
+  if (!await isVaultSessionActive(sessionId)) throw new Error('VAULT_LOCKED');
+  return chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_FILL_TOTP_CODE',code,expectedUrl:matches[0].url,expiresAt:(Math.floor(now/1000/account.period)+1)*account.period*1000},{frameId:matches[0].frameId});
+}
+
+function sendFillMessage(tabId: number, frameId: number | undefined, credential: FillCredentialPayload, documentId?: string): Promise<FillCredentialResult> {
   return new Promise((resolve) => {
     const message = { type: 'KEYPILOT_FILL_CREDENTIAL', credential };
     const callback = (response?: FillCredentialResult) => {
@@ -912,6 +1134,10 @@ function sendFillMessage(tabId: number, frameId: number | undefined, credential:
       resolve(response ?? { ok: false, error: 'NO_RESPONSE' });
     };
 
+    if (documentId) {
+      chrome.tabs.sendMessage(tabId, message, { documentId }, callback);
+      return;
+    }
     if (typeof frameId === 'number' && frameId >= 0) {
       chrome.tabs.sendMessage(tabId, message, { frameId }, callback);
       return;
@@ -1020,9 +1246,23 @@ function sendFillProfileBindingStart(
   });
 }
 
-async function fillTabBestFrame(tabId: number, credential: FillCredentialPayload) {
+async function fillTabBestFrame(tabId: number, credential: FillCredentialPayload, guard?: ManagedLoginGuard) {
   const tab = await getTabById(tabId);
   const frameId = tab ? await chooseCredentialFrame(tab, credential) : undefined;
+  if (guard) {
+    const main = await chrome.webNavigation.getFrame({ tabId, frameId: 0 }).catch(() => null);
+    if (!main || main.errorOccurred || main.documentId !== guard.documentId || main.url !== guard.url) return { ok: false, error: 'LOGIN_CONTEXT_CHANGED' };
+    let frame = typeof frameId === 'number' && frameId !== 0
+      ? await chrome.webNavigation.getFrame({ tabId, frameId }).catch(() => null) : main;
+    // A continuation may only fill a document on the verified origin.
+    if (!frame || frame.errorOccurred || !sameLoginTarget(new URL(guard.url).origin, frame.url)) frame = main;
+    if (!frame.documentId) return { ok: false, error: 'LOGIN_CONTEXT_CHANGED' };
+    if (!await guard.authorize()) return { ok: false, error: 'LOGIN_CANCELLED' };
+    if (!await isVaultSessionActive(guard.sessionId)) return { ok: false, error: 'VAULT_LOCKED' };
+    const response = await sendFillMessage(tabId, frameId, credential, frame.documentId);
+    rememberSubmitOutcome(tabId, response);
+    return response;
+  }
   const response = await sendFillMessage(tabId, frameId, credential);
 
   if (!response.ok && typeof frameId === 'number' && frameId !== 0) {
@@ -1157,25 +1397,6 @@ async function saveFillProfileBinding(
   return { ok: true };
 }
 
-async function sendFillToTab(tabId: number, pendingFill: PendingFill) {
-  pendingFill.attempts += 1;
-  const response = await fillTabBestFrame(tabId, pendingFill.credential);
-  const retryable = !response.ok && ['NO_RESPONSE', 'NO_LOGIN_FORM', 'NO_PASSWORD_FIELD', 'Receiving end does not exist.'].some((error) =>
-    response.error?.includes(error)
-  );
-
-  if (retryable && Date.now() - pendingFill.createdAt < 60000 && pendingFill.attempts < 12) {
-    setTimeout(() => {
-      if (pendingFills.get(tabId) === pendingFill) {
-        void sendFillToTab(tabId, pendingFill);
-      }
-    }, 350);
-    return;
-  }
-
-  pendingFills.delete(tabId);
-}
-
 async function fillInlineCredential(tabId: number, frameUrl: string | undefined, frameId: number | undefined, request: InlineCredentialFillRequest) {
   const session = await restoreCachedVaultSession();
 
@@ -1201,12 +1422,20 @@ async function fillInlineCredential(tabId: number, frameUrl: string | undefined,
 
       const result = response as FillCredentialResult | undefined;
 
-      if (result?.ok) {
-        rememberSubmitOutcome(tabId, result);
-        await persistVaultSession(session, touchCredentialInVault(session.vault, credential.id));
+      try {
+        if (result?.ok) {
+          if (!session.sessionId || !await isVaultSessionActive(session.sessionId)) {
+            resolve({ok:false,error:'VAULT_LOCKED'});
+            return;
+          }
+          rememberSubmitOutcome(tabId, result);
+          await persistVaultSession(session, touchCredentialInVault(session.vault, credential.id));
+        }
+        resolve(response ?? { ok: false, error: 'NO_RESPONSE' });
+      } catch (error) {
+        // OCR can outlive a lock. Always settle the channel, including failed metadata writes.
+        resolve({ok:false,error:toErrorMessage(error)});
       }
-
-      resolve(response ?? { ok: false, error: 'NO_RESPONSE' });
     };
 
     if (typeof frameId === 'number' && frameId >= 0) {
@@ -1728,7 +1957,7 @@ async function applyRecognitionRule(senderUrl: string | undefined, input: Recogn
 
   const pageMode = isValidSiteRulePageMode(input?.pageMode) ? input.pageMode : undefined;
   const pathPattern = normalizeRulePathPattern(input?.pathPattern) ?? siteRulePathFromUrl(url);
-  const nextVault = upsertSiteRuleFromForm(session.vault, {
+  const withRule = upsertSiteRuleFromForm(session.vault, {
     domain,
     url: url || input?.url,
     pathPattern,
@@ -1739,6 +1968,7 @@ async function applyRecognitionRule(senderUrl: string | undefined, input: Recogn
     repairActions: input?.repairActions,
     source: 'manual-binding'
   });
+  const { vault: nextVault } = removeInlineSilentRule(withRule, { url });
 
   if (nextVault === session.vault) {
     return { ok: false, error: 'EMPTY_RULE' };
@@ -1798,7 +2028,7 @@ async function getActiveTabDiagnostics(): Promise<InlineDiagnosticsResult> {
 function clearPendingLoginCandidate() {
   pendingLoginCandidate = null;
   pendingLoginCandidateExpiresAt = 0;
-  void chrome.action.setBadgeText({ text: '' });
+  setSavePromptBadge(false);
 }
 
 function validateLoginCandidate(candidate: PendingLoginCandidate | undefined): candidate is PendingLoginCandidate {
@@ -1808,8 +2038,7 @@ function validateLoginCandidate(candidate: PendingLoginCandidate | undefined): c
 function publishLoginCandidate(candidate: PendingLoginCandidate) {
   pendingLoginCandidate = candidate;
   pendingLoginCandidateExpiresAt = Date.now() + STAGED_CANDIDATE_TTL;
-  void chrome.action.setBadgeText({ text: '!' });
-  void chrome.action.setBadgeBackgroundColor({ color: '#2563EB' });
+  setSavePromptBadge(true);
 }
 
 function stageLoginCandidate(tabId: number, candidate: PendingLoginCandidate) {
@@ -1859,7 +2088,7 @@ function promoteStagedLoginCandidate(tabId: number, url?: string): PendingLoginC
 
   publishLoginCandidate({
     ...staged.candidate,
-    url: url || staged.candidate.url,
+    // The destination may be an OTP page or dashboard. Preserve the form's login URL.
     capturedAt: Date.now()
   });
   stagedLoginCandidates.delete(tabId);
@@ -2218,18 +2447,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     }
   }
 
-  const pendingFill = pendingFills.get(tabId);
-
-  if (!pendingFill) {
-    return;
-  }
-
-  if (Date.now() - pendingFill.createdAt > 60000) {
-    pendingFills.delete(tabId);
-    return;
-  }
-
-  void sendFillToTab(tabId, pendingFill);
 });
 
 chrome.webNavigation.onCommitted.addListener((details) => {
@@ -2239,7 +2456,6 @@ chrome.webNavigation.onCommitted.addListener((details) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  pendingFills.delete(tabId);
   pendingBindings.delete(tabId);
   pendingBindingTests.delete(tabId);
   pendingSubmitOutcomes.delete(tabId);
@@ -2247,15 +2463,34 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if(message?.type==='KEYPILOT_VALIDATE_QUICK_FILL'){
+    const job=sender.tab?.id ? quickFillJobs.get(sender.tab.id) : undefined;
+    void (async()=>({ok:Boolean(job && sender.id===chrome.runtime.id && sender.frameId===job.frameId && sender.documentId && sender.documentId===job.documentId && message.token===job.token && message.targetId===job.targetId && await quickFillIsCurrent(sender.tab!.id!,job))}))()
+      .then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
+  }
+  if (message?.type === 'KEYPILOT_SECURE_CACHE') {
+    if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(''))) { sendResponse({ok:false}); return; }
+    sendResponse(handleSecureCacheMessage(message)); return;
+  }
+
   if (message?.type === 'KEYPILOT_PING') {
     sendResponse({ ok: true, source: 'background' });
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_COPY_GENERATED_PASSWORD') {
+    void restoreCachedVaultSession().then(session => copyViaOffscreen(String(message.value ?? '').slice(0,256),session?.vault.settings.clearClipboardSeconds ?? 30)).then(sendResponse).catch(() => sendResponse({ok:false}));return true;
+  }
+  if (message?.type === 'KEYPILOT_COPY_TEXT') {
+    if (!sender.url?.startsWith(chrome.runtime.getURL(''))) { sendResponse({ok:false, error:'REAUTH_REQUIRED'}); return; }
+    void copyViaOffscreen(String(message.value ?? ''), Number(message.seconds) || 0)
+      .then(sendResponse).catch(() => sendResponse({ok:false, error:'CLIPBOARD_UNAVAILABLE'}));
     return true;
   }
 
   if (message?.type === 'KEYPILOT_LOCK_VAULT') {
     void clearVaultSessionCache()
       .then(() => {
-        pendingFills.clear();
         pendingBindings.clear();
         pendingBindingTests.clear();
         pendingSubmitOutcomes.clear();
@@ -2311,8 +2546,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const credential = message.credential as FillCredentialPayload;
     const action = message.action as 'login' | 'fill' | 'goto';
 
-    if (!credential?.url || !isSupportedOpenUrl(credential.url)) {
-      sendResponse({ ok: false, error: 'INVALID_CREDENTIAL_URL' });
+    if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL(''))) {
+      sendResponse({ ok: false, error: 'INVALID_SENDER' });
       return false;
     }
 
@@ -2321,45 +2556,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return false;
     }
 
-    try {
-      sendResponse({ ok: true, queued: true });
-
-      setTimeout(() => {
-        chrome.tabs.create({ url: credential.url, active: false }, (tab) => {
-          if (chrome.runtime.lastError || !tab.id) {
-            return;
-          }
-
-          if (action !== 'goto') {
-            const pendingFill = {
-              credential: {
-                ...credential,
-                autoSubmit: action === 'login' ? credential.autoSubmit : false
-              },
-              createdAt: Date.now(),
-              attempts: 0
-            };
-            pendingFills.set(tab.id, pendingFill);
-            void resolveFillPayload(
-              pendingFill.credential,
-              tab.url ?? credential.url
-            ).then((resolvedCredential) => {
-              if (pendingFills.get(tab.id!) === pendingFill) {
-                pendingFill.credential = resolvedCredential;
-              }
-            });
-          }
-
-          setTimeout(() => {
-            chrome.tabs.update(tab.id!, { active: true });
-          }, 250);
-        });
-      }, 0);
-    } catch (error) {
-      sendResponse({ ok: false, error: toErrorMessage(error) });
-    }
-
-    return false;
+    void (async () => {
+      if (action !== 'goto') return openManagedLogin(credential?.id, action === 'login' && Boolean(credential?.autoSubmit));
+      const session = await restoreCachedVaultSession();
+      const saved = session?.vault.credentials.find(item => item.id === credential?.id);
+      if (!saved) throw new Error('VAULT_LOCKED');
+      if (!isSupportedOpenUrl(saved.url)) throw new Error('INVALID_CREDENTIAL_URL');
+      await chrome.tabs.create({ url: saved.url, active: true });
+      return { ok: true, queued: true };
+    })().then(sendResponse).catch(error => sendResponse({ ok: false, error: toErrorMessage(error) }));
+    return true;
   }
 
   if (message?.type === 'KEYPILOT_OPEN_AND_BIND') {
@@ -2381,6 +2587,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, locked: errorMessage === 'VAULT_LOCKED', error: errorMessage });
       });
 
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_FILL_TOTP') {
+    if (!sender.url?.startsWith(chrome.runtime.getURL('')) || sender.tab?.url?.startsWith('http')) { sendResponse({ok:false,error:'REAUTH_REQUIRED'}); return; }
+    void fillTotpInTab(message.accountId, message.tabId, message.sessionId).then(sendResponse).catch(error=>sendResponse({ok:false,error:toErrorMessage(error)}));
     return true;
   }
 
@@ -2476,6 +2688,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           hidden: state.hidden,
           matches: state.matches,
           fillProfiles: state.fillProfiles,
+          silentRule: state.silentRule,
           siteRule: state.siteRule
         });
       })
@@ -2486,6 +2699,87 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           locked: errorMessage === 'VAULT_LOCKED',
           error: errorMessage
         });
+      });
+
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_GET_INLINE_PAGE_STATE') {
+    void (async () => {
+      const tab = message.url ? undefined : await queryActiveTab();
+      return getInlineState([message.url as string | undefined, tab?.url]);
+    })()
+      .then((state) => {
+        sendResponse({
+          ok: true,
+          locked: false,
+          hidden: state.hidden,
+          silentRule: state.silentRule,
+          siteRule: state.siteRule
+        });
+      })
+      .catch((error) => {
+        const errorMessage = toErrorMessage(error);
+        sendResponse({
+          ok: false,
+          locked: errorMessage === 'VAULT_LOCKED',
+          error: errorMessage
+        });
+      });
+
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_RECORD_INLINE_SILENCE') {
+    void restoreCachedVaultSession()
+      .then(async (session) => {
+        if (!session || session.vault.settings.autoSilentInline === false) {
+          sendResponse({ ok: true, skipped: true });
+          return;
+        }
+
+        const url = (message.url as string | undefined) || sender.url || sender.tab?.url;
+        const nextVault = upsertInlineSilentRule(session.vault, {
+          url,
+          reason: message.reason,
+          confidence: message.confidence,
+          source: message.source,
+          title: message.title
+        });
+        await persistVaultSession(session, nextVault);
+        sendResponse({ ok: true });
+      })
+      .catch((error) => {
+        sendResponse({ ok: false, error: toErrorMessage(error) });
+      });
+
+    return true;
+  }
+
+  if (message?.type === 'KEYPILOT_RESTORE_INLINE_FOR_PAGE') {
+    void restoreCachedVaultSession()
+      .then(async (session) => {
+        if (!session) {
+          sendResponse({ ok: false, locked: true, error: 'VAULT_LOCKED' });
+          return;
+        }
+
+        const tab = message.url ? undefined : await queryActiveTab();
+        const url = (message.url as string | undefined) || tab?.url || sender.url || sender.tab?.url;
+        const { vault, removedCount } = removeInlineSilentRule(session.vault, {
+          url,
+          ruleId: message.ruleId
+        });
+
+        if (vault !== session.vault) {
+          await persistVaultSession(session, vault);
+        }
+
+        sendResponse({ ok: true, removedCount });
+      })
+      .catch((error) => {
+        const errorMessage = toErrorMessage(error);
+        sendResponse({ ok: false, locked: errorMessage === 'VAULT_LOCKED', error: errorMessage });
       });
 
     return true;
@@ -2569,7 +2863,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     void handleInlineCredentialCommand(
       sender.url ?? sender.tab?.url,
       message.credentialId as string | undefined,
-      message.command as InlineCredentialCommand | undefined
+      message.command as InlineCredentialCommand | undefined,
+      message.title
     )
       .then((response) => sendResponse(response))
       .catch((error) => {
@@ -2611,6 +2906,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       });
 
+    return true;
+  }
+
+  if(message?.type==='KEYPILOT_GET_LOGIN_PROGRESS'){
+    const outcome=sender.id===chrome.runtime.id && sender.tab?.id && sender.frameId===0?getPendingSubmitOutcome(sender.tab.id):undefined;
+    // Transfer to the destination document once; unrelated later navigation is not a login attempt.
+    if(outcome && sender.tab?.id)pendingSubmitOutcomes.delete(sender.tab.id);
+    sendResponse(outcome);return false;
+  }
+  if(message?.type==='KEYPILOT_OPEN_LOGIN_SETTINGS'){
+    void (async()=>{
+      if(sender.id!==chrome.runtime.id || !sender.tab?.id)return {ok:false};
+      if(typeof message.credentialId!=='string' || message.credentialId.length>200 || !sender.url || !/^https?:/.test(sender.url))return {ok:false};
+      // Opening the locked extension UI discloses no secrets and lets the user unlock there.
+      await chrome.tabs.create({url:chrome.runtime.getURL('vault.html?loginFor='+encodeURIComponent(message.credentialId))});return {ok:true};
+    })().then(sendResponse).catch(()=>sendResponse({ok:false}));return true;
+  }
+  if (message?.type === 'KEYPILOT_AUTHORIZE_LOGIN_SUBMIT') {
+    void authorizeLoginSubmit(message,sender).then(sendResponse).catch(()=>sendResponse({ok:false}));
+    return true;
+  }
+  if (message?.type === 'KEYPILOT_CONTINUE_LOGIN_TOTP') {
+    void continueLoginTotp(sender).then(sendResponse).catch(()=>sendResponse({active:false}));
     return true;
   }
 
@@ -2773,3 +3091,170 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   return false;
 });
+
+chrome.alarms.onAlarm.addListener(alarm => {
+ if (alarm.name === 'keypilot-auto-lock') void getSessionState().then(state => {
+  if (state?.expiresAt && Date.now() >= state.expiresAt) return clearVaultSessionCache();
+ });
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+ if (area === 'session' && changes['keypilot.sessionState'] && !changes['keypilot.sessionState'].newValue) {
+  pendingBindings.clear(); pendingBindingTests.clear(); pendingSubmitOutcomes.clear(); stagedLoginCandidates.clear(); clearPendingLoginCandidate();
+  void chrome.tabs.query({}).then(tabs => Promise.allSettled(tabs.filter(tab => tab.id).map(tab => chrome.tabs.sendMessage(tab.id!, {type:'KEYPILOT_SESSION_LOCKED'}))));
+ }
+});
+
+async function copyViaOffscreen(value: string, seconds: number) {
+ await ensureOffscreenDocument();
+ return chrome.runtime.sendMessage({target:'keypilot-clipboard',value,seconds});
+}
+
+interface QuickFillJob {
+  sessionId:string;
+  tabUrl:string;
+  expiresAt:number;
+  frameId?:number;
+  frameUrl?:string;
+  documentId?:string;
+  token?:string;
+  targetId?:string;
+  kind?:QuickFillTarget['kind'];
+  itemId?:string;
+  revision?:string;
+}
+const quickFillJobs=new Map<number,QuickFillJob>();
+async function quickFillIsCurrent(tabId:number,job:QuickFillJob):Promise<boolean>{
+  if(quickFillJobs.get(tabId)!==job || Date.now()>job.expiresAt || !await isVaultSessionActive(job.sessionId))return false;
+  const tab=await chrome.tabs.get(tabId);
+  if(tab.url!==job.tabUrl)return false;
+  if(job.documentId && job.frameId!==undefined){
+    const frame=await chrome.webNavigation.getFrame({tabId,frameId:job.frameId});
+    if(frame?.documentId!==job.documentId || frame.url!==job.frameUrl)return false;
+  }
+  const session=await restoreCachedVaultSession();
+  if(session?.sessionId!==job.sessionId)return false;
+  if(!job.itemId)return true;
+  const item=job.kind==='profile'?session.vault.fillProfiles?.find(item=>item.id===job.itemId):session.vault.credentials.find(item=>item.id===job.itemId);
+  if(job.kind==='login' && siteLoginSettings(session.vault.settings,job.frameUrl??job.tabUrl).fillEnabled===false)return false;
+  return Boolean(item && JSON.stringify(item)===job.revision);
+}
+
+async function quickFillTab(tab:chrome.tabs.Tab,session:UnlockedVaultSession):Promise<boolean>{
+  if(!tab.id || !tab.url || !/^https?:\/\//.test(tab.url) || !session.sessionId)return false;
+  const tabId=tab.id, existing=quickFillJobs.get(tabId);
+  if(existing && Date.now()<existing.expiresAt){
+    if(existing.frameId!==undefined)await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_FOCUS_QUICK_FILL'},{frameId:existing.frameId}).catch(()=>undefined);
+    return true;
+  }
+  const job:QuickFillJob={sessionId:session.sessionId,tabUrl:tab.url,expiresAt:Date.now()+120000};quickFillJobs.set(tabId,job);
+  try{
+    await ensureContentScriptInTab(tabId,tab.url);
+    const frames=await getTabFrames(tab);
+    const results=await Promise.all(frames.map(async frame=>{
+      try{
+        const probe:QuickFillProbe=await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_PROBE_QUICK_FILL'},{frameId:frame.frameId});
+        return probe?.url===frame.url && probe.token && Array.isArray(probe.targets)?{...frame,probe}:undefined;
+      }catch{return undefined;}
+    }));
+    const probes=results.filter((item):item is NonNullable<typeof item>=>Boolean(item));
+    if(!probes.length)return false;
+    const origin=new URL(tab.url).origin;
+    const focused=probes.filter(item=>item.probe.frameFocused);
+    const eligible=focused.length?focused:probes.filter(item=>new URL(item.url).origin===origin);
+    const candidates=eligible.flatMap(frame=>frame.probe.targets.map(target=>({frame,target})));
+    const focusedTargets=candidates.filter(item=>item.target.focused);
+    const targets=focusedTargets.length?focusedTargets:candidates;
+    const host=targets[0]?.frame ?? probes.find(frame=>frame.frameId===0) ?? probes[0];
+    Object.assign(job,{frameId:host.frameId,frameUrl:host.url,token:host.probe.token});
+    const choose=async(title:string,description:string,choices:FillChoice[])=>{
+      if(!await quickFillIsCurrent(tabId,job))return null;
+      return await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_CHOOSE_QUICK_FILL',token:job.token,title,description,choices},{frameId:job.frameId}) as string|null;
+    };
+    if(!targets.length){
+      const selected=await choose('快捷填写','没有找到可填写的表单。请先点击网页中的输入框，再按快捷键。',[{id:'manage',label:'打开个人信息',detail:'添加或管理常用填写资料'}]);
+      if(selected==='manage')await chrome.tabs.create({url:chrome.runtime.getURL('vault.html#identities')});return true;
+    }
+    let selected=targets[0];
+    if(targets.length>1 || selected.target.uncertain || new URL(selected.frame.url).origin!==origin){
+      const id=await choose('选择要填写的表单','选择本次填写的位置。也可以取消，点击目标输入框后再按快捷键。',targets.map((item,index)=>({id:String(index),label:item.target.label,detail:new URL(item.frame.url).host+' · 表单 '+(index+1)})));
+      if(id===null)return true;
+      selected=targets[Number(id)];if(!selected)return true;
+    }
+    Object.assign(job,{frameId:selected.frame.frameId,frameUrl:selected.frame.url,token:selected.frame.probe.token,targetId:selected.target.id,kind:selected.target.kind});
+    job.documentId=(await chrome.webNavigation.getFrame({tabId,frameId:selected.frame.frameId}))?.documentId;
+    const items=selected.target.kind==='profile'
+      ? (session.vault.fillProfiles??[]).filter(item=>item.fields.some(field=>field.value.trim())).sort((a,b)=>Number(Boolean(b.pinned))-Number(Boolean(a.pinned)) || (b.lastUsedAt??0)-(a.lastUsedAt??0))
+      : session.vault.credentials.filter(item=>credentialMatchesUrl(item,selected.frame.url));
+    if(!items.length){
+      const profile=selected.target.kind==='profile';
+      const id=await choose(profile?'还没有填写资料':'没有匹配的账号',profile?'先在个人信息中添加姓名、联系方式、地址等资料，就可以用快捷键填写。':'此网站没有保存的登录账号。',[{id:'manage',label:profile?'添加填写资料':'打开密码库'}]);
+      if(id==='manage')await chrome.tabs.create({url:chrome.runtime.getURL(profile?'vault.html#identities':'vault.html')});return true;
+    }
+    let item=items[0];
+    if(items.length>1){
+      const id=await choose(job.kind==='profile'?'选择填写资料':'选择登录账号',job.kind==='profile'?'选好后预览填写内容；已有值会保留。':'仅填写账号信息，不会自动点击登录。',items.map(item=>({id:item.id,label:item.title,detail:'fields' in item?`${item.fields.filter(field=>field.value.trim()).length} 个资料字段`:item.username})));
+      if(id===null)return true;
+      const found=items.find(item=>item.id===id);if(!found)return true;item=found;
+    }
+    job.itemId=item.id;job.revision=JSON.stringify(item);
+    if(!await quickFillIsCurrent(tabId,job))return true;
+    const payload='fields' in item?{profile:fillProfileToPayload(item,job.frameUrl,true)}:{credential:credentialToFillPayload(item,false,session.vault,job.frameUrl)};
+    const result=await chrome.tabs.sendMessage(tabId,{type:'KEYPILOT_APPLY_QUICK_FILL',token:job.token,targetId:job.targetId,...payload},{frameId:job.frameId});
+    if(result?.ok && job.kind==='profile' && await quickFillIsCurrent(tabId,job)){
+      const latest=await restoreCachedVaultSession(), profile=latest?.vault.fillProfiles?.find(profile=>profile.id===job.itemId);
+      if(latest && profile && latest.sessionId===job.sessionId && JSON.stringify(profile)===job.revision){
+        await persistVaultSession(latest,updateFillProfileInVault(latest.vault,{...profile,lastUsedAt:Date.now()})).catch(()=>undefined);
+      }
+    }
+    if(!result?.ok && result?.error!=='FILL_CANCELLED'){
+      await choose('暂未填写','表单或密码库状态可能已变化。请关闭提示，点击要填写的输入框后重试。',[]);
+    }
+    return true;
+  }finally{if(quickFillJobs.get(tabId)===job)quickFillJobs.delete(tabId);}
+}
+
+async function executeUserCommand(command: string, targetTab?: chrome.tabs.Tab) {
+  if (command === 'lock-vault') { await clearVaultSessionCache(); return; }
+  if (command === 'search-vault') { await chrome.tabs.create({url: chrome.runtime.getURL('vault.html?focus=search')}); return; }
+  if (command !== 'fill-current') return;
+  const tab = targetTab ?? await queryActiveTab();
+  const session = await restoreCachedVaultSession();
+  if (tab?.id && session) {
+    if(await quickFillTab(tab,session).catch(()=>false))return;
+  }
+  try { await chrome.action.openPopup(); }
+  catch { await chrome.tabs.create({url: chrome.runtime.getURL('popup.html')}); }
+}
+chrome.commands.onCommand.addListener(command => { void executeUserCommand(command).catch(() => undefined); });
+
+let menuEnabled: boolean | undefined;
+let menuQueue = Promise.resolve();
+function refreshContextMenus() {
+  menuQueue = menuQueue.then(async () => {
+    const session = await restoreCachedVaultSession();
+    const enabled = Boolean(session?.vault.settings.showContextMenuCommands);
+    if (enabled === menuEnabled) return;
+    await chrome.contextMenus.removeAll();
+    if (enabled) {
+      for (const [id, title] of [['fill-current', 'KeyPilot：填写当前网站'], ['search-vault', 'KeyPilot：搜索密码库'], ['lock-vault', 'KeyPilot：锁定密码库']]) {
+        await new Promise<void>((resolve, reject) => chrome.contextMenus.create({id, title, contexts: ['page', 'editable']}, () => {
+          const error = chrome.runtime.lastError;
+          if (error) reject(new Error(error.message)); else resolve();
+        }));
+      }
+    }
+    menuEnabled = enabled;
+  }).catch(() => { menuEnabled = undefined; });
+}
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  void restoreCachedVaultSession().then(session => {
+    if (session?.vault.settings.showContextMenuCommands) return executeUserCommand(String(info.menuItemId), tab);
+  }).catch(() => undefined);
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if ((area === 'session' && ('keypilot.sessionState' in changes || 'keypilot.unlockedSession' in changes)) ||
+      (area === 'local' && 'keypilot.encryptedVault' in changes)) refreshContextMenus();
+});
+chrome.runtime.onInstalled.addListener(refreshContextMenus);
+chrome.runtime.onStartup.addListener(refreshContextMenus);
+refreshContextMenus();

@@ -1,6 +1,6 @@
 {
   "name": "keypilot-extension",
-  "version": "1.1.0",
+  "version": "1.13.0",
   "description": "Local-first browser password manager, autofill, and one-click login extension.",
   "license": "MIT",
   "keywords": [
@@ -15,20 +15,37 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "lab": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+    "lab": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "test": "tsx --test tests/core.test.ts tests/totp.test.ts tests/totpImport.test.ts tests/backup.test.ts tests/security.test.ts tests/reminders.test.ts tests/loginJob.test.ts tests/captcha.test.ts tests/ocrLite.test.ts tests/captchaConsensus.test.ts tests/captchaImage.test.ts tests/captchaArithmetic.test.ts",
+    "test:e2e": "playwright test",
+    "check": "tsc --noEmit",
+    "ocr:lab": "vite --config tools/ocr-lite/vite.config.ts",
+    "ocr:build": "tsc -p tools/ocr-lite/tsconfig.json && vite build --config tools/ocr-lite/vite.config.ts && tsx tools/ocr-lite/package.mts",
+    "ocr:templates": "tsx tools/ocr-lite/generate.mts",
+    "ocr:benchmark": "tsx tools/ocr-lite/benchmark.mts",
+    "package": "npm run build && tsx tools/package.mts"
   },
   "dependencies": {
     "fflate": "^0.8.2",
+    "jsqr": "1.4.0",
     "lucide-react": "^0.468.0",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tesseract.js": "7.0.0",
+    "tldts": "^7.4.19"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tesseract.js-data/eng": "1.0.0",
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.14.15",
+    "@types/qrcode": "1.5.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.0.2",
+    "onnxruntime-web": "1.31.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.5.4",
     "vite": "^8.0.14"
   }

@@ -1,0 +1,42 @@
+KeyPilot local OCR third-party notices
+
+Runtime libraries bundled without source changes:
+- ONNX Runtime Web 1.31.1, MIT
+  https://github.com/microsoft/onnxruntime/tree/v1.31.1
+  WASM-only entry point and one SIMD runtime. Runtime bytes are gzip-compressed
+  for storage, and decompressed locally without altering the original bytes.
+  Licenses: onnxruntime.txt, onnxruntime-ThirdPartyNotices.txt.
+- Tesseract.js 7.0.0, Apache-2.0
+  https://github.com/naptha/tesseract.js
+  License: tesseract-js.txt
+- Tesseract.js-core 7.0.0, Apache-2.0
+  https://github.com/naptha/tesseract.js-core
+  Portable LSTM JS + WebAssembly build only. License: tesseract-core.txt
+
+Modified model data:
+- ddddocr common_old.onnx, MIT
+  https://github.com/sml2h3/ddddocr/tree/c40f56f95412e10bcb9bd0bd24411e92f896d238
+  Output weights retain the 94 printable ASCII classes and CTC blank. Other
+  output columns are removed; retained weights are unchanged. Output shape
+  metadata is corrected. A KeyPilot-trained, uint8 63-class letter/digit review
+  head shares the frozen encoder; the original ASCII head remains unchanged.
+  Review training uses 3000 locally generated synthetic images only. An added
+  uint8 17-class arithmetic head uses 2000 synthetic arithmetic expressions and
+  the same frozen encoder; neither existing output head is modified. Compressed
+  as captcha-ascii.onnx.gz. No training runtime or corpus is shipped.
+  License: ddddocr.txt. Reproduction: tools/ocr/prepare-models.py and
+  tools/ocr/train-review-head.py; quantized checkpoints:
+  tools/ocr/review-head.npz and tools/ocr/math-head.npz.
+- Tesseract tessdata_fast English model, Apache-2.0
+  https://github.com/tesseract-ocr/tessdata_fast/tree/87416418657359cb625c412a48b6e1d6d41c29bd
+  LSTM, unicharset, recoder and version entries retained unchanged; dictionary
+  entries removed. Compressed as eng.traineddata.gz. License: tessdata-fast.txt.
+  Source and derived hashes: src/ocr-models/metadata.json in the source tree.
+
+The distributed Tesseract worker retains its upstream attribution notices
+in ocr/worker.min.js.LICENSE.txt. Licenses for bundled JavaScript dependencies
+are included in the ocr-*.txt files in this directory.
+
+KeyPilot's detection, image preprocessing, candidate ranking and confirmation
+interface are separate application code. All OCR files and language data are
+loaded from the installed extension; no CDN or hosted recognition API is used.

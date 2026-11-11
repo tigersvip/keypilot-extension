@@ -1,0 +1,37 @@
+{
+  "format": "KPD1",
+  "version": 1,
+  "kind": "rendered-digit-templates",
+  "fonts": [
+    "Arial",
+    "Tahoma",
+    "Times New Roman",
+    "Consolas",
+    "Trebuchet MS",
+    "Courier New"
+  ],
+  "weights": [
+    "normal",
+    "bold"
+  ],
+  "styles": [
+    "normal",
+    "italic"
+  ],
+  "sizes": [
+    18,
+    34
+  ],
+  "angles": [
+    -20,
+    -10,
+    0,
+    10,
+    20
+  ],
+  "count": 2400,
+  "bytes": 1351212,
+  "gzipBytes": 167205,
+  "sha256": "d098db846de6526b73001d9738435a5f3a4ed2837aeef8e307d8b872b5615c2d",
+  "note": "Generated from local system fonts through Chromium canvas. No font files are redistributed. Synthetic templates; real CAPTCHA accuracy is unverified."
+}

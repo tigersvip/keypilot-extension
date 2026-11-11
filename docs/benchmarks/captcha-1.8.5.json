@@ -1,0 +1,7731 @@
+{
+  "description": "Frozen-code synthetic holdout; exact text including case. Not a real-world accuracy estimate.",
+  "seed": 202611111,
+  "baseline": "1.8.4",
+  "version": "1.8.5",
+  "count": 192,
+  "imagesSha256": "a2059542a95ed0bc6c0d4be612fdc4ebdc45481ecb1a1fb2d755c67582d8e5a7",
+  "sameImagesVerified": true,
+  "summaryOld": [
+    {
+      "kind": "clean",
+      "total": 32,
+      "first": 30,
+      "any": 31
+    },
+    {
+      "kind": "touching",
+      "total": 32,
+      "first": 25,
+      "any": 28
+    },
+    {
+      "kind": "overlap",
+      "total": 32,
+      "first": 6,
+      "any": 8
+    },
+    {
+      "kind": "warp",
+      "total": 32,
+      "first": 21,
+      "any": 26
+    },
+    {
+      "kind": "lines",
+      "total": 32,
+      "first": 16,
+      "any": 16
+    },
+    {
+      "kind": "mixed",
+      "total": 32,
+      "first": 3,
+      "any": 3
+    }
+  ],
+  "summaryNew": [
+    {
+      "kind": "clean",
+      "total": 32,
+      "first": 30,
+      "any": 32
+    },
+    {
+      "kind": "touching",
+      "total": 32,
+      "first": 25,
+      "any": 30
+    },
+    {
+      "kind": "overlap",
+      "total": 32,
+      "first": 12,
+      "any": 15
+    },
+    {
+      "kind": "warp",
+      "total": 32,
+      "first": 21,
+      "any": 28
+    },
+    {
+      "kind": "lines",
+      "total": 32,
+      "first": 16,
+      "any": 23
+    },
+    {
+      "kind": "mixed",
+      "total": 32,
+      "first": 3,
+      "any": 4
+    }
+  ],
+  "rows": [
+    {
+      "index": 0,
+      "fixture": {
+        "kind": "clean",
+        "text": "95631",
+        "font": "Verdana",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          0.09257919259835035,
+          -0.0014062444679439068,
+          -0.11103901790920645,
+          -0.10325133544392884,
+          0.18890418077353388
+        ],
+        "phase": 1.2508069302949822,
+        "lineSeed": 732991
+      },
+      "old": {
+        "candidates": [
+          "95631",
+          "Jose3:|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 768.69
+      },
+      "new": {
+        "candidates": [
+          "95631",
+          "Jose3:|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 1076.09
+      }
+    },
+    {
+      "index": 1,
+      "fixture": {
+        "kind": "clean",
+        "text": "imdgot",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.059608352836221457,
+          0.024529274902306497,
+          0.2093407481443137,
+          0.026838900172151625,
+          0.13834303710609674,
+          0.06187301210593432
+        ],
+        "phase": 0.5467579693612017,
+        "lineSeed": 925707
+      },
+      "old": {
+        "candidates": [
+          "imdgot",
+          "|mdget",
+          "imdgot_"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 161.72
+      },
+      "new": {
+        "candidates": [
+          "imdgot",
+          "|mdget",
+          "imdgot_"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 159.03
+      }
+    },
+    {
+      "index": 2,
+      "fixture": {
+        "kind": "clean",
+        "text": "GhRqX",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.12455883773509413,
+          -0.18134702113457024,
+          -0.03232003410812467,
+          0.11326016020029783,
+          -0.013808612828142941
+        ],
+        "phase": 1.0903364998631557,
+        "lineSeed": 326729
+      },
+      "old": {
+        "candidates": [
+          "GhRqX",
+          "GhRqx",
+          "GhRqxX"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 225.64
+      },
+      "new": {
+        "candidates": [
+          "GhRqX",
+          "GhRqx",
+          "ghRqx",
+          "Ghrqx"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 320.14
+      }
+    },
+    {
+      "index": 3,
+      "fixture": {
+        "kind": "clean",
+        "text": "9703",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.13322765240445733,
+          -0.12384748423937708,
+          -0.11566956271417439,
+          0.23915717529598624
+        ],
+        "phase": 5.846422723316273,
+        "lineSeed": 235948
+      },
+      "old": {
+        "candidates": [
+          "9703",
+          "(9703"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 172.46
+      },
+      "new": {
+        "candidates": [
+          "9703",
+          "(9703"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 179.33
+      }
+    },
+    {
+      "index": 4,
+      "fixture": {
+        "kind": "clean",
+        "text": "qhhjyv",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.06267942441627383,
+          0.1491074882214889,
+          -0.2401341397780925,
+          -0.1609801430022344,
+          0.14550319220870733,
+          -0.18095481500495225
+        ],
+        "phase": 0.685971383792988,
+        "lineSeed": 978949
+      },
+      "old": {
+        "candidates": [
+          "qhhjyv",
+          "[annivy|"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 238.56
+      },
+      "new": {
+        "candidates": [
+          "qhhjyv",
+          "[annivy|"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 239.8
+      }
+    },
+    {
+      "index": 5,
+      "fixture": {
+        "kind": "clean",
+        "text": "Oytc7D",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.10115035925991833,
+          -0.18371312913950533,
+          0.021753051318228245,
+          0.1157794602913782,
+          -0.07582450727932155,
+          -0.16994512628298253
+        ],
+        "phase": 5.739159539214111,
+        "lineSeed": 354068
+      },
+      "old": {
+        "candidates": [
+          "Oytc7D",
+          "oytc7D"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 225.17
+      },
+      "new": {
+        "candidates": [
+          "Oytc7D",
+          "oytc7D",
+          "oytc>D",
+          "oytc7d"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 316.27
+      }
+    },
+    {
+      "index": 6,
+      "fixture": {
+        "kind": "clean",
+        "text": "792740",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.0344609497115016,
+          0.2303525236202404,
+          0.15241296705789864,
+          -0.1879739648429677,
+          -0.24579625437036157,
+          0.10772816033568233
+        ],
+        "phase": 1.0570421052922672,
+        "lineSeed": 62895
+      },
+      "old": {
+        "candidates": [
+          "792740"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 210.34
+      },
+      "new": {
+        "candidates": [
+          "792740"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 208.29
+      }
+    },
+    {
+      "index": 7,
+      "fixture": {
+        "kind": "clean",
+        "text": "hgmmcy",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.22153802658431232,
+          0.03433373395819217,
+          -0.023449253756552935,
+          0.24892486014869064,
+          -0.22912701428867877,
+          -0.0254248765995726
+        ],
+        "phase": 0.31808101401383804,
+        "lineSeed": 425453
+      },
+      "old": {
+        "candidates": [
+          "hgmmcy",
+          "h3mmcy",
+          "hammey"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 171.29
+      },
+      "new": {
+        "candidates": [
+          "hgmmcy",
+          "h3mmcy",
+          "hammey"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 175.32
+      }
+    },
+    {
+      "index": 8,
+      "fixture": {
+        "kind": "clean",
+        "text": "2H8a1",
+        "font": "Georgia",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.001244380953721702,
+          -0.1851730071939528,
+          0.0182344721397385,
+          -0.14722761535085738,
+          0.07159210054669529
+        ],
+        "phase": 2.6288404285671962,
+        "lineSeed": 759179
+      },
+      "old": {
+        "candidates": [
+          "2H8a1",
+          "2h8a1",
+          "f2nsa:|",
+          "2H8ai1"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 212.55
+      },
+      "new": {
+        "candidates": [
+          "2H8a1",
+          "2h8a1",
+          "f2nsa:|",
+          "2H8ai1"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 226.7
+      }
+    },
+    {
+      "index": 9,
+      "fixture": {
+        "kind": "clean",
+        "text": "714358",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.10317707760259509,
+          -0.05686955398414284,
+          -0.17631146893836558,
+          -0.22980064654257149,
+          0.1968477126210928,
+          0.05688461090903729
+        ],
+        "phase": 2.827525772677854,
+        "lineSeed": 960313
+      },
+      "old": {
+        "candidates": [
+          "714358"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 228.25
+      },
+      "new": {
+        "candidates": [
+          "714358"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 291.92
+      }
+    },
+    {
+      "index": 10,
+      "fixture": {
+        "kind": "clean",
+        "text": "itspi",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.05780048726592213,
+          -0.23803232260979712,
+          -0.13375808612909168,
+          -0.06028003990650177,
+          -0.015391383436508477
+        ],
+        "phase": 0.320685385627798,
+        "lineSeed": 368761
+      },
+      "old": {
+        "candidates": [
+          "itspi",
+          "|tsp|",
+          "Ea"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 192.43
+      },
+      "new": {
+        "candidates": [
+          "itspi",
+          "|tsp|",
+          "Ea"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 242.86
+      }
+    },
+    {
+      "index": 11,
+      "fixture": {
+        "kind": "clean",
+        "text": "Qy1q8M",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.013321267673745751,
+          0.03495934477541596,
+          -0.17860371433198452,
+          -0.22956446011085063,
+          -0.16493202722631395,
+          0.1354151061968878
+        ],
+        "phase": 2.484074414938794,
+        "lineSeed": 725897
+      },
+      "old": {
+        "candidates": [
+          "Qy1q8M",
+          "Qyiae",
+          "QyiaeM"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 327.12
+      },
+      "new": {
+        "candidates": [
+          "Qy1q8M",
+          "Qy1q8m",
+          "qy1q8M",
+          "qy1q8m"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 478.9
+      }
+    },
+    {
+      "index": 12,
+      "fixture": {
+        "kind": "clean",
+        "text": "58613",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.11223574040923268,
+          -0.1861613355576992,
+          -0.07903519284445792,
+          0.06366456509567797,
+          -0.1217501302016899
+        ],
+        "phase": 2.9224353830955145,
+        "lineSeed": 165799
+      },
+      "old": {
+        "candidates": [
+          "58613",
+          "(5e613"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 283.07
+      },
+      "new": {
+        "candidates": [
+          "58613",
+          "(5e613"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 281.68
+      }
+    },
+    {
+      "index": 13,
+      "fixture": {
+        "kind": "clean",
+        "text": "biuguk",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.11636202223598957,
+          0.1229716258822009,
+          -0.036394443130120635,
+          0.15758282237220556,
+          0.16544308187440038,
+          -0.23610902728978544
+        ],
+        "phase": 6.149786450833197,
+        "lineSeed": 560329
+      },
+      "old": {
+        "candidates": [
+          "biuguk"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 170.85
+      },
+      "new": {
+        "candidates": [
+          "biuguk"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 169.98
+      }
+    },
+    {
+      "index": 14,
+      "fixture": {
+        "kind": "clean",
+        "text": "tur2d5",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.03572255210019648,
+          0.1990685659693554,
+          0.22280412772670388,
+          0.1587382782017812,
+          -0.049442193703725934,
+          -0.14944070798810571
+        ],
+        "phase": 0.9245089512001379,
+        "lineSeed": 726731
+      },
+      "old": {
+        "candidates": [
+          "tur2d5",
+          "tur2ds",
+          "turzds"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 295.84
+      },
+      "new": {
+        "candidates": [
+          "tur2d5",
+          "tur2ds",
+          "turzds"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 284.17
+      }
+    },
+    {
+      "index": 15,
+      "fixture": {
+        "kind": "clean",
+        "text": "925145",
+        "font": "Georgia",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.21018686098977923,
+          -0.1667550258571282,
+          0.20861915010027587,
+          -0.09114535187836736,
+          -0.09880135301500559,
+          -0.2040933157550171
+        ],
+        "phase": 5.549646878713972,
+        "lineSeed": 156259
+      },
+      "old": {
+        "candidates": [
+          "925145",
+          "Jozssas|",
+          "905145"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 314.91
+      },
+      "new": {
+        "candidates": [
+          "925145",
+          "Jozssas|",
+          "905145"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 331.58
+      }
+    },
+    {
+      "index": 16,
+      "fixture": {
+        "kind": "clean",
+        "text": "rssja",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.19745286961551756,
+          -0.14416924421675503,
+          -0.1931959077483043,
+          0.19968924019485712,
+          -0.1494306690292433
+        ],
+        "phase": 3.564678290519083,
+        "lineSeed": 475217
+      },
+      "old": {
+        "candidates": [
+          "rssja",
+          "rSSja",
+          "rssia"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 212.17
+      },
+      "new": {
+        "candidates": [
+          "rssja",
+          "rSSja",
+          "rssia"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 222.7
+      }
+    },
+    {
+      "index": 17,
+      "fixture": {
+        "kind": "clean",
+        "text": "9VnJ8G",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.1158025476615876,
+          -0.1463196094846353,
+          -0.02994342613965273,
+          0.03663888096343726,
+          -0.04863034817390144,
+          0.1877398231299594
+        ],
+        "phase": 6.247112058755423,
+        "lineSeed": 805547
+      },
+      "old": {
+        "candidates": [
+          "9VnJ8G",
+          "oVnJ8G",
+          "9Vns8G"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 308.84
+      },
+      "new": {
+        "candidates": [
+          "9VnJ8G",
+          "9vnJ8G",
+          "9VnJ8g",
+          "9Vnj8G"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 492.33
+      }
+    },
+    {
+      "index": 18,
+      "fixture": {
+        "kind": "clean",
+        "text": "654011",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.06731926370412111,
+          0.2154510886175558,
+          -0.15868487651459873,
+          0.173953523975797,
+          0.10752979991957545,
+          0.1582451177528128
+        ],
+        "phase": 4.054683830542375,
+        "lineSeed": 459874
+      },
+      "old": {
+        "candidates": [
+          "654011",
+          "e54o1t"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 309.57
+      },
+      "new": {
+        "candidates": [
+          "654011",
+          "e54o1t"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 324.09
+      }
+    },
+    {
+      "index": 19,
+      "fixture": {
+        "kind": "clean",
+        "text": "krei",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.1067498316988349,
+          -0.11835751042235643,
+          0.08299821359105408,
+          0.21951163571793586
+        ],
+        "phase": 5.9498922799586245,
+        "lineSeed": 119974
+      },
+      "old": {
+        "candidates": [
+          "krei",
+          "krel"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 224.54
+      },
+      "new": {
+        "candidates": [
+          "krei",
+          "krel"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 231.93
+      }
+    },
+    {
+      "index": 20,
+      "fixture": {
+        "kind": "clean",
+        "text": "fFXIn",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.00035896000918000937,
+          0.12012470606714487,
+          0.19440040073823184,
+          -0.05492720822803676,
+          -0.09324178646784276
+        ],
+        "phase": 1.0482062176077929,
+        "lineSeed": 282665
+      },
+      "old": {
+        "candidates": [
+          "fFXIn",
+          "fFX|n",
+          "EXIn"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 246.65
+      },
+      "new": {
+        "candidates": [
+          "fFXIn",
+          "fFXln",
+          "fFXin",
+          "fFxIn"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 369.54
+      }
+    },
+    {
+      "index": 21,
+      "fixture": {
+        "kind": "clean",
+        "text": "789191",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          0.2119742212817073,
+          0.00871292024385184,
+          -0.008397116092965007,
+          -0.0916306561557576,
+          0.10009632399305701,
+          -0.04827147035393864
+        ],
+        "phase": 3.755373108786552,
+        "lineSeed": 847166
+      },
+      "old": {
+        "candidates": [
+          "789191",
+          "J789193|",
+          "799191"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 305.53
+      },
+      "new": {
+        "candidates": [
+          "789191",
+          "J789193|",
+          "799191"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 302.92
+      }
+    },
+    {
+      "index": 22,
+      "fixture": {
+        "kind": "clean",
+        "text": "mwnh",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.2158326180651784,
+          -0.09338107251096517,
+          -0.011687327874824405,
+          -0.23139685567002743
+        ],
+        "phase": 0.2117412589133432,
+        "lineSeed": 175966
+      },
+      "old": {
+        "candidates": [
+          "mwnh",
+          "mwoh",
+          "Smwnh",
+          "omwnh"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 186.54
+      },
+      "new": {
+        "candidates": [
+          "mwnh",
+          "mwoh",
+          "Smwnh",
+          "omwnh"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 185.29
+      }
+    },
+    {
+      "index": 23,
+      "fixture": {
+        "kind": "clean",
+        "text": "RZZ2",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.009442341746762395,
+          0.10413795674685389,
+          -0.14951195660978556,
+          0.22845808311831206
+        ],
+        "phase": 0.7393611993731086,
+        "lineSeed": 869099
+      },
+      "old": {
+        "candidates": [
+          "RZZ2",
+          "rzz2",
+          "JRzz2|",
+          "/RZZ2"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 241.52
+      },
+      "new": {
+        "candidates": [
+          "RZZ2",
+          "rzz2",
+          "Rzz2",
+          "RZz2"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 308.89
+      }
+    },
+    {
+      "index": 24,
+      "fixture": {
+        "kind": "clean",
+        "text": "9735",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.02609595889225602,
+          -0.0059908811235800385,
+          0.14663175935856998,
+          -0.1527196898823604
+        ],
+        "phase": 1.586285012920844,
+        "lineSeed": 708241
+      },
+      "old": {
+        "candidates": [
+          "9735"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 212.44
+      },
+      "new": {
+        "candidates": [
+          "9735"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 213.1
+      }
+    },
+    {
+      "index": 25,
+      "fixture": {
+        "kind": "clean",
+        "text": "bsup",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.06709412089549005,
+          -0.22354957915376872,
+          -0.24520694045349956,
+          0.03547562507446855
+        ],
+        "phase": 5.439492582276805,
+        "lineSeed": 368469
+      },
+      "old": {
+        "candidates": [
+          "bsup"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 160.56
+      },
+      "new": {
+        "candidates": [
+          "bsup"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 168.88
+      }
+    },
+    {
+      "index": 26,
+      "fixture": {
+        "kind": "clean",
+        "text": "dRVq",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.2289704829454422,
+          0.21115874859970063,
+          0.13404690311290324,
+          0.039437991683371365
+        ],
+        "phase": 4.915219628683906,
+        "lineSeed": 350333
+      },
+      "old": {
+        "candidates": [
+          "dRVq",
+          "dRvq",
+          "(aRVa"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 255.72
+      },
+      "new": {
+        "candidates": [
+          "dRVq",
+          "dRvq",
+          "drvq",
+          "drVq"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 384.71
+      }
+    },
+    {
+      "index": 27,
+      "fixture": {
+        "kind": "clean",
+        "text": "80863",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.1469071494648233,
+          0.2409969214349985,
+          0.018685577320866287,
+          0.2286240013781935,
+          -0.016071976046077907
+        ],
+        "phase": 2.0370826748414936,
+        "lineSeed": 844491
+      },
+      "old": {
+        "candidates": [
+          "80863"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 216.63
+      },
+      "new": {
+        "candidates": [
+          "80863"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 216.63
+      }
+    },
+    {
+      "index": 28,
+      "fixture": {
+        "kind": "clean",
+        "text": "mcfekk",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.06528773531317711,
+          0.05041182029526681,
+          -0.14678903459571302,
+          0.10022355720866472,
+          0.2345967390574515,
+          -0.24488640914205462
+        ],
+        "phase": 3.9943064511250306,
+        "lineSeed": 442607
+      },
+      "old": {
+        "candidates": [
+          "mefekk",
+          "mcfekk",
+          "mecfekk",
+          "_mefekk-"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 207.27
+      },
+      "new": {
+        "candidates": [
+          "mefekk",
+          "mcfekk",
+          "mecfekk",
+          "_mefekk-"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 193.93
+      }
+    },
+    {
+      "index": 29,
+      "fixture": {
+        "kind": "clean",
+        "text": "upvI",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.05923010595142841,
+          0.12592518504243344,
+          0.23666674294508994,
+          -0.17166533775161952
+        ],
+        "phase": 1.529490314027952,
+        "lineSeed": 805319
+      },
+      "old": {
+        "candidates": [
+          "upvl",
+          "upv|",
+          "upyl|",
+          "upyl"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 213.68
+      },
+      "new": {
+        "candidates": [
+          "upvl",
+          "upvI",
+          "upv|",
+          "upyl|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 318.13
+      }
+    },
+    {
+      "index": 30,
+      "fixture": {
+        "kind": "clean",
+        "text": "26535",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.16968079342041165,
+          0.04070209711790085,
+          -0.22376083966810256,
+          0.10638543800450861,
+          -0.16077155887614936
+        ],
+        "phase": 1.1183524958246984,
+        "lineSeed": 251023
+      },
+      "old": {
+        "candidates": [
+          "26535"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 253.16
+      },
+      "new": {
+        "candidates": [
+          "26535"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 260.27
+      }
+    },
+    {
+      "index": 31,
+      "fixture": {
+        "kind": "clean",
+        "text": "cjtfz",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.17146801331546158,
+          -0.17682993225753307,
+          -0.22495698381680995,
+          0.09454631083644927,
+          -0.18392097286414355
+        ],
+        "phase": 3.904086066615308,
+        "lineSeed": 494572
+      },
+      "old": {
+        "candidates": [
+          "cjtfz",
+          "ejtfz",
+          "ejttn"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 250.44
+      },
+      "new": {
+        "candidates": [
+          "cjtfz",
+          "ejtfz",
+          "ejttn"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 366.36
+      }
+    },
+    {
+      "index": 32,
+      "fixture": {
+        "kind": "touching",
+        "text": "402922",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.15978609398007393,
+          0.16995180386584252,
+          0.14436377794481814,
+          0.23551758483517915,
+          0.025931762997061014,
+          0.18583666940685362
+        ],
+        "phase": 1.887197802597798,
+        "lineSeed": 736587
+      },
+      "old": {
+        "candidates": [
+          "402922",
+          "4o2922",
+          "|aoagae",
+          "|aoaga2"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 173.99
+      },
+      "new": {
+        "candidates": [
+          "402922",
+          "4o2922",
+          "|aoagae",
+          "|aoaga2"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 323.06
+      }
+    },
+    {
+      "index": 33,
+      "fixture": {
+        "kind": "touching",
+        "text": "jwqh",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.23649738170206547,
+          -0.1862436441006139,
+          -0.08366258791647851,
+          0.1488823100226
+        ],
+        "phase": 2.45200495678571,
+        "lineSeed": 969012
+      },
+      "old": {
+        "candidates": [
+          "jwqh",
+          "jwgh"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 143.92
+      },
+      "new": {
+        "candidates": [
+          "jwqh",
+          "jwgh"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 238.04
+      }
+    },
+    {
+      "index": 34,
+      "fixture": {
+        "kind": "touching",
+        "text": "nFQdsa",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.04058411717414856,
+          -0.10432671394664794,
+          0.19450194225646555,
+          -0.036531570251099765,
+          -0.09393822541460395,
+          0.09337574278470129
+        ],
+        "phase": 1.5870407651781018,
+        "lineSeed": 920150
+      },
+      "old": {
+        "candidates": [
+          "nFQdsa",
+          "nFqdsa",
+          "-nFQdsa"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 220.15
+      },
+      "new": {
+        "candidates": [
+          "nFQdsa",
+          "nFqdsa",
+          "nfqdsa",
+          "nfQdsa"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 293.23
+      }
+    },
+    {
+      "index": 35,
+      "fixture": {
+        "kind": "touching",
+        "text": "4625",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.0511352214962244,
+          -0.02740501065272838,
+          -0.2073227462824434,
+          0.22377820231486112
+        ],
+        "phase": 3.5216264752038833,
+        "lineSeed": 301028
+      },
+      "old": {
+        "candidates": [
+          "4625",
+          "-4605"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 153.47
+      },
+      "new": {
+        "candidates": [
+          "4625",
+          "-4605"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 229.33
+      }
+    },
+    {
+      "index": 36,
+      "fixture": {
+        "kind": "touching",
+        "text": "wwtyg",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.10527288855519146,
+          -0.2367883436381817,
+          0.0003396420506760478,
+          -0.03928161202929914,
+          -0.1072290827287361
+        ],
+        "phase": 4.76397313958626,
+        "lineSeed": 526458
+      },
+      "old": {
+        "candidates": [
+          "wwtyg",
+          "wwlyg",
+          "wstg",
+          "wotg"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 123.87
+      },
+      "new": {
+        "candidates": [
+          "wwtyg",
+          "wwlyg",
+          "wstg",
+          "wotg"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 239.02
+      }
+    },
+    {
+      "index": 37,
+      "fixture": {
+        "kind": "touching",
+        "text": "yqJ6",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.1028195486869663,
+          -0.17268784099724144,
+          -0.11050194688141346,
+          -0.1350987983169034
+        ],
+        "phase": 0.5122749187408745,
+        "lineSeed": 766225
+      },
+      "old": {
+        "candidates": [
+          "yoJ6",
+          "yqJ6",
+          "yoss",
+          "aJo"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 149.28
+      },
+      "new": {
+        "candidates": [
+          "yqj6",
+          "yoJ6",
+          "yqJ6",
+          "yq)6"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 216.71
+      }
+    },
+    {
+      "index": 38,
+      "fixture": {
+        "kind": "touching",
+        "text": "5387",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.1453602402471006,
+          -0.1280687084654346,
+          0.05107555887661874,
+          0.16267309023533016
+        ],
+        "phase": 3.6889579885016364,
+        "lineSeed": 327398
+      },
+      "old": {
+        "candidates": [
+          "5387",
+          "Ea",
+          "e7"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 106.83
+      },
+      "new": {
+        "candidates": [
+          "5387",
+          "Ea",
+          "e7"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 172.84
+      }
+    },
+    {
+      "index": 39,
+      "fixture": {
+        "kind": "touching",
+        "text": "rgghgr",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.17253588465973735,
+          -0.08855276426766068,
+          -0.1719086414668709,
+          -0.1134036568691954,
+          -0.10391621105372906,
+          -0.013170221936888993
+        ],
+        "phase": 2.568119874900981,
+        "lineSeed": 829090
+      },
+      "old": {
+        "candidates": [
+          "rgghgr",
+          "roghgr",
+          "-shor",
+          "-rshor"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 208.82
+      },
+      "new": {
+        "candidates": [
+          "rgghgr",
+          "roghgr",
+          "-shor",
+          "-rshor"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 268.7
+      }
+    },
+    {
+      "index": 40,
+      "fixture": {
+        "kind": "touching",
+        "text": "4uDnV",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.04958601726684719,
+          -0.04735711240209639,
+          0.020512886927463114,
+          -0.16885307803750038,
+          -0.05168638390023261
+        ],
+        "phase": 1.129370536484603,
+        "lineSeed": 121506
+      },
+      "old": {
+        "candidates": [
+          "4uDnV",
+          "4uDnv",
+          "-auDov",
+          "-aubav"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 113.52
+      },
+      "new": {
+        "candidates": [
+          "4uDnV",
+          "4uDnv",
+          "4udnv",
+          "4uunv"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 228.06
+      }
+    },
+    {
+      "index": 41,
+      "fixture": {
+        "kind": "touching",
+        "text": "6969",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.052362137008458376,
+          0.03192998224403709,
+          -0.12827125773765147,
+          -0.09725177788641304
+        ],
+        "phase": 4.42898722356397,
+        "lineSeed": 934696
+      },
+      "old": {
+        "candidates": [
+          "6969",
+          "-6969"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 168.72
+      },
+      "new": {
+        "candidates": [
+          "6969",
+          "-6969"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 225.78
+      }
+    },
+    {
+      "index": 42,
+      "fixture": {
+        "kind": "touching",
+        "text": "ctkl",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.07660389575175941,
+          0.01845778909046203,
+          0.06941978773102164,
+          0.09020696522202343
+        ],
+        "phase": 1.46800561388054,
+        "lineSeed": 439544
+      },
+      "old": {
+        "candidates": [
+          "ctkl",
+          "ctk!",
+          "-et",
+          "ett"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 167.89
+      },
+      "new": {
+        "candidates": [
+          "ctkl",
+          "ctki",
+          "ctk!",
+          "-et"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 207.01
+      }
+    },
+    {
+      "index": 43,
+      "fixture": {
+        "kind": "touching",
+        "text": "G9gXt",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.04391373402904719,
+          0.12616868619807065,
+          0.05042782996315509,
+          0.0017034071497619152,
+          -0.018180056125856936
+        ],
+        "phase": 2.6403338824928286,
+        "lineSeed": 574899
+      },
+      "old": {
+        "candidates": [
+          "G9gXt",
+          "g9gxt",
+          "G9QXt",
+          "apt"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 187.93
+      },
+      "new": {
+        "candidates": [
+          "G9gXt",
+          "g9gxt",
+          "G9gxt",
+          "g9gXt"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 293.86
+      }
+    },
+    {
+      "index": 44,
+      "fixture": {
+        "kind": "touching",
+        "text": "11911",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.18230228230822831,
+          -0.0884251173119992,
+          -0.20035976904910058,
+          -0.2265424677170813,
+          0.01695721165742725
+        ],
+        "phase": 0.8892977389575277,
+        "lineSeed": 664579
+      },
+      "old": {
+        "candidates": [
+          "11911",
+          "11941",
+          "ss9st",
+          "s9st"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 246.22
+      },
+      "new": {
+        "candidates": [
+          "11911",
+          "11941",
+          "ss9st",
+          "s9st"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 267.42
+      }
+    },
+    {
+      "index": 45,
+      "fixture": {
+        "kind": "touching",
+        "text": "pkfd",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.13668166939169168,
+          0.17377819202374667,
+          -0.2368876866530627,
+          0.14140779722947627
+        ],
+        "phase": 2.283527949373529,
+        "lineSeed": 481340
+      },
+      "old": {
+        "candidates": [
+          "pkfd",
+          "pkid",
+          "pktd",
+          "-ple"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 183.9
+      },
+      "new": {
+        "candidates": [
+          "pkfd",
+          "pkid",
+          "pktd",
+          "-ple"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 246.32
+      }
+    },
+    {
+      "index": 46,
+      "fixture": {
+        "kind": "touching",
+        "text": "hHWiFQ",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1813208432868123,
+          0.04136200516950339,
+          0.2096887540537864,
+          -0.2086246347753331,
+          0.19783457508310676,
+          0.21412419469561428
+        ],
+        "phase": 5.56953739756535,
+        "lineSeed": 500432
+      },
+      "old": {
+        "candidates": [
+          "hHwFQ",
+          "HHWAFQ",
+          "HHWiFQ",
+          "WHIMEQ"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 129.22
+      },
+      "new": {
+        "candidates": [
+          "hHwFQ",
+          "hhwFQ",
+          "hHWFQ",
+          "hHwFq"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 201.78
+      }
+    },
+    {
+      "index": 47,
+      "fixture": {
+        "kind": "touching",
+        "text": "75822",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.1732932134764269,
+          0.23187213693745434,
+          0.08676980261225253,
+          0.12372714607045054,
+          0.04584690311457962
+        ],
+        "phase": 2.3177512237788482,
+        "lineSeed": 821587
+      },
+      "old": {
+        "candidates": [
+          "75822",
+          "15822",
+          "-15822"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 187.82
+      },
+      "new": {
+        "candidates": [
+          "75822",
+          "15822",
+          "-15822"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 294.87
+      }
+    },
+    {
+      "index": 48,
+      "fixture": {
+        "kind": "touching",
+        "text": "rdsli",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.05562905326951295,
+          0.1681405503768474,
+          -0.23234999168198556,
+          0.24812952941283584,
+          -0.07702011300716549
+        ],
+        "phase": 5.836208731691095,
+        "lineSeed": 372030
+      },
+      "old": {
+        "candidates": [
+          "rdsh",
+          "rdsi",
+          "rdshi",
+          "rh"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 116.29
+      },
+      "new": {
+        "candidates": [
+          "rdsh",
+          "rdsi",
+          "rdsf",
+          "rdsl"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 168.86
+      }
+    },
+    {
+      "index": 49,
+      "fixture": {
+        "kind": "touching",
+        "text": "Ymgbh",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.15153632231522352,
+          0.12113223900087178,
+          -0.24184308748226613,
+          -0.24715743260458112,
+          -0.1074721539625898
+        ],
+        "phase": 3.5306400313632484,
+        "lineSeed": 148725
+      },
+      "old": {
+        "candidates": [
+          "Ymgbh",
+          "ymgbh",
+          "Yengbh"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 92.15
+      },
+      "new": {
+        "candidates": [
+          "Ymgbh",
+          "ymgbh",
+          "Yengbh"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 153.07
+      }
+    },
+    {
+      "index": 50,
+      "fixture": {
+        "kind": "touching",
+        "text": "97229",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.06389495253097266,
+          -0.13610439631156623,
+          -0.05223652336280793,
+          0.11898350855335593,
+          0.14260876120533794
+        ],
+        "phase": 2.717845859612087,
+        "lineSeed": 844924
+      },
+      "old": {
+        "candidates": [
+          "97229",
+          "|97229|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 164.8
+      },
+      "new": {
+        "candidates": [
+          "97229",
+          "|97229|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 266.28
+      }
+    },
+    {
+      "index": 51,
+      "fixture": {
+        "kind": "touching",
+        "text": "wrsqci",
+        "font": "Georgia",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          0.2461392015684396,
+          -0.02747530664782971,
+          -0.21676399232819676,
+          0.033703894703648984,
+          0.09336557774804533,
+          -0.043664948432706296
+        ],
+        "phase": 5.9029776499359725,
+        "lineSeed": 619027
+      },
+      "old": {
+        "candidates": [
+          "wrsqci",
+          "wrsqai",
+          "nsad"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 87.83
+      },
+      "new": {
+        "candidates": [
+          "wrsqci",
+          "wrsqai",
+          "wnsqai",
+          "wnsqci"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 184.75
+      }
+    },
+    {
+      "index": 52,
+      "fixture": {
+        "kind": "touching",
+        "text": "vYpz",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.10048174601979554,
+          -0.003672413411550224,
+          -0.20589987421408296,
+          0.12990778998937458
+        ],
+        "phase": 1.660847568716294,
+        "lineSeed": 625292
+      },
+      "old": {
+        "candidates": [
+          "vypz",
+          "VYpz",
+          "vVYpz",
+          "vie"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 122.01
+      },
+      "new": {
+        "candidates": [
+          "vypz",
+          "vYpz",
+          "VYpz",
+          "vVYpz"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 218.96
+      }
+    },
+    {
+      "index": 53,
+      "fixture": {
+        "kind": "touching",
+        "text": "37279",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.04558149061631411,
+          0.14870210667140782,
+          -0.007858788478188217,
+          -0.031857669819146395,
+          0.23017827176954597
+        ],
+        "phase": 4.471757936244402,
+        "lineSeed": 639910
+      },
+      "old": {
+        "candidates": [
+          "3279",
+          "37279"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 121.48
+      },
+      "new": {
+        "candidates": [
+          "3279",
+          "37279"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 105.25
+      }
+    },
+    {
+      "index": 54,
+      "fixture": {
+        "kind": "touching",
+        "text": "emmno",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.23476770252455026,
+          -0.0920106905978173,
+          0.02326665457803756,
+          0.04624549439176917,
+          -0.10041355399880558
+        ],
+        "phase": 6.246292008322746,
+        "lineSeed": 559934
+      },
+      "old": {
+        "candidates": [
+          "emmno",
+          "-emmno",
+          "-emmno_"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 210.37
+      },
+      "new": {
+        "candidates": [
+          "emmno",
+          "-emmno",
+          "-emmno_"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 201.72
+      }
+    },
+    {
+      "index": 55,
+      "fixture": {
+        "kind": "touching",
+        "text": "7ues",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1065814821049571,
+          0.07653323269914836,
+          0.09719253634102643,
+          0.024587033432908356
+        ],
+        "phase": 1.2548639239707675,
+        "lineSeed": 501133
+      },
+      "old": {
+        "candidates": [
+          "7ues",
+          "7Jues",
+          "Tues"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 157.84
+      },
+      "new": {
+        "candidates": [
+          "7ues",
+          ">ues",
+          "7Jues",
+          "Tues"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 217.85
+      }
+    },
+    {
+      "index": 56,
+      "fixture": {
+        "kind": "touching",
+        "text": "9969",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.23177070659585297,
+          -0.017362475744448602,
+          -0.15690454188734293,
+          0.08544895693194121
+        ],
+        "phase": 3.6828403840102824,
+        "lineSeed": 667634
+      },
+      "old": {
+        "candidates": [
+          "9969",
+          "Ea",
+          "-69"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 124.93
+      },
+      "new": {
+        "candidates": [
+          "9969",
+          "Ea",
+          "-69"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 214.55
+      }
+    },
+    {
+      "index": 57,
+      "fixture": {
+        "kind": "touching",
+        "text": "yxqlj",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.20299037138465792,
+          0.07010493869893253,
+          0.041121827089227736,
+          -0.07273031678050756,
+          0.18749491206835955
+        ],
+        "phase": 4.229143827650092,
+        "lineSeed": 945510
+      },
+      "old": {
+        "candidates": [
+          "yxqj",
+          "yxqy",
+          "val",
+          "om"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 111.46
+      },
+      "new": {
+        "candidates": [
+          "yxqj",
+          "yxqlj",
+          "yxqu",
+          "yxqy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 194.84
+      }
+    },
+    {
+      "index": 58,
+      "fixture": {
+        "kind": "touching",
+        "text": "u0xP",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.20386772183701396,
+          0.1983432307606563,
+          -0.11578413215465844,
+          0.03545925358776003
+        ],
+        "phase": 2.288488804058753,
+        "lineSeed": 697974
+      },
+      "old": {
+        "candidates": [
+          "uoxp",
+          "udxP",
+          "u0xP",
+          "we"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 154.15
+      },
+      "new": {
+        "candidates": [
+          "uoxp",
+          "uoxP",
+          "u0xp",
+          "u0xP"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 223.2
+      }
+    },
+    {
+      "index": 59,
+      "fixture": {
+        "kind": "touching",
+        "text": "81799",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.14344243437517434,
+          0.13611232349649072,
+          -0.01669801736716181,
+          -0.14932408859021962,
+          -0.060526648885570467
+        ],
+        "phase": 3.1139181407438214,
+        "lineSeed": 276586
+      },
+      "old": {
+        "candidates": [
+          "81799",
+          "-81799"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 262.35
+      },
+      "new": {
+        "candidates": [
+          "81799",
+          "-81799"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 252.82
+      }
+    },
+    {
+      "index": 60,
+      "fixture": {
+        "kind": "touching",
+        "text": "wdtk",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.06331296288408339,
+          0.1275786153273657,
+          -0.08728823019191623,
+          0.176673787063919
+        ],
+        "phase": 3.8132218869689343,
+        "lineSeed": 994014
+      },
+      "old": {
+        "candidates": [
+          "wdtk",
+          "wduk",
+          "|war|",
+          "we"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 104.63
+      },
+      "new": {
+        "candidates": [
+          "wdtk",
+          "wduk",
+          "|war|",
+          "we"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 159.06
+      }
+    },
+    {
+      "index": 61,
+      "fixture": {
+        "kind": "touching",
+        "text": "fZAJ",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.05533519759774208,
+          -0.06218463194090873,
+          0.24355254531838,
+          -0.08146993711125106
+        ],
+        "phase": 1.5200769628383763,
+        "lineSeed": 44969
+      },
+      "old": {
+        "candidates": [
+          "fZAJ",
+          "fz4j",
+          "fFZAJ",
+          "|rz43|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 149.55
+      },
+      "new": {
+        "candidates": [
+          "fZAJ",
+          "fz4j",
+          "fz4J",
+          "fzaj"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 213.48
+      }
+    },
+    {
+      "index": 62,
+      "fixture": {
+        "kind": "touching",
+        "text": "06114",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.06674608832690865,
+          0.1507063340395689,
+          0.07870119984727353,
+          0.23270976939238608,
+          -0.15306815213989466
+        ],
+        "phase": 1.2829426001203343,
+        "lineSeed": 30499
+      },
+      "old": {
+        "candidates": [
+          "06114",
+          "-06124|"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 244.46
+      },
+      "new": {
+        "candidates": [
+          "06114",
+          "-06124|"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 249.31
+      }
+    },
+    {
+      "index": 63,
+      "fixture": {
+        "kind": "touching",
+        "text": "epugxh",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.013047747313976288,
+          -0.08036821719724685,
+          0.21130373911000788,
+          -0.025623927707783878,
+          -0.05023381253704429,
+          0.18122076278086752
+        ],
+        "phase": 4.501296698263835,
+        "lineSeed": 971401
+      },
+      "old": {
+        "candidates": [
+          "epugxh",
+          "-eptgsh"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 148.39
+      },
+      "new": {
+        "candidates": [
+          "epugxh",
+          "epugvh",
+          "-eptgsh"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 252.24
+      }
+    },
+    {
+      "index": 64,
+      "fixture": {
+        "kind": "overlap",
+        "text": "0751",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.05914563126862049,
+          -7.861305493861437e-05,
+          -0.23536128527484834,
+          -0.12533813051413745
+        ],
+        "phase": 5.231882010074572,
+        "lineSeed": 719278
+      },
+      "old": {
+        "candidates": [
+          "751",
+          "|o7s|",
+          "O71"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 110.14
+      },
+      "new": {
+        "candidates": [
+          "0751",
+          "751",
+          "07s1",
+          "O751"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 182.96
+      }
+    },
+    {
+      "index": 65,
+      "fixture": {
+        "kind": "overlap",
+        "text": "eslifz",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.16916508600115776,
+          0.13281006354372948,
+          -0.21094588725827634,
+          -0.08495459600817412,
+          0.06911348039284348,
+          0.23398488422390074
+        ],
+        "phase": 0.7218974626583766,
+        "lineSeed": 421695
+      },
+      "old": {
+        "candidates": [
+          "esfz",
+          "esifz",
+          "eik",
+          "ote"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 88.35
+      },
+      "new": {
+        "candidates": [
+          "esfz",
+          "esiz",
+          "esifz",
+          "eik"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 185.13
+      }
+    },
+    {
+      "index": 66,
+      "fixture": {
+        "kind": "overlap",
+        "text": "tDIVy",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.0632863548817113,
+          -0.10182549408636987,
+          0.03748987161088735,
+          -0.053422901313751936,
+          -0.13677528651896864
+        ],
+        "phase": 6.085151874475084,
+        "lineSeed": 737596
+      },
+      "old": {
+        "candidates": [
+          "Wivy",
+          "dvy",
+          "oNy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 104.91
+      },
+      "new": {
+        "candidates": [
+          "Wivy",
+          "udvy",
+          "dvy",
+          "oNy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 217.95
+      }
+    },
+    {
+      "index": 67,
+      "fixture": {
+        "kind": "overlap",
+        "text": "74420",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.13352625456172973,
+          -0.17084037675522268,
+          0.03991549939382821,
+          -0.03533750167116523,
+          -0.03693520987872034
+        ],
+        "phase": 3.6167347850067424,
+        "lineSeed": 145434
+      },
+      "old": {
+        "candidates": [
+          "zn2o",
+          "74420",
+          "tae",
+          "mae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 80.52
+      },
+      "new": {
+        "candidates": [
+          "74420",
+          "zn2o",
+          "7442o",
+          "tae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 198.79
+      }
+    },
+    {
+      "index": 68,
+      "fixture": {
+        "kind": "overlap",
+        "text": "jeyqxc",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.1510456500109285,
+          -0.14255045435857028,
+          -0.17700721276924014,
+          0.18719926697667688,
+          -0.022101660491898656,
+          -0.14839629118796438
+        ],
+        "phase": 0.3951412303268742,
+        "lineSeed": 16188
+      },
+      "old": {
+        "candidates": [
+          "jaqpc",
+          "pec",
+          "Ea",
+          "pre"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 84.64
+      },
+      "new": {
+        "candidates": [
+          "jaqpc",
+          "jeqpc",
+          "jaqmc",
+          "joqpc"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 162.49
+      }
+    },
+    {
+      "index": 69,
+      "fixture": {
+        "kind": "overlap",
+        "text": "NpnwFI",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.08886752044782043,
+          -0.09143942187074572,
+          -0.08565541659481823,
+          0.03572649660054594,
+          -0.23521198984235525,
+          -0.11935835995245725
+        ],
+        "phase": 4.95032218122326,
+        "lineSeed": 626641
+      },
+      "old": {
+        "candidates": [
+          "nnw",
+          "NonwAl",
+          "Nawe",
+          "wwe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 122.65
+      },
+      "new": {
+        "candidates": [
+          "nnw",
+          "Nnw",
+          "nmw",
+          "Nmw"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 225.42
+      }
+    },
+    {
+      "index": 70,
+      "fixture": {
+        "kind": "overlap",
+        "text": "8577",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.03516250429674983,
+          -0.2494305610889569,
+          0.21333739045076072,
+          0.03787403891328722
+        ],
+        "phase": 1.9183334538083607,
+        "lineSeed": 111782
+      },
+      "old": {
+        "candidates": [
+          "85",
+          "&7"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 96.69
+      },
+      "new": {
+        "candidates": [
+          "85",
+          "857",
+          "85>",
+          "8577"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 162.67
+      }
+    },
+    {
+      "index": 71,
+      "fixture": {
+        "kind": "overlap",
+        "text": "skqp",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.08867238298989832,
+          0.016330246930010617,
+          0.2223051623441279,
+          0.11838484590407461
+        ],
+        "phase": 5.0725721535167345,
+        "lineSeed": 769208
+      },
+      "old": {
+        "candidates": [
+          "skqp",
+          "dap",
+          "dayp",
+          "sep"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 113.29
+      },
+      "new": {
+        "candidates": [
+          "skqp",
+          "dap",
+          "dayp",
+          "sep"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 235.25
+      }
+    },
+    {
+      "index": 72,
+      "fixture": {
+        "kind": "overlap",
+        "text": "BHsZ",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.1600439716130495,
+          -0.19011680234689265,
+          -0.05239247507415712,
+          0.033461175044067204
+        ],
+        "phase": 4.152233112787249,
+        "lineSeed": 960308
+      },
+      "old": {
+        "candidates": [
+          "bz",
+          "BreZ",
+          "BAz"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 109.55
+      },
+      "new": {
+        "candidates": [
+          "bhsz",
+          "bz",
+          "BreZ",
+          "BAz"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 200.81
+      }
+    },
+    {
+      "index": 73,
+      "fixture": {
+        "kind": "overlap",
+        "text": "4194",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.2193371953908354,
+          -0.12712394387926906,
+          0.1353483460843563,
+          -0.17619995039422065
+        ],
+        "phase": 1.8297144086865658,
+        "lineSeed": 386384
+      },
+      "old": {
+        "candidates": [
+          "MA",
+          "419",
+          "AAD",
+          "MAMN"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 142.7
+      },
+      "new": {
+        "candidates": [
+          "4194",
+          "419",
+          "MA",
+          "AAD"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 236.43
+      }
+    },
+    {
+      "index": 74,
+      "fixture": {
+        "kind": "overlap",
+        "text": "uqlr",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.20677149994298816,
+          -0.05102341121528298,
+          -0.12551913247443736,
+          -0.11594802641775459
+        ],
+        "phase": 6.023827650589295,
+        "lineSeed": 884773
+      },
+      "old": {
+        "candidates": [
+          "uqr",
+          "uge",
+          "ke",
+          "oke"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 109.57
+      },
+      "new": {
+        "candidates": [
+          "uqr",
+          "udr",
+          "uge",
+          "ke"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 179.25
+      }
+    },
+    {
+      "index": 75,
+      "fixture": {
+        "kind": "overlap",
+        "text": "TUHK",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.004196352092549205,
+          0.1850671359570697,
+          -0.007487072143703699,
+          0.19927398802246898
+        ],
+        "phase": 5.063582428292881,
+        "lineSeed": 234740
+      },
+      "old": {
+        "candidates": [
+          "tuhk",
+          "TUK",
+          "jrux|",
+          "Tua"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 89.44
+      },
+      "new": {
+        "candidates": [
+          "tuhk",
+          "tuhK",
+          "tuik",
+          "tunk"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 150.23
+      }
+    },
+    {
+      "index": 76,
+      "fixture": {
+        "kind": "overlap",
+        "text": "81926",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.23612113005947322,
+          0.14204623107798398,
+          0.12081906769890338,
+          -0.0233044964261353,
+          0.20112027355935425
+        ],
+        "phase": 1.1483196031835763,
+        "lineSeed": 58640
+      },
+      "old": {
+        "candidates": [
+          "81926",
+          "8rg6",
+          "81026",
+          "-805"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 124.5
+      },
+      "new": {
+        "candidates": [
+          "81926",
+          "8rg26",
+          "8tg26",
+          "8rgz6"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 237.28
+      }
+    },
+    {
+      "index": 77,
+      "fixture": {
+        "kind": "overlap",
+        "text": "xdma",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.06693090591579676,
+          -0.048135505174286664,
+          -0.13371624308638275,
+          0.08851062518078834
+        ],
+        "phase": 0.20625232005986502,
+        "lineSeed": 60657
+      },
+      "old": {
+        "candidates": [
+          "dma",
+          "ydra",
+          "odre"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 143.11
+      },
+      "new": {
+        "candidates": [
+          "xdma",
+          "dma",
+          "xdmm",
+          "xcma"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 222.32
+      }
+    },
+    {
+      "index": 78,
+      "fixture": {
+        "kind": "overlap",
+        "text": "8OBy",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.2378947630058974,
+          -0.10157362220343202,
+          -0.21546418126672506,
+          0.10171099088620394
+        ],
+        "phase": 4.462806346369039,
+        "lineSeed": 208159
+      },
+      "old": {
+        "candidates": [
+          "SOBy",
+          "8oby",
+          "-80Ry",
+          "-80R5"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 114.67
+      },
+      "new": {
+        "candidates": [
+          "SOBy",
+          "8oby",
+          "-80Ry",
+          "-80R5"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 214.28
+      }
+    },
+    {
+      "index": 79,
+      "fixture": {
+        "kind": "overlap",
+        "text": "94076",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.051570764160715044,
+          -0.05575139936991036,
+          0.019997786381281912,
+          -0.06658971030265093,
+          -0.11950753361452371
+        ],
+        "phase": 1.1390695077999746,
+        "lineSeed": 547591
+      },
+      "old": {
+        "candidates": [
+          "94o6",
+          "OA0/6",
+          "9A07S",
+          "-978"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 141.23
+      },
+      "new": {
+        "candidates": [
+          "94o6",
+          "9406",
+          "94u6",
+          "94U6"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 219.7
+      }
+    },
+    {
+      "index": 80,
+      "fixture": {
+        "kind": "overlap",
+        "text": "jazit",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.16734383220318705,
+          0.12573597650043666,
+          -0.20568162424024194,
+          -0.0875545023009181,
+          -0.039908449281938374
+        ],
+        "phase": 3.223185695238913,
+        "lineSeed": 151022
+      },
+      "old": {
+        "candidates": [
+          "jait",
+          "juit",
+          "jpit",
+          "re"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 78.18
+      },
+      "new": {
+        "candidates": [
+          "jait",
+          "juit",
+          "jpit",
+          "re"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 154.73
+      }
+    },
+    {
+      "index": 81,
+      "fixture": {
+        "kind": "overlap",
+        "text": "3PPIiK",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.05577150243334472,
+          0.17812184954527766,
+          -0.11035166028887033,
+          0.0206916545284912,
+          -0.10571197676472366,
+          -0.11009031522553414
+        ],
+        "phase": 3.5950275705969887,
+        "lineSeed": 527030
+      },
+      "old": {
+        "candidates": [
+          "3pk",
+          "SPPIK",
+          "SPPIIK"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 126.18
+      },
+      "new": {
+        "candidates": [
+          "3pk",
+          "3ppk",
+          "3pK",
+          "3ppik"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 211.78
+      }
+    },
+    {
+      "index": 82,
+      "fixture": {
+        "kind": "overlap",
+        "text": "9209",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.017132553504779935,
+          0.05441144260112196,
+          -0.17547038104385138,
+          -0.21797303028870374
+        ],
+        "phase": 3.8929696534920812,
+        "lineSeed": 563514
+      },
+      "old": {
+        "candidates": [
+          "929",
+          "9209"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 109.24
+      },
+      "new": {
+        "candidates": [
+          "9209",
+          "929",
+          "92o9"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 176.15
+      }
+    },
+    {
+      "index": 83,
+      "fixture": {
+        "kind": "overlap",
+        "text": "jimcp",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.10682892648037523,
+          0.036883733002468944,
+          0.013709921040572226,
+          0.12435404490679502,
+          0.03463246941100806
+        ],
+        "phase": 6.021557801526685,
+        "lineSeed": 562302
+      },
+      "old": {
+        "candidates": [
+          "jmp",
+          "im",
+          "in"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 98.75
+      },
+      "new": {
+        "candidates": [
+          "jmp",
+          "imp",
+          "jrp",
+          "im"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 193.92
+      }
+    },
+    {
+      "index": 84,
+      "fixture": {
+        "kind": "overlap",
+        "text": "yGtc",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.24175033578649163,
+          0.09570899640675634,
+          0.1352779425214976,
+          0.1353095822269097
+        ],
+        "phase": 0.6332223468124396,
+        "lineSeed": 842187
+      },
+      "old": {
+        "candidates": [
+          "ygc",
+          "(t",
+          "yae",
+          "yee"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 120.44
+      },
+      "new": {
+        "candidates": [
+          "ygc",
+          "(t",
+          "yae",
+          "yee"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 202.02
+      }
+    },
+    {
+      "index": 85,
+      "fixture": {
+        "kind": "overlap",
+        "text": "356190",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.19007097138091922,
+          0.23439616186078638,
+          -0.1106446881312877,
+          -0.23147774522658437,
+          0.12416070606559515,
+          0.21729782118927687
+        ],
+        "phase": 0.2996962211505633,
+        "lineSeed": 974265
+      },
+      "old": {
+        "candidates": [
+          "356190",
+          "356go",
+          "-9690-",
+          "-9600-"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 135.44
+      },
+      "new": {
+        "candidates": [
+          "356190",
+          "356ygo",
+          "356go",
+          "-9690-"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 257.32
+      }
+    },
+    {
+      "index": 86,
+      "fixture": {
+        "kind": "overlap",
+        "text": "zvfyro",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.01051873411051929,
+          -0.18607070145662874,
+          -0.21630810853093863,
+          -0.1363184741931036,
+          0.1097777106333524,
+          -0.13817403267603368
+        ],
+        "phase": 2.9693568654264495,
+        "lineSeed": 482041
+      },
+      "old": {
+        "candidates": [
+          "zvfyo",
+          "A0",
+          "zfyro",
+          "-ahro"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 122.45
+      },
+      "new": {
+        "candidates": [
+          "zvfyo",
+          "zvfyro",
+          "A0",
+          "zfyro"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 248.92
+      }
+    },
+    {
+      "index": 87,
+      "fixture": {
+        "kind": "overlap",
+        "text": "7YOy",
+        "font": "Georgia",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          0.2165187585633248,
+          0.004631604650057852,
+          0.03976412396878004,
+          -0.0035168799804523587
+        ],
+        "phase": 5.446070546606851,
+        "lineSeed": 985556
+      },
+      "old": {
+        "candidates": [
+          "yoy",
+          "7Oy",
+          "|20|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 98.19
+      },
+      "new": {
+        "candidates": [
+          "7yoy",
+          "yoy",
+          "7ycy",
+          "7Oy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 197.8
+      }
+    },
+    {
+      "index": 88,
+      "fixture": {
+        "kind": "overlap",
+        "text": "31567",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.14044097845908254,
+          0.1377035907935351,
+          0.18749959545675665,
+          -0.1178383557125926,
+          0.22899148322176188
+        ],
+        "phase": 5.235699017891126,
+        "lineSeed": 910995
+      },
+      "old": {
+        "candidates": [
+          "31567",
+          "-31967"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 98.7
+      },
+      "new": {
+        "candidates": [
+          "31567",
+          "3156>",
+          "-31967"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 182.07
+      }
+    },
+    {
+      "index": 89,
+      "fixture": {
+        "kind": "overlap",
+        "text": "fwwcvm",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.22326909261755645,
+          0.10442322457674891,
+          0.1859225993975997,
+          -0.06720372394192964,
+          -0.1605604540091008,
+          0.22832448792178184
+        ],
+        "phase": 2.3410141930491792,
+        "lineSeed": 586496
+      },
+      "old": {
+        "candidates": [
+          "wwcm",
+          "fwwom",
+          "-fm",
+          "-favm"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 153.79
+      },
+      "new": {
+        "candidates": [
+          "wwcm",
+          "fwwcm",
+          "iwwcm",
+          "fwwqvm"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 234.99
+      }
+    },
+    {
+      "index": 90,
+      "fixture": {
+        "kind": "overlap",
+        "text": "5a0r3k",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1324109574779868,
+          -0.23096205957699567,
+          -0.004183412296697497,
+          0.22368082602042705,
+          -0.055034362245351076,
+          0.04621754342224449
+        ],
+        "phase": 1.5644992924752843,
+        "lineSeed": 292223
+      },
+      "old": {
+        "candidates": [
+          "5a03k",
+          "ars",
+          "Se0rSk",
+          "-s0"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 157.91
+      },
+      "new": {
+        "candidates": [
+          "5a03k",
+          "5ao3k",
+          "ars",
+          "Se0rSk"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 246.23
+      }
+    },
+    {
+      "index": 91,
+      "fixture": {
+        "kind": "overlap",
+        "text": "5467",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.04145693313330412,
+          0.21965769946109504,
+          -0.1497705343645066,
+          -0.18067909392993897
+        ],
+        "phase": 6.273261075738369,
+        "lineSeed": 134659
+      },
+      "old": {
+        "candidates": [
+          "546",
+          "Sol",
+          "5e",
+          "se"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 98.09
+      },
+      "new": {
+        "candidates": [
+          "5467",
+          "546",
+          "Sol",
+          "5e"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 175.04
+      }
+    },
+    {
+      "index": 92,
+      "fixture": {
+        "kind": "overlap",
+        "text": "tvpum",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.009970446699298918,
+          0.17582613695412874,
+          0.11864755756687373,
+          -0.05620701308362186,
+          0.13958097074646503
+        ],
+        "phase": 4.8175160466175395,
+        "lineSeed": 973194
+      },
+      "old": {
+        "candidates": [
+          "vpum",
+          "tyam",
+          "ve",
+          "sam"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 124.02
+      },
+      "new": {
+        "candidates": [
+          "vpum",
+          "tvpum",
+          "mpum",
+          "tyam"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 202.83
+      }
+    },
+    {
+      "index": 93,
+      "fixture": {
+        "kind": "overlap",
+        "text": "2UKfo",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.026156790205277503,
+          0.2492504259571433,
+          0.18330030038487166,
+          0.05053211492486298,
+          0.0866292939754203
+        ],
+        "phase": 6.2026150530022415,
+        "lineSeed": 775292
+      },
+      "old": {
+        "candidates": [
+          "2UKio",
+          "2uko",
+          "-aLk",
+          "-abk"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 122.84
+      },
+      "new": {
+        "candidates": [
+          "2UKio",
+          "2uko",
+          "-aLk",
+          "-abk"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 259.17
+      }
+    },
+    {
+      "index": 94,
+      "fixture": {
+        "kind": "overlap",
+        "text": "525676",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.09321252163499594,
+          0.04545949480962008,
+          0.08363196928985417,
+          0.12171618093270808,
+          0.24410100234672427,
+          -0.1610348323592916
+        ],
+        "phase": 4.570403274750133,
+        "lineSeed": 504699
+      },
+      "old": {
+        "candidates": [
+          "525676",
+          "-556%",
+          "5255%"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 137.14
+      },
+      "new": {
+        "candidates": [
+          "525676",
+          "-556%",
+          "5255%"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 220.65
+      }
+    },
+    {
+      "index": 95,
+      "fixture": {
+        "kind": "overlap",
+        "text": "nodc",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.11624887865036726,
+          -0.21723051101434976,
+          0.0016878258902579546,
+          0.04642396804410964
+        ],
+        "phase": 2.8078626234801924,
+        "lineSeed": 850313
+      },
+      "old": {
+        "candidates": [
+          "nodc",
+          "nooc",
+          "|rx:|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 116.49
+      },
+      "new": {
+        "candidates": [
+          "nodc",
+          "nooc",
+          "|rx:|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 173.81
+      }
+    },
+    {
+      "index": 96,
+      "fixture": {
+        "kind": "warp",
+        "text": "9004",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1971534409094602,
+          -0.2131958327954635,
+          -0.17554988246411085,
+          -0.05007458769250661
+        ],
+        "phase": 5.842798317442363,
+        "lineSeed": 67834
+      },
+      "old": {
+        "candidates": [
+          "9004",
+          "5Q0f",
+          "9XVOA",
+          "Saog4"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 327.38
+      },
+      "new": {
+        "candidates": [
+          "9004",
+          "5Q0f",
+          "9XVOA",
+          "Saog4"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 309.92
+      }
+    },
+    {
+      "index": 97,
+      "fixture": {
+        "kind": "warp",
+        "text": "opdgxk",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.19872719305567443,
+          -0.00094501709099859,
+          0.11346059199422598,
+          0.10992317541968077,
+          -0.008400569437071681,
+          0.16019174468237907
+        ],
+        "phase": 0.4002567915248172,
+        "lineSeed": 217266
+      },
+      "old": {
+        "candidates": [
+          "opdgxk",
+          "QPd8xk",
+          "Opag*k",
+          "Spagxk"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 329.73
+      },
+      "new": {
+        "candidates": [
+          "opdgxk",
+          "oPdgxk",
+          "QPd8xk",
+          "Opag*k"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 449.34
+      }
+    },
+    {
+      "index": 98,
+      "fixture": {
+        "kind": "warp",
+        "text": "xOLF9",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.19550007430370897,
+          -0.143146394751966,
+          -0.13469052978325635,
+          -0.1360534883569926,
+          0.18532656331080943
+        ],
+        "phase": 0.8272304989792791,
+        "lineSeed": 973878
+      },
+      "old": {
+        "candidates": [
+          "xolf9",
+          "KOLFS",
+          "fxove|",
+          "XOLFS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 208.97
+      },
+      "new": {
+        "candidates": [
+          "xolf9",
+          "KOLFS",
+          "fxove|",
+          "XOLFS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 223.02
+      }
+    },
+    {
+      "index": 99,
+      "fixture": {
+        "kind": "warp",
+        "text": "86668",
+        "font": "Georgia",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.1360257383203134,
+          -0.12404363323003054,
+          -0.11056823015678674,
+          0.034732260974124074,
+          -0.16526805970352143
+        ],
+        "phase": 0.640331760022322,
+        "lineSeed": 249320
+      },
+      "old": {
+        "candidates": [
+          "86668",
+          "[8<.068|",
+          "8g668",
+          "8go68"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 281.1
+      },
+      "new": {
+        "candidates": [
+          "86668",
+          "[8<.068|",
+          "8g668",
+          "8go68"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 277.2
+      }
+    },
+    {
+      "index": 100,
+      "fixture": {
+        "kind": "warp",
+        "text": "ztsoi",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1729172117775306,
+          0.09609999228268862,
+          -0.04231167130637914,
+          -0.2166472643148154,
+          -0.16959963168483227
+        ],
+        "phase": 0.5165254711077276,
+        "lineSeed": 811429
+      },
+      "old": {
+        "candidates": [
+          "ztsoi",
+          "LtsO4",
+          "Lygor",
+          "Ltgor"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 272.65
+      },
+      "new": {
+        "candidates": [
+          "ztsoi",
+          "LtsO4",
+          "Lygor",
+          "Ltgor"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 284.25
+      }
+    },
+    {
+      "index": 101,
+      "fixture": {
+        "kind": "warp",
+        "text": "AhjJNn",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.2028695037588477,
+          -0.0212218175875023,
+          -0.12788585084490478,
+          -0.07784362870734185,
+          -0.048040101770311594,
+          0.1676347585162148
+        ],
+        "phase": 1.4382611889858519,
+        "lineSeed": 624382
+      },
+      "old": {
+        "candidates": [
+          "AnysNn",
+          "AhjJNn",
+          "&hj3Nq",
+          "AnysNo"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 306.72
+      },
+      "new": {
+        "candidates": [
+          "AnysNn",
+          "AhjJNn",
+          "ahjJNn",
+          "AHjJNn"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 429.44
+      }
+    },
+    {
+      "index": 102,
+      "fixture": {
+        "kind": "warp",
+        "text": "2796",
+        "font": "Verdana",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          -0.201646170578897,
+          0.025951147894375026,
+          -0.04751712898723781,
+          0.1689065044047311
+        ],
+        "phase": 5.871991939051027,
+        "lineSeed": 965631
+      },
+      "old": {
+        "candidates": [
+          "2796",
+          "2?96",
+          "J2796|",
+          "21796"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 236.42
+      },
+      "new": {
+        "candidates": [
+          "2796",
+          "27g6",
+          "2?96",
+          "J2796|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 296.47
+      }
+    },
+    {
+      "index": 103,
+      "fixture": {
+        "kind": "warp",
+        "text": "yumk",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.1617390823084861,
+          -0.12794554641004652,
+          0.05739580374211073,
+          -0.1317421767162159
+        ],
+        "phase": 2.7813830074921855,
+        "lineSeed": 939778
+      },
+      "old": {
+        "candidates": [
+          "yumk",
+          "Nvm\\",
+          "yurn",
+          "yon\\"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 236.54
+      },
+      "new": {
+        "candidates": [
+          "yumk",
+          "Nvm\\",
+          "yurn",
+          "yon\\"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 214.77
+      }
+    },
+    {
+      "index": 104,
+      "fixture": {
+        "kind": "warp",
+        "text": "Xm5fH",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.19782393390778452,
+          0.23444613139145076,
+          0.0648883410030976,
+          -0.11615783255547285,
+          0.001799587975256145
+        ],
+        "phase": 4.111823274858154,
+        "lineSeed": 691851
+      },
+      "old": {
+        "candidates": [
+          "xm5fh",
+          "$m3fW",
+          "osmstn",
+          "osmaun"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 228.76
+      },
+      "new": {
+        "candidates": [
+          "xm5fh",
+          "xm5fH",
+          "Xm5fH",
+          "$m3fW"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 400.47
+      }
+    },
+    {
+      "index": 105,
+      "fixture": {
+        "kind": "warp",
+        "text": "88118",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.07410536182578653,
+          -0.15457294625230134,
+          0.08467337454203516,
+          0.06679356750100851,
+          0.18097860261332244
+        ],
+        "phase": 3.475216309074178,
+        "lineSeed": 441335
+      },
+      "old": {
+        "candidates": [
+          "88118",
+          "3%118",
+          "feetts|",
+          "Betig"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 299.29
+      },
+      "new": {
+        "candidates": [
+          "88118",
+          "3%118",
+          "feetts|",
+          "Betig"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 288.32
+      }
+    },
+    {
+      "index": 106,
+      "fixture": {
+        "kind": "warp",
+        "text": "urgt",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.1240710043348372,
+          -0.09347556869033724,
+          0.19705970282666385,
+          -0.08011846092995256
+        ],
+        "phase": 2.348083615930447,
+        "lineSeed": 399495
+      },
+      "old": {
+        "candidates": [
+          "ur8t",
+          "urgt",
+          "us5X",
+          "Sws8t"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 263.42
+      },
+      "new": {
+        "candidates": [
+          "ur8t",
+          "urgt",
+          "ur&t",
+          "urgl"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 406.1
+      }
+    },
+    {
+      "index": 107,
+      "fixture": {
+        "kind": "warp",
+        "text": "ZvYpaJ",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.14102379651740193,
+          -0.2470678851241246,
+          -0.053452247055247426,
+          0.01650435070041567,
+          0.022383595816791058,
+          0.17286093055736274
+        ],
+        "phase": 2.6197110385543145,
+        "lineSeed": 225081
+      },
+      "old": {
+        "candidates": [
+          "zvYpaJ",
+          "vPaa",
+          "zaPaa",
+          "244983"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 277.28
+      },
+      "new": {
+        "candidates": [
+          "zvYpaJ",
+          "zvypaJ",
+          "zvYPaJ",
+          "zvYpa]"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 429.35
+      }
+    },
+    {
+      "index": 108,
+      "fixture": {
+        "kind": "warp",
+        "text": "521221",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.21130746533162892,
+          0.05930285679642111,
+          0.20574304927140474,
+          0.06712247140239924,
+          0.1497450650203973,
+          0.022387063247151673
+        ],
+        "phase": 2.4439762634098328,
+        "lineSeed": 28585
+      },
+      "old": {
+        "candidates": [
+          "521221",
+          "21224",
+          "g2t22y",
+          "32t22y"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 281.86
+      },
+      "new": {
+        "candidates": [
+          "521221",
+          "21224",
+          "g2t22y",
+          "32t22y"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 301.18
+      }
+    },
+    {
+      "index": 109,
+      "fixture": {
+        "kind": "warp",
+        "text": "ngvo",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.13785696518607438,
+          -0.246942364028655,
+          -0.12045081052929163,
+          0.232637717272155
+        ],
+        "phase": 2.065615016516622,
+        "lineSeed": 557740
+      },
+      "old": {
+        "candidates": [
+          "ngvo",
+          "novs",
+          "n9v8",
+          "nova"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 247.8
+      },
+      "new": {
+        "candidates": [
+          "ngvo",
+          "novs",
+          "n9v8",
+          "nova"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 245.44
+      }
+    },
+    {
+      "index": 110,
+      "fixture": {
+        "kind": "warp",
+        "text": "h2JD",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -1.1525116860866547e-06,
+          0.19964947213884443,
+          0.15564589644782245,
+          0.10381879808846861
+        ],
+        "phase": 4.4349510958460465,
+        "lineSeed": 868125
+      },
+      "old": {
+        "candidates": [
+          "h2ND",
+          "h2JD",
+          "n2aup",
+          "\"2up"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 242.38
+      },
+      "new": {
+        "candidates": [
+          "h2ND",
+          "h2JD",
+          "h2)D",
+          "h2Jd"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 365.93
+      }
+    },
+    {
+      "index": 111,
+      "fixture": {
+        "kind": "warp",
+        "text": "527345",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.08601530315354466,
+          0.2405156403547153,
+          -0.08570458111353219,
+          0.20015598426107317,
+          -0.24226385075598955,
+          -0.11814562708605081
+        ],
+        "phase": 0.22755909868128943,
+        "lineSeed": 596661
+      },
+      "old": {
+        "candidates": [
+          "527345",
+          "527365",
+          "53273%5",
+          "8a7385"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 288.23
+      },
+      "new": {
+        "candidates": [
+          "527345",
+          "527365",
+          "53273%5",
+          "8a7385"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 299.32
+      }
+    },
+    {
+      "index": 112,
+      "fixture": {
+        "kind": "warp",
+        "text": "hvdbkg",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.04578355769626796,
+          -0.00559163314756006,
+          0.2048690440133214,
+          -0.23647973977494985,
+          0.179185088025406,
+          0.17667947534937412
+        ],
+        "phase": 3.414784336479951,
+        "lineSeed": 961387
+      },
+      "old": {
+        "candidates": [
+          "hvdbkg",
+          "nvddkg",
+          "wvddieg",
+          "nvddke"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 311.46
+      },
+      "new": {
+        "candidates": [
+          "hvdbkg",
+          "nvddkg",
+          "wvddieg",
+          "nvddke"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 329.67
+      }
+    },
+    {
+      "index": 113,
+      "fixture": {
+        "kind": "warp",
+        "text": "MRoe",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.026649924693629146,
+          0.08393464947585016,
+          -0.05954722408205271,
+          -0.22513119236100465
+        ],
+        "phase": 4.650427790263843,
+        "lineSeed": 389817
+      },
+      "old": {
+        "candidates": [
+          "MRoe",
+          "mroe",
+          "MR9@",
+          "[HRoe|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 236.89
+      },
+      "new": {
+        "candidates": [
+          "MRoe",
+          "mroe",
+          "MR9@",
+          "[HRoe|"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 228.59
+      }
+    },
+    {
+      "index": 114,
+      "fixture": {
+        "kind": "warp",
+        "text": "700932",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.19146821205504239,
+          -0.007636933005414903,
+          -0.24787685181945562,
+          -0.09874079294968396,
+          0.09964941372163594,
+          0.058408992481417954
+        ],
+        "phase": 1.209439264308505,
+        "lineSeed": 719233
+      },
+      "old": {
+        "candidates": [
+          "700932",
+          "7Q9932",
+          "199932",
+          "7199932"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 248.82
+      },
+      "new": {
+        "candidates": [
+          "700932",
+          "7Q9932",
+          "199932",
+          "7199932"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 252.02
+      }
+    },
+    {
+      "index": 115,
+      "fixture": {
+        "kind": "warp",
+        "text": "denf",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.22441407176665962,
+          -0.049158614478074014,
+          -0.1247301297262311,
+          0.19885143160354346
+        ],
+        "phase": 0.5934327100772149,
+        "lineSeed": 875807
+      },
+      "old": {
+        "candidates": [
+          "denf",
+          "qeLf",
+          "Gdenf",
+          "deof"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 212.78
+      },
+      "new": {
+        "candidates": [
+          "denf",
+          "qeLf",
+          "Gdenf",
+          "deof"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 236.12
+      }
+    },
+    {
+      "index": 116,
+      "fixture": {
+        "kind": "warp",
+        "text": "XR0W",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.07275096187368035,
+          -0.08715322578791529,
+          -0.1051206432748586,
+          0.17928690242115408
+        ],
+        "phase": 5.017582868157992,
+        "lineSeed": 151712
+      },
+      "old": {
+        "candidates": [
+          "XRQW",
+          "XR0W",
+          "XRawW",
+          "OeROW"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 206.44
+      },
+      "new": {
+        "candidates": [
+          "XRQW",
+          "XR0W",
+          "XR0w",
+          "xR0W"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 332.56
+      }
+    },
+    {
+      "index": 117,
+      "fixture": {
+        "kind": "warp",
+        "text": "06556",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.19795595027972013,
+          0.24617333756759763,
+          -0.20725130813661963,
+          0.13435787963680923,
+          0.16763644630555063
+        ],
+        "phase": 5.325888406092585,
+        "lineSeed": 647570
+      },
+      "old": {
+        "candidates": [
+          "06556",
+          "064556"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 275.28
+      },
+      "new": {
+        "candidates": [
+          "06556",
+          "064556"
+        ],
+        "uncertain": false,
+        "error": null,
+        "ms": 272.42
+      }
+    },
+    {
+      "index": 118,
+      "fixture": {
+        "kind": "warp",
+        "text": "wehu",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1444213145878166,
+          0.22936970100272447,
+          0.21959554636850953,
+          -0.10514697025064379
+        ],
+        "phase": 1.3493458824721523,
+        "lineSeed": 414192
+      },
+      "old": {
+        "candidates": [
+          "wehu",
+          "Weht",
+          "Wehbt",
+          "wert"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 209.93
+      },
+      "new": {
+        "candidates": [
+          "wehu",
+          "Weht",
+          "Wehbt",
+          "wert"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 208.92
+      }
+    },
+    {
+      "index": 119,
+      "fixture": {
+        "kind": "warp",
+        "text": "SoBwV",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.06062297697644681,
+          0.07878570654429495,
+          -0.10378037102054805,
+          0.09596100868657231,
+          0.11601800320204347
+        ],
+        "phase": 2.950758088609884,
+        "lineSeed": 342785
+      },
+      "old": {
+        "candidates": [
+          "so8wy",
+          "soBwv",
+          "so8Wwy",
+          "soB8Wwy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 227.61
+      },
+      "new": {
+        "candidates": [
+          "so8wy",
+          "soBwv",
+          "soBwV",
+          "SoBwv"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 356.07
+      }
+    },
+    {
+      "index": 120,
+      "fixture": {
+        "kind": "warp",
+        "text": "461196",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.18739132746122777,
+          0.06869158626068383,
+          -0.019345448818057775,
+          0.1348401088034734,
+          -0.1498599119950086,
+          0.048020494752563536
+        ],
+        "phase": 2.287858532136826,
+        "lineSeed": 727987
+      },
+      "old": {
+        "candidates": [
+          "461196",
+          "a64136",
+          "46t196",
+          "461198"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 329.53
+      },
+      "new": {
+        "candidates": [
+          "461196",
+          "a64136",
+          "46t196",
+          "461198"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 332.15
+      }
+    },
+    {
+      "index": 121,
+      "fixture": {
+        "kind": "warp",
+        "text": "qhuel",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.12082154385279864,
+          0.13775240676477551,
+          -0.05709587561432272,
+          0.10567705589346588,
+          0.21949505771044642
+        ],
+        "phase": 4.76227077692745,
+        "lineSeed": 541000
+      },
+      "old": {
+        "candidates": [
+          "qhuel",
+          "ahyel",
+          "*hYei",
+          "cahuel"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 259.24
+      },
+      "new": {
+        "candidates": [
+          "qhuel",
+          "ahyel",
+          "*hYei",
+          "cahuel"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 256.11
+      }
+    },
+    {
+      "index": 122,
+      "fixture": {
+        "kind": "warp",
+        "text": "OmWuw",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.0035301531897857785,
+          0.14627221459522843,
+          -0.12396689096931368,
+          0.12884328956715763,
+          -0.0053992405300959945
+        ],
+        "phase": 2.477970517989843,
+        "lineSeed": 697499
+      },
+      "old": {
+        "candidates": [
+          "OmWuy",
+          "omWuw",
+          "QmWuW",
+          "OmWNuw"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 282.89
+      },
+      "new": {
+        "candidates": [
+          "OmWuy",
+          "omWuw",
+          "OmWuw",
+          "omwuw"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 434.87
+      }
+    },
+    {
+      "index": 123,
+      "fixture": {
+        "kind": "warp",
+        "text": "5383",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.07192912348546088,
+          -0.05769637681078166,
+          0.05642302008345723,
+          0.14553840307053179
+        ],
+        "phase": 2.241902888802677,
+        "lineSeed": 279283
+      },
+      "old": {
+        "candidates": [
+          "5383",
+          "3388",
+          "8383"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 228.3
+      },
+      "new": {
+        "candidates": [
+          "5383",
+          "3388",
+          "8383"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 214.91
+      }
+    },
+    {
+      "index": 124,
+      "fixture": {
+        "kind": "warp",
+        "text": "syrt",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.16855250298976898,
+          -0.23700505879241973,
+          -0.22745246603153646,
+          -0.1979871568037197
+        ],
+        "phase": 3.7178270324760527,
+        "lineSeed": 238939
+      },
+      "old": {
+        "candidates": [
+          "syrt",
+          "{et|",
+          "%PX&",
+          "ONNy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 211.32
+      },
+      "new": {
+        "candidates": [
+          "syrt",
+          "{et|",
+          "%PX&",
+          "ONNy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 221.25
+      }
+    },
+    {
+      "index": 125,
+      "fixture": {
+        "kind": "warp",
+        "text": "ynszl",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.012838362366892397,
+          -0.1068472620099783,
+          0.1792368273017928,
+          -0.20200149691663682,
+          0.0763788215117529
+        ],
+        "phase": 4.095516364021292,
+        "lineSeed": 707729
+      },
+      "old": {
+        "candidates": [
+          "ynsz",
+          "yS88y)",
+          "y8S8u\\",
+          "y88y1"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 244.75
+      },
+      "new": {
+        "candidates": [
+          "ynsz",
+          "ynSz",
+          "y[sz",
+          "ynsz1"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 380.36
+      }
+    },
+    {
+      "index": 126,
+      "fixture": {
+        "kind": "warp",
+        "text": "64728",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.0751703524729237,
+          0.18708399310708046,
+          0.1016605495242402,
+          0.14423082233406603,
+          -0.0724204023135826
+        ],
+        "phase": 3.743182141372397,
+        "lineSeed": 247999
+      },
+      "old": {
+        "candidates": [
+          "64728",
+          "64723",
+          "]64725|",
+          "647238"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 265.36
+      },
+      "new": {
+        "candidates": [
+          "64728",
+          "64723",
+          "]64725|",
+          "647238"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 272.89
+      }
+    },
+    {
+      "index": 127,
+      "fixture": {
+        "kind": "warp",
+        "text": "yopwh",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.05704167240764946,
+          -0.17173035629093647,
+          0.1467288153944537,
+          -0.10052156052552164,
+          -0.03249975747894496
+        ],
+        "phase": 2.629090136979982,
+        "lineSeed": 911278
+      },
+      "old": {
+        "candidates": [
+          "yoPNh",
+          "yopwh",
+          "y0pNh",
+          "yoPN)h"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 186.89
+      },
+      "new": {
+        "candidates": [
+          "yoPNh",
+          "yopwh",
+          "y0pNh",
+          "yoPN)h"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 201.36
+      }
+    },
+    {
+      "index": 128,
+      "fixture": {
+        "kind": "lines",
+        "text": "0595",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.1744274238590151,
+          -0.18966494069900364,
+          0.08261697739362717,
+          0.14233011368196458
+        ],
+        "phase": 5.032962856544813,
+        "lineSeed": 577965
+      },
+      "old": {
+        "candidates": [
+          "0595",
+          "VS955",
+          "Bied",
+          "SWeaas"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 136.34
+      },
+      "new": {
+        "candidates": [
+          "0595",
+          "o595",
+          "VS955",
+          "Bied"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 242.86
+      }
+    },
+    {
+      "index": 129,
+      "fixture": {
+        "kind": "lines",
+        "text": "vaxxj",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.16051805636379868,
+          -0.19973496557213366,
+          -0.22553496935870498,
+          0.02316218800842762,
+          0.15902871440630406
+        ],
+        "phase": 1.7452318726898366,
+        "lineSeed": 494153
+      },
+      "old": {
+        "candidates": [
+          "vaxx",
+          "STredes",
+          "SErere",
+          "Sag"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 140.36
+      },
+      "new": {
+        "candidates": [
+          "vaxx",
+          "YeXxi",
+          "YExxi",
+          "STredes"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 220.5
+      }
+    },
+    {
+      "index": 130,
+      "fixture": {
+        "kind": "lines",
+        "text": "LY5ik",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.19517973496112972,
+          0.06969781196676195,
+          -0.13150203914847225,
+          0.18632037565112114,
+          0.04131466883700341
+        ],
+        "phase": 2.1008445766777823,
+        "lineSeed": 480575
+      },
+      "old": {
+        "candidates": [
+          "Ly5ik",
+          "=CysTie",
+          "CYSie",
+          "sersrie"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 180.61
+      },
+      "new": {
+        "candidates": [
+          "Ly5ik",
+          "ly5ik",
+          "LY5ik",
+          "Ly5fk"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 282.62
+      }
+    },
+    {
+      "index": 131,
+      "fixture": {
+        "kind": "lines",
+        "text": "40283",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.07998078817036003,
+          0.13946325494907796,
+          0.19247810041997582,
+          0.22813554666936398,
+          -0.06114619050640613
+        ],
+        "phase": 0.066366908356695,
+        "lineSeed": 983658
+      },
+      "old": {
+        "candidates": [
+          "40283",
+          "aE",
+          "a0B"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 127.16
+      },
+      "new": {
+        "candidates": [
+          "40283",
+          "aE",
+          "a0B"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 186.01
+      }
+    },
+    {
+      "index": 132,
+      "fixture": {
+        "kind": "lines",
+        "text": "jipbm",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.10785600601229817,
+          0.09962636581622064,
+          0.19459423108492047,
+          0.08053061366081238,
+          -0.1622622498543933
+        ],
+        "phase": 3.727123979274061,
+        "lineSeed": 161742
+      },
+      "old": {
+        "candidates": [
+          "jpbm",
+          "ipbw",
+          "Sipew",
+          "Sipeet"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 149.4
+      },
+      "new": {
+        "candidates": [
+          "jpbm",
+          "jipbm",
+          "jHpbm",
+          "jpbn"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 223.15
+      }
+    },
+    {
+      "index": 133,
+      "fixture": {
+        "kind": "lines",
+        "text": "yObtH",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.14085364469792694,
+          0.03097480325959623,
+          -0.04757033416535705,
+          0.1075573954731226,
+          0.09173388581257313
+        ],
+        "phase": 2.6931762916827044,
+        "lineSeed": 447582
+      },
+      "old": {
+        "candidates": [
+          "yobth",
+          "eObtHe",
+          "aeonsHe",
+          "sromene"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 146.5
+      },
+      "new": {
+        "candidates": [
+          "yobth",
+          "yobtH",
+          "vobtw",
+          "eObtHe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 279.28
+      }
+    },
+    {
+      "index": 134,
+      "fixture": {
+        "kind": "lines",
+        "text": "20985",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.0707332162419334,
+          -0.08873111777938902,
+          -0.04578775109257549,
+          -0.23835338279604912,
+          -0.046464607235975564
+        ],
+        "phase": 4.620334336522132,
+        "lineSeed": 110847
+      },
+      "old": {
+        "candidates": [
+          "20985",
+          "Zogss=",
+          "Soges=",
+          "pod"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 222.62
+      },
+      "new": {
+        "candidates": [
+          "20985",
+          "26985",
+          "2o9s5",
+          "Zogss="
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 299.62
+      }
+    },
+    {
+      "index": 135,
+      "fixture": {
+        "kind": "lines",
+        "text": "kigj",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.09568586992099881,
+          0.09540373587515205,
+          0.021491573890671134,
+          -0.1199356442084536
+        ],
+        "phase": 6.155736047960656,
+        "lineSeed": 712022
+      },
+      "old": {
+        "candidates": [
+          "kigj",
+          "esrs",
+          "astaa"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 113.9
+      },
+      "new": {
+        "candidates": [
+          "kigj",
+          "kigJ",
+          "kugj",
+          "esrs"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 221.85
+      }
+    },
+    {
+      "index": 136,
+      "fixture": {
+        "kind": "lines",
+        "text": "yAomW",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.18492769065778702,
+          -0.14625816652551293,
+          0.24339810700621456,
+          -0.14790149428881705,
+          -0.11674710677471012
+        ],
+        "phase": 4.902515806078703,
+        "lineSeed": 886912
+      },
+      "old": {
+        "candidates": [
+          "yAomw",
+          "=yRomW=",
+          "ame",
+          "SyAomWs"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 152.99
+      },
+      "new": {
+        "candidates": [
+          "yAomw",
+          "yaomw",
+          "yAomW",
+          "yaomW"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 228.06
+      }
+    },
+    {
+      "index": 137,
+      "fixture": {
+        "kind": "lines",
+        "text": "298238",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.2202215907163918,
+          -0.22525321564171463,
+          0.00926796137355268,
+          -0.1285607008030638,
+          0.11752976663410664,
+          -0.14715937722939998
+        ],
+        "phase": 5.097563563423556,
+        "lineSeed": 428084
+      },
+      "old": {
+        "candidates": [
+          "298238",
+          "DBOSEESS",
+          "ayurses",
+          "ayerses"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 127.86
+      },
+      "new": {
+        "candidates": [
+          "298238",
+          "=98=3s",
+          "DBOSEESS",
+          "ayurses"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 316.73
+      }
+    },
+    {
+      "index": 138,
+      "fixture": {
+        "kind": "lines",
+        "text": "mico",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.06399795645847917,
+          -0.08044006361160427,
+          0.12115088081918657,
+          -0.21207045705523342
+        ],
+        "phase": 3.6505824873794075,
+        "lineSeed": 990122
+      },
+      "old": {
+        "candidates": [
+          "mico",
+          "fmicoy",
+          "mico..",
+          "ReeS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 116.84
+      },
+      "new": {
+        "candidates": [
+          "mico",
+          "micn",
+          "fmicoy",
+          "mico.."
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 243.85
+      }
+    },
+    {
+      "index": 139,
+      "fixture": {
+        "kind": "lines",
+        "text": "sCtM",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.08853015233762562,
+          -0.2301462272880599,
+          -0.030942671466618776,
+          -0.2321889871964231
+        ],
+        "phase": 6.209305858055414,
+        "lineSeed": 285848
+      },
+      "old": {
+        "candidates": [
+          "sctm",
+          "ssttwe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 116.01
+      },
+      "new": {
+        "candidates": [
+          "sctm",
+          "sctM",
+          "ssttwe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 250.3
+      }
+    },
+    {
+      "index": 140,
+      "fixture": {
+        "kind": "lines",
+        "text": "649556",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.061395102413371205,
+          -0.19912139687221497,
+          0.07490526279434562,
+          -0.1994132554391399,
+          -0.23097584792412817,
+          0.04476807697210461
+        ],
+        "phase": 5.671906509192606,
+        "lineSeed": 857447
+      },
+      "old": {
+        "candidates": [
+          "649556",
+          "SERSSSS",
+          "SeaaseS",
+          "poes"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 139.57
+      },
+      "new": {
+        "candidates": [
+          "649556",
+          "649SSG",
+          "C4-=6u",
+          "649s96"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 344.87
+      }
+    },
+    {
+      "index": 141,
+      "fixture": {
+        "kind": "lines",
+        "text": "irslr",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.005131816607899964,
+          0.15507325110957026,
+          -0.07866285613272339,
+          -0.1725703349802643,
+          -0.018799038021825254
+        ],
+        "phase": 5.017383688935664,
+        "lineSeed": 385674
+      },
+      "old": {
+        "candidates": [
+          "irs",
+          "sinsieg",
+          "seaig",
+          "Sesicl"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 107.57
+      },
+      "new": {
+        "candidates": [
+          "irs",
+          "irsH",
+          "irs}",
+          "irs)"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 168.35
+      }
+    },
+    {
+      "index": 142,
+      "fixture": {
+        "kind": "lines",
+        "text": "luxQE4",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.027094895485788584,
+          -0.012874495820142329,
+          0.19787896401248872,
+          0.10060687421355397,
+          -0.22466569766402245,
+          -0.05237022053916007
+        ],
+        "phase": 4.105320697622569,
+        "lineSeed": 46115
+      },
+      "old": {
+        "candidates": [
+          "uxQE4",
+          "Segeas",
+          "SrexQeas"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 108.51
+      },
+      "new": {
+        "candidates": [
+          "uxQE4",
+          "uxQe4",
+          "iuxQE4",
+          "Segeas"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 189.94
+      }
+    },
+    {
+      "index": 143,
+      "fixture": {
+        "kind": "lines",
+        "text": "3531",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.19018895970657468,
+          -0.16012159979436547,
+          0.21213627024553716,
+          0.24326443916652352
+        ],
+        "phase": 1.365180896898349,
+        "lineSeed": 384752
+      },
+      "old": {
+        "candidates": [
+          "3531",
+          "ass",
+          "==",
+          "aBe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 129.26
+      },
+      "new": {
+        "candidates": [
+          "3531",
+          "ass",
+          "==",
+          "aBe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 196.37
+      }
+    },
+    {
+      "index": 144,
+      "fixture": {
+        "kind": "lines",
+        "text": "uqcc",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.2420816731173545,
+          0.11497965094167739,
+          0.12151768198236823,
+          -0.16236431209836155
+        ],
+        "phase": 5.170288187941791,
+        "lineSeed": 445193
+      },
+      "old": {
+        "candidates": [
+          "uqcc",
+          "~aqee=",
+          "cised",
+          "rics"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 127.32
+      },
+      "new": {
+        "candidates": [
+          "uqcc",
+          "~aqee=",
+          "cised",
+          "rics"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 264.98
+      }
+    },
+    {
+      "index": 145,
+      "fixture": {
+        "kind": "lines",
+        "text": "R6VH",
+        "font": "Verdana",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          -0.004050183109939098,
+          -0.013007084955461323,
+          -5.1502836868166924e-05,
+          -0.1097255515633151
+        ],
+        "phase": 5.583465404648464,
+        "lineSeed": 271601
+      },
+      "old": {
+        "candidates": [
+          "R6vH",
+          "Rewe",
+          "Feoviry"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 98.83
+      },
+      "new": {
+        "candidates": [
+          "R6vH",
+          "r6vH",
+          "R6vh",
+          "r6vh"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 186.29
+      }
+    },
+    {
+      "index": 146,
+      "fixture": {
+        "kind": "lines",
+        "text": "234535",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.02897693868726492,
+          -0.0430975939380005,
+          0.09548433613963425,
+          0.1826468111248687,
+          -0.19867839151993394,
+          -0.03161073161754757
+        ],
+        "phase": 0.18834838251757308,
+        "lineSeed": 996402
+      },
+      "old": {
+        "candidates": [
+          "234535",
+          "SELEeEe",
+          "sreee=",
+          "paceaed"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 189.31
+      },
+      "new": {
+        "candidates": [
+          "234535",
+          "SELEeEe",
+          "sreee=",
+          "paceaed"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 261.02
+      }
+    },
+    {
+      "index": 147,
+      "fixture": {
+        "kind": "lines",
+        "text": "ybbx",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.24350109603255987,
+          -0.04383961029816419,
+          -0.009297565324231982,
+          0.08811266918201
+        ],
+        "phase": 1.3660169077672717,
+        "lineSeed": 858563
+      },
+      "old": {
+        "candidates": [
+          "ybb",
+          "aes",
+          "SEBas"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 106.31
+      },
+      "new": {
+        "candidates": [
+          "ybb",
+          "ybbx",
+          "ybba",
+          "aes"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 214.94
+      }
+    },
+    {
+      "index": 148,
+      "fixture": {
+        "kind": "lines",
+        "text": "nTN5s",
+        "font": "Georgia",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.040616017184220254,
+          0.24203042220324278,
+          -0.19344816089142114,
+          -0.18197380634956062,
+          0.16801998403389007
+        ],
+        "phase": 4.171507222328418,
+        "lineSeed": 6941
+      },
+      "old": {
+        "candidates": [
+          "nTN5",
+          "forsse]",
+          "pEN5s7",
+          "eENss"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 132.79
+      },
+      "new": {
+        "candidates": [
+          "nTN5",
+          "nTN5s",
+          "ntN5",
+          "ntN5s"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 257.56
+      }
+    },
+    {
+      "index": 149,
+      "fixture": {
+        "kind": "lines",
+        "text": "69583",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.010012144572101533,
+          0.15309010911732912,
+          -0.0680874913232401,
+          -0.2134608298074454,
+          0.23029874835629016
+        ],
+        "phase": 4.9277984420134,
+        "lineSeed": 696625
+      },
+      "old": {
+        "candidates": [
+          "69583",
+          "==",
+          "ROsmes",
+          "SeaeBa="
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 135.42
+      },
+      "new": {
+        "candidates": [
+          "69583",
+          "6958s",
+          "695E3",
+          "695Cs"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 292.96
+      }
+    },
+    {
+      "index": 150,
+      "fixture": {
+        "kind": "lines",
+        "text": "xbzsl",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.028786770650185645,
+          -0.0825495133176446,
+          -0.11062106594908983,
+          0.0882350776810199,
+          0.11071098607499152
+        ],
+        "phase": 0.9064181141698749,
+        "lineSeed": 149554
+      },
+      "old": {
+        "candidates": [
+          "xbzs",
+          "sebrsl",
+          "rebned",
+          "Sehask"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 154.99
+      },
+      "new": {
+        "candidates": [
+          "xbzs",
+          "xbzs1",
+          "xbz1",
+          "xhzi"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 328.16
+      }
+    },
+    {
+      "index": 151,
+      "fixture": {
+        "kind": "lines",
+        "text": "59KI8",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.24238791165407747,
+          -0.12061201687902212,
+          -0.09936156787443906,
+          -0.19573221425525844,
+          -0.045899247634224594
+        ],
+        "phase": 5.3138862107015425,
+        "lineSeed": 57393
+      },
+      "old": {
+        "candidates": [
+          "59KL8",
+          "59KIB=",
+          "59KTas",
+          "SgoKias"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 134.73
+      },
+      "new": {
+        "candidates": [
+          "59KL8",
+          "59KI8",
+          "59Kl8",
+          "59kL8"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 262.91
+      }
+    },
+    {
+      "index": 152,
+      "fixture": {
+        "kind": "lines",
+        "text": "748464",
+        "font": "Verdana",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          -0.044067067094147205,
+          -0.11682089895475656,
+          -0.1887986797373742,
+          -0.004355866345576942,
+          0.16960511496290565,
+          0.07201761694159359
+        ],
+        "phase": 6.1810671152612855,
+        "lineSeed": 352046
+      },
+      "old": {
+        "candidates": [
+          "48464",
+          "|74Tr;54_",
+          "orsee6a=",
+          "HZzs"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 191.19
+      },
+      "new": {
+        "candidates": [
+          "48464",
+          "748464",
+          "|74Tr;54_",
+          "orsee6a="
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 367.66
+      }
+    },
+    {
+      "index": 153,
+      "fixture": {
+        "kind": "lines",
+        "text": "lpvuja",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.18725986336357892,
+          -0.15790075238328427,
+          -0.13182679982855916,
+          0.11404935398604721,
+          0.11897761165164411,
+          -0.1729315606644377
+        ],
+        "phase": 5.805902151266087,
+        "lineSeed": 632097
+      },
+      "old": {
+        "candidates": [
+          "lpvuja",
+          "apsEUSSC",
+          "seaeuges",
+          "epmagaz"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 166.31
+      },
+      "new": {
+        "candidates": [
+          "lpvuja",
+          "Ipvuja",
+          "/pvuja",
+          "ipvuja"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 257.97
+      }
+    },
+    {
+      "index": 154,
+      "fixture": {
+        "kind": "lines",
+        "text": "pH7zo",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.24694375682156533,
+          0.06121057039126754,
+          0.14271451102104038,
+          -0.010508716339245439,
+          0.09696940390858799
+        ],
+        "phase": 4.587666857939095,
+        "lineSeed": 927955
+      },
+      "old": {
+        "candidates": [
+          "pH7zo",
+          "pEESe",
+          "SpHTEse"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 130.55
+      },
+      "new": {
+        "candidates": [
+          "pH7zo",
+          "PH7zo",
+          "ph7zo",
+          "pH>zo"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 226.56
+      }
+    },
+    {
+      "index": 155,
+      "fixture": {
+        "kind": "lines",
+        "text": "278003",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.06557568209245801,
+          -0.24420096224639565,
+          0.011350804707035422,
+          -0.18376103544142097,
+          -0.21948414482176304,
+          -0.22812545869965106
+        ],
+        "phase": 4.258641838623508,
+        "lineSeed": 481341
+      },
+      "old": {
+        "candidates": [
+          "278003",
+          "SEEEDORS",
+          "SEEo0R="
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 171.65
+      },
+      "new": {
+        "candidates": [
+          "278003",
+          "27R003",
+          "2i8c03",
+          "SEEEDORS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 250.43
+      }
+    },
+    {
+      "index": 156,
+      "fixture": {
+        "kind": "lines",
+        "text": "jbup",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.22283794125542045,
+          -0.057797834859229624,
+          0.17696492723189294,
+          0.16353465302381665
+        ],
+        "phase": 4.85512353330317,
+        "lineSeed": 850098
+      },
+      "old": {
+        "candidates": [
+          "jbup",
+          "SEup=",
+          "Ead",
+          "pbaee"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 111.99
+      },
+      "new": {
+        "candidates": [
+          "jbup",
+          "iDUp",
+          "ibup",
+          "SEup="
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 167.89
+      }
+    },
+    {
+      "index": 157,
+      "fixture": {
+        "kind": "lines",
+        "text": "Na3XwW",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.13295865477994084,
+          0.1131864053895697,
+          0.21946505992673337,
+          0.1969085322925821,
+          -0.20725170336663723,
+          -0.02351236541289836
+        ],
+        "phase": 5.629672231016825,
+        "lineSeed": 263056
+      },
+      "old": {
+        "candidates": [
+          "na3Xww",
+          "aseeWS",
+          "aegeW",
+          "Erecs"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 179.68
+      },
+      "new": {
+        "candidates": [
+          "na3Xww",
+          "Na3Xww",
+          "na3xww",
+          "Na3xww"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 343.85
+      }
+    },
+    {
+      "index": 158,
+      "fixture": {
+        "kind": "lines",
+        "text": "548977",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.018955267732962966,
+          0.13505719660315663,
+          0.19820985570549965,
+          -0.12189781677443534,
+          0.15456751943565905,
+          0.11832262680400163
+        ],
+        "phase": 4.252647271394293,
+        "lineSeed": 416286
+      },
+      "old": {
+        "candidates": [
+          "54897",
+          "S4897TT",
+          "Erutaad",
+          "ssaeg7e"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 164.49
+      },
+      "new": {
+        "candidates": [
+          "54897",
+          "S4897TT",
+          "Erutaad",
+          "ssaeg7e"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 269.59
+      }
+    },
+    {
+      "index": 159,
+      "fixture": {
+        "kind": "lines",
+        "text": "ixrf",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.008762271841987967,
+          0.1385717714438215,
+          -0.20410348661243916,
+          -0.2380195838632062
+        ],
+        "phase": 4.02380318058221,
+        "lineSeed": 638942
+      },
+      "old": {
+        "candidates": [
+          "ixrf",
+          "Sra=",
+          "aeas=",
+          "Beae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 116.33
+      },
+      "new": {
+        "candidates": [
+          "ixrf",
+          "Ixrf",
+          "ixrt",
+          "Ixrt"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 180.87
+      }
+    },
+    {
+      "index": 160,
+      "fixture": {
+        "kind": "mixed",
+        "text": "549480",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.08168544969521463,
+          0.09118791355285794,
+          0.1798405572772026,
+          0.2216358220903203,
+          -0.015201123198494315,
+          -0.03155798732768744
+        ],
+        "phase": 3.885237385354934,
+        "lineSeed": 151285
+      },
+      "old": {
+        "candidates": [
+          "5oo",
+          "ie",
+          "lse"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 98.69
+      },
+      "new": {
+        "candidates": [
+          "5oo",
+          "soo",
+          "54oo",
+          "59o"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 248.18
+      }
+    },
+    {
+      "index": 161,
+      "fixture": {
+        "kind": "mixed",
+        "text": "yykvba",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.24879681877791882,
+          0.0932576711056754,
+          -0.15696883923374116,
+          0.060908443410880864,
+          0.24480248289182782,
+          -0.02913049387279898
+        ],
+        "phase": 5.437724487782858,
+        "lineSeed": 969505
+      },
+      "old": {
+        "candidates": [
+          "mvb",
+          "aa",
+          "ee"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 104.64
+      },
+      "new": {
+        "candidates": [
+          "mvb",
+          "mvba",
+          "mvbo",
+          "wvb"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 225.08
+      }
+    },
+    {
+      "index": 162,
+      "fixture": {
+        "kind": "mixed",
+        "text": "jA3VvE",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.09938464849255979,
+          -0.11399809166323394,
+          -0.0554917580448091,
+          0.1994744505500421,
+          -0.17216420476324856,
+          -0.004899559891782701
+        ],
+        "phase": 5.379727559886589,
+        "lineSeed": 575223
+      },
+      "old": {
+        "candidates": [
+          "jkE",
+          "BE",
+          "SME",
+          "awe"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 101.28
+      },
+      "new": {
+        "candidates": [
+          "jkE",
+          "jwE",
+          "JkE",
+          "1kE"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 197.48
+      }
+    },
+    {
+      "index": 163,
+      "fixture": {
+        "kind": "mixed",
+        "text": "18389",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.05756060325074941,
+          0.18115994008257985,
+          -0.1327000573510304,
+          0.05507176253013313,
+          -0.056440543732605875
+        ],
+        "phase": 2.161132633243043,
+        "lineSeed": 834665
+      },
+      "old": {
+        "candidates": [
+          "Be",
+          "Se",
+          "=s"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 96.14
+      },
+      "new": {
+        "candidates": [
+          "Be",
+          ";;",
+          "G,",
+          "Se"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 202.38
+      }
+    },
+    {
+      "index": 164,
+      "fixture": {
+        "kind": "mixed",
+        "text": "fxqh",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.12937290058471262,
+          0.04537975520361215,
+          -0.14493572106584907,
+          -0.013073145993985236
+        ],
+        "phase": 3.6404568091928393,
+        "lineSeed": 521969
+      },
+      "old": {
+        "candidates": [
+          "=K",
+          "ae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 78.18
+      },
+      "new": {
+        "candidates": [
+          "=K",
+          "6n",
+          "6M",
+          "ae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 147.32
+      }
+    },
+    {
+      "index": 165,
+      "fixture": {
+        "kind": "mixed",
+        "text": "77ME",
+        "font": "Verdana",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.06642492674291134,
+          0.16684724192600697,
+          0.023400873178616166,
+          -0.04353837750386447
+        ],
+        "phase": 1.8877122318887,
+        "lineSeed": 17848
+      },
+      "old": {
+        "candidates": [
+          "Tm",
+          "Sae",
+          "ER"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 89.6
+      },
+      "new": {
+        "candidates": [
+          "Tm",
+          "TM",
+          "tm",
+          "tM"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 201.46
+      }
+    },
+    {
+      "index": 166,
+      "fixture": {
+        "kind": "mixed",
+        "text": "258819",
+        "font": "Georgia",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.14646022394299507,
+          -0.1777072997065261,
+          -0.12501001893542707,
+          -0.1837345053208992,
+          -0.05943528329953551,
+          0.10309982707258314
+        ],
+        "phase": 1.3532973061276652,
+        "lineSeed": 215001
+      },
+      "old": {
+        "candidates": [
+          "gsg"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 127.02
+      },
+      "new": {
+        "candidates": [
+          "gsg",
+          "g8g",
+          "psg",
+          "ssg"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 217.65
+      }
+    },
+    {
+      "index": 167,
+      "fixture": {
+        "kind": "mixed",
+        "text": "ryssn",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.24696837191004306,
+          0.08878042199648917,
+          -0.15004230744671077,
+          -0.05376874981448054,
+          0.18974903819616884
+        ],
+        "phase": 4.848576574058896,
+        "lineSeed": 446797
+      },
+      "old": {
+        "candidates": [
+          "ee",
+          "See"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 96.47
+      },
+      "new": {
+        "candidates": [
+          "ee",
+          "ug",
+          "9B",
+          "See"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 188.37
+      }
+    },
+    {
+      "index": 168,
+      "fixture": {
+        "kind": "mixed",
+        "text": "FCwW7",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.13101623591501266,
+          -0.18205245002172887,
+          -0.23633843183051795,
+          -0.11020870646461844,
+          -0.029094032594002783
+        ],
+        "phase": 1.551072829300629,
+        "lineSeed": 388754
+      },
+      "old": {
+        "candidates": [
+          "fgw",
+          "eatl",
+          "ae",
+          "Esay"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 110.66
+      },
+      "new": {
+        "candidates": [
+          "fgw",
+          "Fgw",
+          "pgw",
+          "eatl"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 188.2
+      }
+    },
+    {
+      "index": 169,
+      "fixture": {
+        "kind": "mixed",
+        "text": "02918",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.07274462829809636,
+          -0.12954812473617494,
+          0.025707504828460515,
+          -0.09749142033979297,
+          0.21159289253409952
+        ],
+        "phase": 0.3453151738887693,
+        "lineSeed": 227778
+      },
+      "old": {
+        "candidates": [
+          "o8",
+          "atgh",
+          "Eoa"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 104.15
+      },
+      "new": {
+        "candidates": [
+          "o8",
+          "os8",
+          "oz8",
+          "op8"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 199.45
+      }
+    },
+    {
+      "index": 170,
+      "fixture": {
+        "kind": "mixed",
+        "text": "hwcrt",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.20916447800118476,
+          0.11528906435705721,
+          0.14788291708100587,
+          -0.06941175227984786,
+          0.021070372662506998
+        ],
+        "phase": 0.3781226683611717,
+        "lineSeed": 503312
+      },
+      "old": {
+        "candidates": [
+          "Awi",
+          "awK",
+          "Es"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 115.88
+      },
+      "new": {
+        "candidates": [
+          "Awi",
+          "awK",
+          "Es"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 157.78
+      }
+    },
+    {
+      "index": 171,
+      "fixture": {
+        "kind": "mixed",
+        "text": "zPDb0s",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.11126005998812616,
+          -0.03331774927210063,
+          -0.10857315687462687,
+          -0.1159127518767491,
+          -0.05528365937061608,
+          0.08492011169437319
+        ],
+        "phase": 0.21302590579547087,
+        "lineSeed": 501254
+      },
+      "old": {
+        "candidates": [
+          "zus",
+          "Byd",
+          "aee",
+          "aye"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 119.18
+      },
+      "new": {
+        "candidates": [
+          "zus",
+          "zds",
+          "zeus",
+          "zeds"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 233.5
+      }
+    },
+    {
+      "index": 172,
+      "fixture": {
+        "kind": "mixed",
+        "text": "09061",
+        "font": "Arial",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.07544301718007773,
+          -0.17013768246397376,
+          0.19213064049836248,
+          -0.12759047676809132,
+          0.07969157921615988
+        ],
+        "phase": 6.206891917413668,
+        "lineSeed": 791013
+      },
+      "old": {
+        "candidates": [
+          "06",
+          "ame",
+          "aaEK"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 80.73
+      },
+      "new": {
+        "candidates": [
+          "06",
+          "0o",
+          "0p",
+          "0n"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 178.2
+      }
+    },
+    {
+      "index": 173,
+      "fixture": {
+        "kind": "mixed",
+        "text": "dfijjl",
+        "font": "Arial",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.07442402886226773,
+          -0.225324047380127,
+          0.10806858050636947,
+          -0.027998648933134973,
+          0.16691855993121862,
+          0.2340034981025383
+        ],
+        "phase": 0.5116160789546957,
+        "lineSeed": 228114
+      },
+      "old": {
+        "candidates": [
+          "at",
+          "Eo"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 70.94
+      },
+      "new": {
+        "candidates": [
+          "at",
+          "Eo"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 144.64
+      }
+    },
+    {
+      "index": 174,
+      "fixture": {
+        "kind": "mixed",
+        "text": "WqHsVE",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.04669015551917255,
+          0.04914953710976988,
+          -0.2487083738669753,
+          -0.18797694065142423,
+          -0.19910382549278438,
+          -0.17709439049940556
+        ],
+        "phase": 4.117848393668537,
+        "lineSeed": 850550
+      },
+      "old": {
+        "candidates": [
+          "wqH",
+          "Sae",
+          "Swine"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 104.14
+      },
+      "new": {
+        "candidates": [
+          "wqH",
+          "wqh",
+          "wqHb",
+          "Sae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 186.65
+      }
+    },
+    {
+      "index": 175,
+      "fixture": {
+        "kind": "mixed",
+        "text": "307668",
+        "font": "Verdana",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          0.0351720480248332,
+          -0.128727478091605,
+          0.012563557596877217,
+          -0.026257071527652442,
+          0.06604942074045539,
+          0.030091992928646505
+        ],
+        "phase": 3.048143363108891,
+        "lineSeed": 394716
+      },
+      "old": {
+        "candidates": [
+          "3o68",
+          "DRS.",
+          "See",
+          "BaS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 142.17
+      },
+      "new": {
+        "candidates": [
+          "3o68",
+          "so68",
+          "3o6o8",
+          "3o6c8"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 253.06
+      }
+    },
+    {
+      "index": 176,
+      "fixture": {
+        "kind": "mixed",
+        "text": "wfkl",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          0.035687816329300404,
+          -0.1194904848234728,
+          0.21878319536335766,
+          0.2162961793364957
+        ],
+        "phase": 3.3419517076457597,
+        "lineSeed": 332058
+      },
+      "old": {
+        "candidates": [
+          "ie"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 80.41
+      },
+      "new": {
+        "candidates": [
+          "ie"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 120.84
+      }
+    },
+    {
+      "index": 177,
+      "fixture": {
+        "kind": "mixed",
+        "text": "vyg5wO",
+        "font": "Georgia",
+        "bold": false,
+        "dark": true,
+        "angles": [
+          -0.09477917198091745,
+          -0.18320755020249635,
+          0.0705331761855632,
+          -0.1468757389811799,
+          -0.22139366203919053,
+          -0.16727179719600827
+        ],
+        "phase": 3.516149675644627,
+        "lineSeed": 401629
+      },
+      "old": {
+        "candidates": [],
+        "uncertain": null,
+        "error": "NO_RESULT",
+        "ms": 84.95
+      },
+      "new": {
+        "candidates": [
+          "wmwg",
+          "wo",
+          "wawo"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 225.69
+      }
+    },
+    {
+      "index": 178,
+      "fixture": {
+        "kind": "mixed",
+        "text": "28633",
+        "font": "Tahoma",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.1967305176658556,
+          -0.017048255307599902,
+          -0.12913189630489796,
+          -0.15166292386129498,
+          -0.11030623561237007
+        ],
+        "phase": 4.790316891446409,
+        "lineSeed": 444223
+      },
+      "old": {
+        "candidates": [
+          "263",
+          "Bey.",
+          "ae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 101.3
+      },
+      "new": {
+        "candidates": [
+          "263",
+          "26s",
+          "2863",
+          "268"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 167.07
+      }
+    },
+    {
+      "index": 179,
+      "fixture": {
+        "kind": "mixed",
+        "text": "eigm",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.025364299304783344,
+          0.10773369192611426,
+          0.04158730176277459,
+          0.22150066879112273
+        ],
+        "phase": 3.377256461796194,
+        "lineSeed": 175087
+      },
+      "old": {
+        "candidates": [
+          "ed"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 85.12
+      },
+      "new": {
+        "candidates": [
+          "ed"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 125.84
+      }
+    },
+    {
+      "index": 180,
+      "fixture": {
+        "kind": "mixed",
+        "text": "rnBC",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.047749177319929004,
+          -0.18258755875285715,
+          0.06180088687688112,
+          0.23926272697281092
+        ],
+        "phase": 1.9936346486453778,
+        "lineSeed": 707153
+      },
+      "old": {
+        "candidates": [
+          "mbc",
+          "ate",
+          "aee",
+          "BS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 101.35
+      },
+      "new": {
+        "candidates": [
+          "mbc",
+          "mBc",
+          "mbC",
+          "mBC"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 201.24
+      }
+    },
+    {
+      "index": 181,
+      "fixture": {
+        "kind": "mixed",
+        "text": "62293",
+        "font": "Georgia",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.14028871280606836,
+          0.18771750736050308,
+          0.10197322780732065,
+          0.10504996683448553,
+          -0.08592084154952317
+        ],
+        "phase": 6.022480446404262,
+        "lineSeed": 986967
+      },
+      "old": {
+        "candidates": [
+          "69",
+          "Rog",
+          "Soak",
+          "Sewt"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 119.47
+      },
+      "new": {
+        "candidates": [
+          "69",
+          "6g",
+          "68",
+          "6s"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 204.36
+      }
+    },
+    {
+      "index": 182,
+      "fixture": {
+        "kind": "mixed",
+        "text": "cxas",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.22049975907430053,
+          -0.24343916366342455,
+          0.044137124670669436,
+          -0.034523567534051836
+        ],
+        "phase": 0.3365823048954371,
+        "lineSeed": 738990
+      },
+      "old": {
+        "candidates": [
+          "06",
+          "aye"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 81.46
+      },
+      "new": {
+        "candidates": [
+          "06",
+          "0s",
+          "0e",
+          "08"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 198.77
+      }
+    },
+    {
+      "index": 183,
+      "fixture": {
+        "kind": "mixed",
+        "text": "0LGIO",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.16198394901584834,
+          -0.2147016185335815,
+          -0.09355562331620604,
+          -0.05586642143316567,
+          0.06289794633630663
+        ],
+        "phase": 0.9067821057430135,
+        "lineSeed": 577248
+      },
+      "old": {
+        "candidates": [
+          "0go",
+          "RAE"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 92.55
+      },
+      "new": {
+        "candidates": [
+          "0go",
+          "0Go",
+          "0g0",
+          "RAE"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 219.19
+      }
+    },
+    {
+      "index": 184,
+      "fixture": {
+        "kind": "mixed",
+        "text": "519513",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.12217850843444467,
+          -0.20021416957024485,
+          0.127430074615404,
+          0.1629831917816773,
+          0.2153343828395009,
+          0.08162990666460246
+        ],
+        "phase": 4.881091046040021,
+        "lineSeed": 95580
+      },
+      "old": {
+        "candidates": [
+          "519513",
+          "=iCsre",
+          "SS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 133.83
+      },
+      "new": {
+        "candidates": [
+          "519513",
+          "=iCsre",
+          "SS"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 246.96
+      }
+    },
+    {
+      "index": 185,
+      "fixture": {
+        "kind": "mixed",
+        "text": "oboq",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          0.2104668547399342,
+          -0.040580024593509734,
+          0.15259747463278472,
+          -0.07050287758465856
+        ],
+        "phase": 0.8258918177549757,
+        "lineSeed": 333953
+      },
+      "old": {
+        "candidates": [
+          "oboq",
+          "SaK",
+          "SeK"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 85.37
+      },
+      "new": {
+        "candidates": [
+          "oboq",
+          "obaq",
+          "SaK",
+          "SeK"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 190.79
+      }
+    },
+    {
+      "index": 186,
+      "fixture": {
+        "kind": "mixed",
+        "text": "v2VaJD",
+        "font": "Georgia",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.21456894045695662,
+          -0.24758012930396944,
+          -0.19669570331461728,
+          0.20247422310058028,
+          0.024240479804575443,
+          0.0026806973619386554
+        ],
+        "phase": 5.727882006145306,
+        "lineSeed": 739536
+      },
+      "old": {
+        "candidates": [
+          "&ad",
+          "StaX",
+          "Sy"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 99.4
+      },
+      "new": {
+        "candidates": [
+          "&ad",
+          "&aD",
+          "2ad",
+          "2aD"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 210.96
+      }
+    },
+    {
+      "index": 187,
+      "fixture": {
+        "kind": "mixed",
+        "text": "534010",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.0054332849103957415,
+          -0.22053149004932493,
+          -0.06044036615639925,
+          0.11755750596057624,
+          0.025643014581874013,
+          0.056880880263634026
+        ],
+        "phase": 0.19169761935244506,
+        "lineSeed": 267455
+      },
+      "old": {
+        "candidates": [
+          "534o10",
+          "Seeie",
+          "Soite",
+          "Seite"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 114.75
+      },
+      "new": {
+        "candidates": [
+          "534o10",
+          "534010",
+          "534o1o",
+          "53401o"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 211.99
+      }
+    },
+    {
+      "index": 188,
+      "fixture": {
+        "kind": "mixed",
+        "text": "ddoph",
+        "font": "Arial",
+        "bold": true,
+        "dark": true,
+        "angles": [
+          0.19680353032890707,
+          0.014354710467159748,
+          -0.1075256644980982,
+          -0.03866471047513187,
+          0.2408303675474599
+        ],
+        "phase": 0.4470602222184273,
+        "lineSeed": 259577
+      },
+      "old": {
+        "candidates": [
+          "cp",
+          "-aE"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 75.91
+      },
+      "new": {
+        "candidates": [
+          "cp",
+          "tp",
+          "dp",
+          "qp"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 169.73
+      }
+    },
+    {
+      "index": 189,
+      "fixture": {
+        "kind": "mixed",
+        "text": "eOcZ",
+        "font": "Tahoma",
+        "bold": false,
+        "dark": false,
+        "angles": [
+          -0.24693868053145707,
+          0.010822362848557532,
+          0.2115544816479087,
+          -0.1584010283695534
+        ],
+        "phase": 4.9798912666086395,
+        "lineSeed": 991319
+      },
+      "old": {
+        "candidates": [
+          "ae",
+          "ay",
+          "=e"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 86.88
+      },
+      "new": {
+        "candidates": [
+          "ae",
+          "ay",
+          "=e"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 143.55
+      }
+    },
+    {
+      "index": 190,
+      "fixture": {
+        "kind": "mixed",
+        "text": "313872",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.036685864673927426,
+          0.0791376173729077,
+          0.16059162560850382,
+          -0.10635001875925809,
+          -0.1469412676524371,
+          0.2044948135735467
+        ],
+        "phase": 1.226446283850562,
+        "lineSeed": 174320
+      },
+      "old": {
+        "candidates": [
+          "313872",
+          "aIX",
+          "Sae",
+          "Ead"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 114.98
+      },
+      "new": {
+        "candidates": [
+          "313872",
+          "313672",
+          "aIX",
+          "Sae"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 200.05
+      }
+    },
+    {
+      "index": 191,
+      "fixture": {
+        "kind": "mixed",
+        "text": "enscg",
+        "font": "Verdana",
+        "bold": true,
+        "dark": false,
+        "angles": [
+          -0.15811856498476118,
+          -0.1863472731783986,
+          -0.07685328752268106,
+          -0.10037970426492393,
+          0.09079241391737014
+        ],
+        "phase": 1.3924769762439033,
+        "lineSeed": 590622
+      },
+      "old": {
+        "candidates": [
+          "eeg",
+          "BEX"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 104.74
+      },
+      "new": {
+        "candidates": [
+          "eeg",
+          "ceg",
+          "ee9",
+          "eneg"
+        ],
+        "uncertain": true,
+        "error": null,
+        "ms": 156.35
+      }
+    }
+  ]
+}

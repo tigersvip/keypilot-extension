@@ -1,3 +1,11 @@
+import { beginLoginFeedback, showLoginFeedback, clearLoginFeedback } from './loginFeedback';
+import { probeTotpFields, fillTotpFields, installLoginTotpWatcher, clearTotpProbe, samePageTotpFields, writeSamePageTotp, hasVerificationFields } from './totpFill';
+import { installCaptchaAssist, fillCaptchaForLogin, offerCaptchaLoginContinuation } from './captchaAssist';
+import { findCaptchaTarget } from './captchaTarget';
+import { UI_FONT, MONO_FONT } from '../shared/uiTypography';
+import { createPageUuid } from './randomId';
+import { chooseFillOption, focusFillReview, showRepairReady, reviewFill, snapshotControls, rememberFill, showFillResult, clearFillReview, type ReviewRow } from './fillReview';
+import type { QuickFillProbe, QuickFillTarget } from '../shared/quickFill';
 import type {
   Credential,
   CredentialIconType,
@@ -22,6 +30,7 @@ import type {
   InlineCredentialMatchesResult,
   InlineCredentialSummary,
   InlineFrameDiagnostic,
+  InlineSilentRuleReason,
   ManualBindingResult,
   PendingLoginCandidate,
   RecognitionRuleApplyResult,
@@ -182,7 +191,6 @@ const USERNAME_KEYWORDS = [
   'phone',
   'mobile',
   'tel',
-  'name',
   '邮箱',
   '邮件',
   '用户',
@@ -197,9 +205,10 @@ const USERNAME_KEYWORDS = [
 const NEXT_BUTTON_PATTERN = /下一步|继续|下一个|next|continue|proceed|sign[-\s]?in|log[-\s]?in|sign[-\s]?up|register|create\s+account|join|login|submit|enter|auth|authorize|登录|登\s*录|登入|登\s*入|登陆|注册|创建账号|提交|确认|确定|进入|立即登录|登录系统/i;
 const PASSWORD_TEXT_PATTERN = /password|passwd|pwd|密码/i;
 const USERNAME_TEXT_PATTERN = new RegExp(USERNAME_KEYWORDS.join('|'), 'i');
+const USERNAME_ONLY_LOGIN_SUBMIT_PATTERN =
+  /^(?:next|continue|proceed|sign\s*in|signin|log\s*in|login|enter|submit|authorize|authorization|下一步|继续|登录|登入|提交|进入)$/i;
 const SUBMIT_OUTCOME_TTL = 30000;
 const SUBMIT_OUTCOME_DELAY = 1700;
-const SUBMIT_REPAIR_DELAY = 1400;
 const DEFAULT_REPAIR_ACTIONS: SubmitRepairAction[] = ['commit-fields', 'wait-enabled-click', 'retry-click', 'click-nearby', 'enter-password', 'request-submit'];
 const ERROR_TEXT_PATTERN =
   /incorrect|invalid|wrong|failed|failure|error|denied|locked|disabled|try again|not match|does not match|required|empty|missing|expired|too many|captcha|verify|verification|blocked|用户名|账号|账户|帐号|密码|错误|失败|无效|不存在|不正确|不匹配|重试|不能为空|必填|验证码|校验码|验证|锁定|禁用|过期|频繁|异常/i;
@@ -381,6 +390,7 @@ let inlineStateLoaded = false;
 let inlineFilterQuery = '';
 let inlineSearchNeedsFocus = false;
 let inlineMenuOpen = false;
+let inlinePinnedAnchor: HTMLInputElement | null = null;
 let inlineStatus = '';
 let inlineLocked = false;
 let inlineSuppressed = false;
@@ -390,6 +400,7 @@ let inlineHoverFillTimer: number | null = null;
 let inlineHoverOpenTimer: number | null = null;
 let inlineHoverCloseTimer: number | null = null;
 let inlineLastHoverFilledId = '';
+let repairTarget: {kind:'credential'|'profile';id:string} | null = null;
 let inlineLastHoverFilledAt = 0;
 let inlineRefreshTimer: number | null = null;
 let inlinePositionTimer: number | null = null;
@@ -397,6 +408,8 @@ let inlineRefreshSuppressedUntil = 0;
 let inlineManualPosition: FloatingIconPosition | null = null;
 let inlineDragSuppressClickUntil = 0;
 let inlineMorePointerHandledUntil = 0;
+let lastInlineSilenceRecordKey = '';
+let lastInlineSilenceRecordAt = 0;
 let inlineEditorHost: HTMLDivElement | null = null;
 let inlineEditorRoot: ShadowRoot | null = null;
 let inlineEditorCredential: Credential | null = null;
@@ -428,7 +441,6 @@ let recognitionDebugOpen = false;
 let recognitionDebugCopyStatus = '';
 let lastSubmitOutcome: SubmitOutcome | null = null;
 let submitOutcomeTimer: number | null = null;
-let submitRepairTimer: number | null = null;
 let savePromptHost: HTMLDivElement | null = null;
 let savePromptRoot: ShadowRoot | null = null;
 let savePromptCandidate: PendingLoginCandidate | null = null;
@@ -440,6 +452,13 @@ let pendingSavePromptCheckTimer: number | null = null;
 
 try {
   document.documentElement.dataset.keypilotContentScript = '0.1.0';
+  installCaptchaAssist();
+  installLoginTotpWatcher();
+  if(window.top===window)void chrome.runtime.sendMessage({type:'KEYPILOT_GET_LOGIN_PROGRESS'}).then(outcome=>{
+    if(outcome?.credentialId && (outcome.url!==location.href || outcome.status==='navigated')){
+      submitOutcomeTimer=window.setTimeout(()=>{lastSubmitOutcome=inspectSubmitOutcome(outcome.credentialId,outcome.url);setInlineSubmitOutcomeStatus(lastSubmitOutcome);},SUBMIT_OUTCOME_DELAY);
+    }
+  }).catch(()=>undefined);
 } catch {
   // Best-effort boot marker for diagnostics.
 }
@@ -653,7 +672,7 @@ function sanitizeTitleCandidate(value: string | null | undefined): string {
 }
 
 function normalizedHostTitle(): string {
-  return window.location.hostname.replace(/^www\./i, '').toLowerCase();
+  return window.location.hostname.toLowerCase();
 }
 
 function isIpAddressTitle(value: string): boolean {
@@ -773,7 +792,7 @@ function getPageMeta() {
     ok: true,
     title: getBestPageTitle(document),
     url: window.location.href,
-    domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+    domain: window.location.hostname.toLowerCase(),
     ...getPageIcon()
   };
 }
@@ -783,7 +802,7 @@ function getInlineFrameDiagnostic(): Omit<InlineFrameDiagnostic, 'matchedCount'>
 
   return {
     url: window.location.href,
-    domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+    domain: window.location.hostname.toLowerCase(),
     hasLoginForm: Boolean(context),
     hasUsernameField: Boolean(context?.usernameField),
     hasPasswordField: Boolean(context?.passwordField),
@@ -1179,14 +1198,14 @@ function fieldMatchScore(input: HTMLInputElement, field: CredentialFormField, in
   return score;
 }
 
-function findStoredFieldInput(field: CredentialFormField, usedInputs: Set<HTMLInputElement>): HTMLInputElement | null {
+function findStoredFieldInput(field: CredentialFormField, usedInputs: Set<HTMLInputElement>, scope: ParentNode = document): HTMLInputElement | null {
   const storedSelectorInput = safeQuerySelector<HTMLInputElement>(field.selector);
 
-  if (storedSelectorInput && isStorableInput(storedSelectorInput) && !usedInputs.has(storedSelectorInput)) {
+  if (storedSelectorInput && Array.from(scope.querySelectorAll('input')).includes(storedSelectorInput) && isStorableInput(storedSelectorInput) && !usedInputs.has(storedSelectorInput)) {
     return storedSelectorInput;
   }
 
-  const candidates = getAllVisibleInputs(document)
+  const candidates = getAllVisibleInputs(scope)
     .filter((input) => !usedInputs.has(input))
     .map((input, index) => ({
       input,
@@ -1198,7 +1217,7 @@ function findStoredFieldInput(field: CredentialFormField, usedInputs: Set<HTMLIn
   return candidates[0]?.input ?? null;
 }
 
-function fillStoredFormFields(fields: CredentialFormField[] | undefined): number {
+function fillStoredFormFields(fields: CredentialFormField[] | undefined, scope: ParentNode = document): number {
   if (!fields?.length) return 0;
 
   const usedInputs = new Set<HTMLInputElement>();
@@ -1207,7 +1226,7 @@ function fillStoredFormFields(fields: CredentialFormField[] | undefined): number
   for (const field of fields) {
     if (!field.value) continue;
 
-    const input = findStoredFieldInput(field, usedInputs);
+    const input = findStoredFieldInput(field, usedInputs, scope);
     if (!input) continue;
 
     setNativeValue(input, field.value);
@@ -1310,6 +1329,10 @@ function scopeElement(scope: ParentNode): Element | null {
   return null;
 }
 
+function isDocumentWideScope(scope: ParentNode): boolean {
+  return scope === document || scope === document.body || scope === document.documentElement;
+}
+
 function scopeHeadingText(scope: ParentNode): string {
   const element = scopeElement(scope);
   if (!element) return '';
@@ -1366,6 +1389,10 @@ function scopeLooksLikeRegistration(scope: ParentNode): boolean {
     REGISTER_PASSWORD_PATTERN.test(headingText) ||
     submitTexts.some((text) => REGISTER_SUBMIT_PATTERN.test(text.trim()))
   );
+}
+
+function scopeHasUsernameOnlySubmitSignal(scope: ParentNode): boolean {
+  return scopeSubmitTexts(scope).some((text) => USERNAME_ONLY_LOGIN_SUBMIT_PATTERN.test(text.trim()));
 }
 
 function scopeIsSinglePasswordLogin(scope: ParentNode, fields: HTMLInputElement[]): boolean {
@@ -1438,8 +1465,8 @@ function getUnsafeReasonInScope(scope: ParentNode): string | undefined {
   return getAllVisibleInputs(scope).map(getUnsafeReason).find(Boolean);
 }
 
-function findLoginContext(): LoginContext | null {
-  const passwordField = getAllVisibleInputs(document).find(isPasswordInput);
+function findLoginContext(searchScope: ParentNode = document): LoginContext | null {
+  const passwordField = getAllVisibleInputs(searchScope).find(isPasswordInput);
 
   if (passwordField) {
     const form = passwordField.closest('form');
@@ -1453,7 +1480,7 @@ function findLoginContext(): LoginContext | null {
     };
   }
 
-  const usernameField = getAllVisibleInputs(document)
+  const usernameField = getAllVisibleInputs(searchScope)
     .filter(isUsernameInput)
     .sort((left, right) => scoreUsernameInput(right) - scoreUsernameInput(left))[0];
 
@@ -1470,6 +1497,22 @@ function findLoginContext(): LoginContext | null {
     usernameField,
     unsafeReason: getUnsafeReasonInScope(scope)
   };
+}
+
+function scopeHasUsernameOnlyLoginSignal(scope: ParentNode): boolean {
+  if (siteRuleForcesLoginPage() || pageLooksLikeLoginUrl()) return true;
+  if (scopeLooksLikeRegistration(scope) || pageLooksLikeRegistration()) return false;
+  if (isDocumentWideScope(scope)) return false;
+
+  return scopeHasUsernameOnlySubmitSignal(scope) && scopeLooksLikeLogin(scope);
+}
+
+function inlineLoginContextIsEligible(context: LoginContext | null): context is LoginContext {
+  if (!context) return false;
+  if (context.passwordField) return true;
+  if (!context.usernameField) return false;
+
+  return scopeHasUsernameOnlyLoginSignal(context.scope ?? getLoginScope(context.usernameField));
 }
 
 function visibleClickable(element: HTMLElement): boolean {
@@ -1597,7 +1640,9 @@ function evaluateSaveCandidateDecision(candidate: PendingLoginCandidate, isFinal
   }
 
   if (!loginFormPresent && !pageLooksLikeLoginUrl() && !pageLooksLikeRegistration()) {
-    return { status: 'success', reason: '登录框已消失。', signal: 'login-form-disappeared' };
+    return isFinalAttempt
+      ? { status: 'success', reason: '登录框已持续消失。', signal: 'login-form-disappeared' }
+      : { status: 'pending', reason: '登录框暂时消失，继续确认登录结果。' };
   }
 
   if (pageStillLooksLikeSubmittedLogin(candidate, context)) {
@@ -1637,7 +1682,7 @@ function recordDiagnosticLog(
       type: 'KEYPILOT_RECORD_DIAGNOSTIC_LOG',
       entry: {
         ...entry,
-        domain: entry.domain || window.location.hostname.replace(/^www\./i, '').toLowerCase() || 'unknown'
+        domain: entry.domain || window.location.hostname.toLowerCase() || 'unknown'
       }
     },
     () => {
@@ -1674,22 +1719,23 @@ function createSubmitOutcome(
 function inspectSubmitOutcome(
   credentialId: string,
   startUrl: string,
-  formProfile?: CredentialFormProfile,
-  repairActions: SubmitRepairAction[] = DEFAULT_REPAIR_ACTIONS,
-  allowRepair = true
+  captchaSubmitted = false
 ): SubmitOutcome {
-  if (window.location.href !== startUrl) {
-    return createSubmitOutcome('navigated', '页面已跳转，登录可能已成功。', credentialId);
-  }
-
   const context = findLoginContext();
   const errorText = (context ? visibleErrorText(context.scope) : undefined) ?? visibleErrorText(document);
 
   if (errorText) {
-    return createSubmitOutcome('errorVisible', `页面显示错误：${errorText}`, credentialId, window.location.href, errorText);
+    const explanation = /captcha|验证码|校验码|verification code|security code/i.test(errorText)
+      ? '验证码未通过，请修正后继续登录。'
+      : /password|credential|用户名|密码|账号.*错误/i.test(errorText) ? '账号或密码未通过，请检查保存的账号信息。' : '网站提示登录未完成。';
+    return createSubmitOutcome('errorVisible', explanation + ' ' + errorText, credentialId, window.location.href, errorText);
   }
 
-  if (context?.unsafeReason) {
+  if (hasVerificationFields()) return createSubmitOutcome('waitingVerification', '正在等待网站验证，请核对验证码或其他验证项。', credentialId);
+
+  if (window.location.href !== startUrl) return createSubmitOutcome('navigated', '页面已跳转，登录结果尚未确认。', credentialId);
+
+  if (context?.unsafeReason && !captchaSubmitted) {
     return createSubmitOutcome('blocked', `检测到验证码或安全字段：${context.unsafeReason}，已停止自动提交。`, credentialId);
   }
 
@@ -1698,31 +1744,14 @@ function inspectSubmitOutcome(
   }
 
   if (context.passwordField) {
-    if (allowRepair && !context.unsafeReason) {
-      const repairAction = runSubmitRepairActions(context, context.passwordField, formProfile, repairActions);
-
-      if (repairAction) {
-        if (submitRepairTimer) {
-          window.clearTimeout(submitRepairTimer);
-        }
-
-        submitRepairTimer = window.setTimeout(() => {
-          lastSubmitOutcome = inspectSubmitOutcome(credentialId, startUrl, formProfile, repairActions, false);
-          submitRepairTimer = null;
-          setInlineSubmitOutcomeStatus(lastSubmitOutcome);
-        }, SUBMIT_REPAIR_DELAY);
-
-        return createSubmitOutcome('checking', '第一次提交后仍在登录表单，已尝试备用提交动作，正在再次判断...', credentialId, window.location.href, undefined, repairAction);
-      }
-    }
-
-    return createSubmitOutcome('stillOnLogin', '仍停留在登录表单，可能按钮未触发、密码错误或需要验证码。', credentialId);
+    return createSubmitOutcome('stillOnLogin', '已提交，网站仍显示登录表单。请检查页面提示后再试；不会重复提交。', credentialId);
   }
 
   return createSubmitOutcome('unknown', '已提交，但页面结果暂时无法判断。', credentialId);
 }
 
 function setInlineSubmitOutcomeStatus(outcome: SubmitOutcome) {
+  showLoginFeedback(outcome.message,outcome.credentialId,outcome.status==='waitingVerification' || outcome.status==='errorVisible' || outcome.status==='blocked',outcome.status==='errorVisible'?2:0);
   if (!inlineMenuOpen && !inlineStatus.includes('判断') && !inlineStatus.includes('提交')) return;
   inlineStatus = outcome.message;
   renderInlineWidget();
@@ -1731,20 +1760,16 @@ function setInlineSubmitOutcomeStatus(outcome: SubmitOutcome) {
 function scheduleSubmitOutcomeCheck(
   credentialId: string,
   startUrl: string,
-  formProfile?: CredentialFormProfile,
-  repairActions: SubmitRepairAction[] = DEFAULT_REPAIR_ACTIONS
+  captchaSubmitted = false
 ): SubmitOutcome {
   if (submitOutcomeTimer) {
     window.clearTimeout(submitOutcomeTimer);
   }
-  if (submitRepairTimer) {
-    window.clearTimeout(submitRepairTimer);
-    submitRepairTimer = null;
-  }
 
   lastSubmitOutcome = createSubmitOutcome('checking', '已提交，正在判断登录结果...', credentialId, startUrl);
+  showLoginFeedback(lastSubmitOutcome.message,credentialId);
   submitOutcomeTimer = window.setTimeout(() => {
-    lastSubmitOutcome = inspectSubmitOutcome(credentialId, startUrl, formProfile, repairActions);
+    lastSubmitOutcome = inspectSubmitOutcome(credentialId, startUrl, captchaSubmitted);
     submitOutcomeTimer = null;
     setInlineSubmitOutcomeStatus(lastSubmitOutcome);
   }, SUBMIT_OUTCOME_DELAY);
@@ -1986,7 +2011,7 @@ function findStoredSubmitButton(profile: CredentialFormProfile | undefined, anch
   return candidates[0]?.element ?? null;
 }
 
-function dispatchHumanClick(element: HTMLElement): boolean {
+function dispatchHumanClick(element: HTMLElement, beforeClick?: () => boolean): boolean {
   if (isDisabledControl(element)) return false;
 
   element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
@@ -2024,9 +2049,11 @@ function dispatchHumanClick(element: HTMLElement): boolean {
     element.dispatchEvent(new PointerEvent('pointerup', pointerInit));
   }
 
-  const accepted = element.dispatchEvent(new MouseEvent('click', eventInit));
+  // click() already dispatches a click event and its default action. Dispatching
+  // another synthetic click first submits ordinary forms twice.
+  if (beforeClick && !beforeClick()) return false;
   element.click();
-  return accepted;
+  return true;
 }
 
 function requestFormSubmit(context: LoginContext, button?: HTMLElement | null): boolean {
@@ -2052,22 +2079,6 @@ function requestFormSubmit(context: LoginContext, button?: HTMLElement | null): 
   return false;
 }
 
-function dispatchEnterSubmit(anchorField: HTMLInputElement): boolean {
-  anchorField.focus({ preventScroll: true });
-  const init: KeyboardEventInit = {
-    key: 'Enter',
-    code: 'Enter',
-    bubbles: true,
-    cancelable: true,
-    composed: true
-  };
-
-  const keydownAccepted = anchorField.dispatchEvent(new KeyboardEvent('keydown', init));
-  anchorField.dispatchEvent(new KeyboardEvent('keypress', init));
-  anchorField.dispatchEvent(new KeyboardEvent('keyup', init));
-  return keydownAccepted;
-}
-
 function resolveSubmitButton(anchorField: HTMLInputElement, requireNextText: boolean, formProfile?: CredentialFormProfile): HTMLElement | null {
   const storedButton = requireNextText ? null : findStoredSubmitButton(formProfile, anchorField);
   return storedButton ?? findSubmitButton(anchorField, requireNextText);
@@ -2078,201 +2089,6 @@ function commitLoginFields(context: LoginContext) {
   commitInputValue(context.passwordField);
 }
 
-const pendingEnabledSubmitClicks = new WeakSet<HTMLElement>();
-
-function scheduleEnabledSubmitClick(
-  context: LoginContext,
-  button: HTMLElement,
-  anchorField: HTMLInputElement,
-  requireNextText: boolean,
-  formProfile?: CredentialFormProfile
-): boolean {
-  if (pendingEnabledSubmitClicks.has(button)) return true;
-
-  pendingEnabledSubmitClicks.add(button);
-  let clicked = false;
-  const delays = [90, 180, 360, 720, 1200, 1800, 2600];
-  const lastDelay = delays[delays.length - 1];
-
-  delays.forEach((delay) => {
-    window.setTimeout(() => {
-      if (clicked) return;
-
-      commitLoginFields(context);
-      const currentButton = resolveSubmitButton(anchorField, requireNextText, formProfile) ?? button;
-
-      if (currentButton && visibleClickable(currentButton) && !isDisabledControl(currentButton)) {
-        clicked = true;
-        pendingEnabledSubmitClicks.delete(button);
-        dispatchHumanClick(currentButton);
-        return;
-      }
-
-      if (delay === lastDelay) {
-        pendingEnabledSubmitClicks.delete(button);
-        if (!requireNextText) {
-          dispatchEnterSubmit(anchorField);
-          requestFormSubmit(context, currentButton);
-        }
-      }
-    }, delay);
-  });
-
-  return true;
-}
-
-function scheduleSubmitRetries(
-  context: LoginContext,
-  anchorField: HTMLInputElement,
-  requireNextText: boolean,
-  formProfile?: CredentialFormProfile
-) {
-  [120, 360, 800, 1400].forEach((delay) => {
-    window.setTimeout(() => {
-      commitLoginFields(context);
-      const button = resolveSubmitButton(anchorField, requireNextText, formProfile);
-      if (button && !isDisabledControl(button)) {
-        dispatchHumanClick(button);
-        return;
-      }
-
-      if (button && isDisabledControl(button)) {
-        scheduleEnabledSubmitClick(context, button, anchorField, requireNextText, formProfile);
-        return;
-      }
-
-      if (!requireNextText) {
-        dispatchEnterSubmit(anchorField);
-        requestFormSubmit(context, button);
-      }
-    }, delay);
-  });
-}
-
-function submitLoginContext(
-  context: LoginContext,
-  anchorField: HTMLInputElement,
-  requireNextText = false,
-  formProfile?: CredentialFormProfile
-): { submitted: boolean; submitButtonMissing?: boolean } {
-  commitLoginFields(context);
-  const button = resolveSubmitButton(anchorField, requireNextText, formProfile);
-
-  if (button) {
-    if (isDisabledControl(button)) {
-      scheduleEnabledSubmitClick(context, button, anchorField, requireNextText, formProfile);
-      scheduleSubmitRetries(context, anchorField, requireNextText, formProfile);
-      return { submitted: true };
-    }
-
-    const activated = dispatchHumanClick(button);
-    scheduleSubmitRetries(context, anchorField, requireNextText, formProfile);
-
-    if (!activated && !requireNextText) {
-      requestFormSubmit(context, button);
-    }
-
-    return { submitted: true };
-  }
-
-  if (!requireNextText && context.form) {
-    dispatchEnterSubmit(anchorField);
-    scheduleSubmitRetries(context, anchorField, requireNextText, formProfile);
-
-    if (requestFormSubmit(context)) {
-      return { submitted: true };
-    }
-  }
-
-  if (!requireNextText && dispatchEnterSubmit(anchorField)) {
-    scheduleSubmitRetries(context, anchorField, requireNextText, formProfile);
-    return { submitted: true };
-  }
-
-  return { submitted: false, submitButtonMissing: true };
-}
-
-function uniqueElements(elements: Array<HTMLElement | null | undefined>): HTMLElement[] {
-  const seen = new Set<HTMLElement>();
-  return elements.filter((element): element is HTMLElement => {
-    if (!element || seen.has(element)) return false;
-    seen.add(element);
-    return true;
-  });
-}
-
-function findRepairSubmitCandidates(anchorField: HTMLInputElement, formProfile?: CredentialFormProfile): HTMLElement[] {
-  const scope = anchorField.closest('form') ?? getLoginScope(anchorField);
-  const anchorRect = anchorField.getBoundingClientRect();
-  const scopedCandidates = Array.from(scope.querySelectorAll<HTMLElement>(SUBMIT_CONTROL_SELECTOR));
-  const documentCandidates = Array.from(document.querySelectorAll<HTMLElement>(SUBMIT_CONTROL_SELECTOR));
-
-  return uniqueElements([
-    findStoredSubmitButton(formProfile, anchorField),
-    findSubmitButton(anchorField, false),
-    ...scopedCandidates,
-    ...documentCandidates
-  ])
-    .filter((element) => visibleClickable(element) && !isDisabledControl(element) && isLikelySubmitControl(element))
-    .filter((element) => {
-      const signal = buttonSignalText(element);
-      const type = element.getAttribute('type');
-      return NEXT_BUTTON_PATTERN.test(signal) || type === 'submit' || element instanceof HTMLButtonElement;
-    })
-    .sort((left, right) => {
-      const leftRect = left.getBoundingClientRect();
-      const rightRect = right.getBoundingClientRect();
-      const leftDistance = Math.hypot(leftRect.left - anchorRect.left, leftRect.top - anchorRect.top);
-      const rightDistance = Math.hypot(rightRect.left - anchorRect.left, rightRect.top - anchorRect.top);
-      return leftDistance - rightDistance;
-    })
-    .slice(0, 4);
-}
-
-function runSubmitRepairActions(
-  context: LoginContext,
-  anchorField: HTMLInputElement,
-  formProfile?: CredentialFormProfile,
-  repairActions: SubmitRepairAction[] = DEFAULT_REPAIR_ACTIONS
-): SubmitRepairAction | undefined {
-  const actions = repairActions.length ? repairActions : DEFAULT_REPAIR_ACTIONS;
-
-  if (actions.includes('commit-fields')) {
-    commitLoginFields(context);
-  }
-
-  if (actions.includes('wait-enabled-click')) {
-    const button = resolveSubmitButton(anchorField, false, formProfile);
-    if (button && isDisabledControl(button) && scheduleEnabledSubmitClick(context, button, anchorField, false, formProfile)) {
-      return 'wait-enabled-click';
-    }
-  }
-
-  if (actions.includes('retry-click')) {
-    const button = resolveSubmitButton(anchorField, false, formProfile);
-    if (button && !isDisabledControl(button) && dispatchHumanClick(button)) {
-      return 'retry-click';
-    }
-  }
-
-  if (actions.includes('click-nearby')) {
-    const candidates = findRepairSubmitCandidates(anchorField, formProfile);
-    if (candidates.some((candidate) => dispatchHumanClick(candidate))) {
-      return 'click-nearby';
-    }
-  }
-
-  if (actions.includes('enter-password') && dispatchEnterSubmit(anchorField)) {
-    return 'enter-password';
-  }
-
-  if (actions.includes('request-submit') && requestFormSubmit(context, resolveSubmitButton(anchorField, false, formProfile))) {
-    return 'request-submit';
-  }
-
-  return undefined;
-}
-
 function startStagedPasswordFill(credential: FillCredentialPayload) {
   stagedFill = {
     credential,
@@ -2281,7 +2097,7 @@ function startStagedPasswordFill(credential: FillCredentialPayload) {
   };
 
   stagedObserver?.disconnect();
-  stagedObserver = new MutationObserver(() => {
+  const tryFill = () => {
     if (!stagedFill || Date.now() > stagedFill.expiresAt) {
       stagedObserver?.disconnect();
       stagedFill = null;
@@ -2294,25 +2110,139 @@ function startStagedPasswordFill(credential: FillCredentialPayload) {
       return;
     }
 
-    const result = fillCredential({ ...stagedFill.credential, autoSubmit: stagedFill.autoSubmit }, false);
-
-    if (result.ok && result.filledPassword) {
-      stagedObserver?.disconnect();
-      stagedFill = null;
-    }
-  });
-  stagedObserver.observe(document.documentElement, { childList: true, subtree: true });
+    if (credentialFillPending) { window.setTimeout(tryFill, 50); return; }
+    const credential = { ...stagedFill.credential, autoSubmit: stagedFill.autoSubmit };
+    // Consume this continuation before awaiting OCR; its UI mutations must not re-enter filling.
+    stagedObserver?.disconnect();
+    stagedFill = null;
+    void fillCredential(credential, false).catch(() => undefined);
+  };
+  stagedObserver = new MutationObserver(tryFill);
+  stagedObserver.observe(document.documentElement, { childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class','style','type','disabled','readonly','aria-hidden'] });
+  window.setTimeout(tryFill, 0);
 }
 
-function fillCredential(credential: FillCredentialPayload, allowStage = true): FillCredentialResult {
+let credentialFillPending = false;
+let credentialFillEpoch = 0;
+
+async function fillCredential(credential: FillCredentialPayload, allowStage = true, scopedContext?: LoginContext): Promise<FillCredentialResult> {
+  if (credentialFillPending) return { ok: false, error: 'LOGIN_IN_PROGRESS' };
+  credentialFillPending = true;
+  try { return await performCredentialFill(credential, allowStage, scopedContext); }
+  finally { credentialFillPending = false; }
+}
+
+async function submitWithCaptcha(
+  context: LoginContext, credential: FillCredentialPayload, anchor: HTMLInputElement, next: boolean
+): Promise<{submitted:boolean;skippedSubmit?:boolean;submitButtonMissing?:boolean;captchaMessage?:string;captchaSubmitted?:boolean}> {
+  const inputs = getAllVisibleInputs(context.scope), targets = inputs.map(findCaptchaTarget).filter(target => target !== null);
+  const totpFields=next?[]:samePageTotpFields(anchor);
+  if (targets.length > 1 || inputs.some(input => input !== targets[0]?.input && !totpFields.includes(input) && getUnsafeReason(input))) {
+    return {submitted:false,skippedSubmit:true,captchaMessage:'已填写账号信息。还有短信码、动态口令或无法确定的验证项，请完成验证后登录。'};
+  }
+  const target=targets[0], url=location.href, epoch=credentialFillEpoch, expiresAt=Date.now()+120000;
+  const loginId=String(Date.now())+':'+Math.random().toString(36).slice(2);
+  let submittedElsewhere=false, sessionId:string|undefined, samePageTotpRevision:string|undefined;
+  let totpCode='',totpExpiresAt=0;
+  const onSubmit=()=>{submittedElsewhere=true;};
+  const onClick=(event:MouseEvent)=>{
+    const button=resolveSubmitButton(anchor,next,credential.formProfile);
+    if(event.isTrusted && button && event.composedPath().includes(button))submittedElsewhere=true;
+  };
+  document.addEventListener('submit',onSubmit,true);document.addEventListener('click',onClick,true);
+  const guard=()=>epoch===credentialFillEpoch && Date.now()<expiresAt && location.href===url && !submittedElsewhere
+    && anchor.isConnected && isVisibleInput(anchor)
+    && (!context.usernameField || (context.usernameField.isConnected && context.usernameField.value===credential.username))
+    && (!context.passwordField || (context.passwordField.isConnected && context.passwordField.value===credential.password))
+    && (!context.form || context.form.isConnected)
+    && (!target || ((!context.form || target.input.form===context.form) && getAllVisibleInputs(context.scope).includes(target.input) && getAllVisibleInputs(context.scope).filter(findCaptchaTarget).length===1))
+    && (!totpFields.length || (samePageTotpFields(anchor).every((field,index)=>field===totpFields[index]) && samePageTotpFields(anchor).length===totpFields.length && (!totpCode || (Date.now()<totpExpiresAt-1000 && totpFields.map(field=>field.value).join('')===totpCode))))
+    && !getAllVisibleInputs(context.scope).some(input=>input!==target?.input && !totpFields.includes(input) && getUnsafeReason(input));
+  const authorize=async(armTotp=false)=>{
+    const state=await chrome.runtime.sendMessage({type:'KEYPILOT_AUTHORIZE_LOGIN_SUBMIT',credentialId:credential.id,username:credential.username,password:credential.password,expectedUrl:url,sessionId,armTotp:armTotp&&!next,loginId,samePageTotpRevision});
+    if(!state?.ok || (sessionId && sessionId!==state.sessionId))return false;
+    sessionId=state.sessionId;return guard();
+  };
+  const paused=(message='一键登录已暂停：页面、输入内容、自动登录设置或密码库状态已变化，请核对后重试。')=>({submitted:false,skippedSubmit:true,captchaMessage:message});
+  const submitOnce=async(current:()=>boolean,extraAuthorize:()=>Promise<boolean>)=>{
+    const deadline=Date.now()+2600;
+    while(guard() && current()){
+      const button=resolveSubmitButton(anchor,next,credential.formProfile);
+      if(button && isDisabledControl(button)){
+        if(Date.now()>=deadline)return paused('已填写，登录按钮仍不可用，请检查页面提示。');
+        await new Promise(resolve=>setTimeout(resolve,100));continue;
+      }
+      if(!await extraAuthorize() || !await authorize(true) || !current())return paused();
+      const currentButton=resolveSubmitButton(anchor,next,credential.formProfile);
+      if(currentButton && isDisabledControl(currentButton))continue;
+      if(currentButton)return dispatchHumanClick(currentButton,()=>guard()&&current())?{submitted:true,captchaSubmitted:Boolean(target)}:paused();
+      if(!next && context.form)return {submitted:requestFormSubmit(context),captchaSubmitted:Boolean(target)};
+      return {submitted:false,submitButtonMissing:true,captchaMessage:'已填写，但没有找到可靠的登录按钮。'};
+    }
+    return paused();
+  };
+  let retain=false;
+  const cleanup=()=>{document.removeEventListener('submit',onSubmit,true);document.removeEventListener('click',onClick,true);};
+  const resume=async(current:()=>boolean)=>{
+    if(credentialFillPending)return paused('正在处理登录，请稍后重试。');
+    credentialFillPending=true;
+    try{
+      const result=await submitOnce(current,async()=>true);
+      if(result.submitted){
+        if(next)startStagedPasswordFill(credential);
+        else scheduleSubmitOutcomeCheck(credential.id,url,true);
+      }
+      return result;
+    }finally{credentialFillPending=false;}
+  };
+  try{
+    if(!await authorize())return paused();
+    commitLoginFields(context);
+    if(totpFields.length){
+      if(totpFields.some(input=>input.value))return paused('动态验证码框已有内容，请核对后在网站登录。');
+      const deadline=Date.now()+8000;
+      while(guard()){
+        const state=await chrome.runtime.sendMessage({type:'KEYPILOT_AUTHORIZE_LOGIN_SUBMIT',credentialId:credential.id,username:credential.username,password:credential.password,expectedUrl:url,sessionId,prepareTotp:true});
+        if(!guard() || !state?.ok)return paused(state?.reason || '动态验证码自动填写已暂停，请核对账号与网站设置。');
+        if(state.waiting){
+          showLoginFeedback('动态验证码即将过期，正在等待下一组…',credential.id);
+          if(Date.now()>deadline)return paused('暂未取得有效动态验证码，请手动填写。');
+          await new Promise(resolve=>setTimeout(resolve,500));continue;
+        }
+        if(!writeSamePageTotp(totpFields,state.code,state.expiresAt,anchor))return paused('动态验证码输入框已变化，请手动核对。');
+        totpCode=state.code;totpExpiresAt=state.expiresAt;samePageTotpRevision=state.revision;break;
+      }
+      if(!totpCode || !guard())return paused();
+    }
+    if(!target)return await submitOnce(guard,async()=>true);
+    const captcha=await fillCaptchaForLogin(target.input,guard);
+    if(!captcha.ok){
+      // Keep only this exact form's explicit login intent, for at most two minutes.
+      retain=offerCaptchaLoginContinuation(target.input,guard,resume,cleanup);
+      return paused(captcha.message);
+    }
+    const result=await submitOnce(captcha.isCurrent,captcha.authorize);
+    if(result.submitted && !next){
+      // A rejected code may leave this form visible. Correction remains an explicit action.
+      submittedElsewhere=false;
+      retain=offerCaptchaLoginContinuation(target.input,guard,resume,cleanup,false);
+    }
+    return result;
+  }catch{return paused();}
+  finally{if(!retain)cleanup();}
+}
+
+async function performCredentialFill(credential: FillCredentialPayload, allowStage: boolean, scopedContext?: LoginContext): Promise<FillCredentialResult> {
   const startUrl = window.location.href;
-  const context = findLoginContext();
+  if(credential.loginRequested){beginLoginFeedback();showLoginFeedback('正在填写账号信息…',credential.id);}
+  const context = scopedContext ?? findLoginContext();
 
   if (!context) {
+    if(credential.loginRequested)showLoginFeedback('没有找到可填写的登录表单，请在网站打开登录页面。',credential.id,true);
     return { ok: false, error: 'NO_LOGIN_FORM' };
   }
 
-  fillStoredFormFields(credential.formFields);
+  fillStoredFormFields(credential.formFields, scopedContext?.scope);
 
   if (context.usernameField) {
     setNativeValue(context.usernameField, credential.username);
@@ -2324,18 +2254,20 @@ function fillCredential(credential: FillCredentialPayload, allowStage = true): F
     }
 
     if (credential.autoSubmit) {
-      const submitResult = submitLoginContext(context, context.usernameField, true, credential.formProfile);
+      const submitResult = await submitWithCaptcha(context, credential, context.usernameField, true);
 
       if (!submitResult.submitted) {
+        showLoginFeedback(submitResult.captchaMessage || '已填写用户名，请在网站继续。',credential.id,true);
         return {
           ok: true,
           stage: 'usernameOnly',
           filledUsername: true,
           filledPassword: false,
-          submitButtonMissing: true
+          ...submitResult
         };
       }
 
+      showLoginFeedback('已填写用户名，正在等待密码步骤…',credential.id);
       if (allowStage) {
         startStagedPasswordFill(credential);
       }
@@ -2349,11 +2281,12 @@ function fillCredential(credential: FillCredentialPayload, allowStage = true): F
       };
     }
 
+    if(credential.loginRequested)showLoginFeedback('已填写用户名，请在网站继续。',credential.id);
     return {
       ok: true,
       stage: 'usernameOnly',
       filledUsername: true,
-      filledPassword: false
+      filledPassword: false, skippedSubmit: Boolean(credential.loginRequested), captchaMessage: credential.loginRequested ? '已填写用户名。自动点击登录已关闭，请在网站继续。' : undefined
     };
   }
 
@@ -2361,21 +2294,23 @@ function fillCredential(credential: FillCredentialPayload, allowStage = true): F
 
   const stage = context.usernameField ? 'complete' : 'passwordOnly';
   let submitted = false;
-  let skippedSubmit = false;
+  let skippedSubmit = Boolean(credential.loginRequested && !credential.autoSubmit);
   let submitButtonMissing = false;
+  let captchaMessage: string | undefined = skippedSubmit ? '已填写账号。自动点击登录已关闭，请在网站点击登录。' : undefined;
+  let captchaSubmitted = false;
 
   if (credential.autoSubmit) {
-    if (context.unsafeReason) {
-      skippedSubmit = true;
-    } else {
-      const submitResult = submitLoginContext(context, context.passwordField, false, credential.formProfile);
-      submitted = submitResult.submitted;
-      submitButtonMissing = Boolean(submitResult.submitButtonMissing);
-    }
+    const submitResult = await submitWithCaptcha(context, credential, context.passwordField, false);
+    submitted = submitResult.submitted;
+    skippedSubmit = Boolean(submitResult.skippedSubmit);
+    submitButtonMissing = Boolean(submitResult.submitButtonMissing);
+    captchaMessage = submitResult.captchaMessage;
+    captchaSubmitted = Boolean(submitResult.captchaSubmitted);
   }
 
+  if(credential.loginRequested && !submitted)showLoginFeedback(captchaMessage || '已填写账号，请在网站继续。',credential.id,skippedSubmit && credential.autoSubmit);
   const submitOutcome = submitted
-    ? scheduleSubmitOutcomeCheck(credential.id, startUrl, credential.formProfile, credential.repairActions)
+    ? scheduleSubmitOutcomeCheck(credential.id, startUrl, captchaSubmitted)
     : undefined;
 
   return {
@@ -2385,6 +2320,7 @@ function fillCredential(credential: FillCredentialPayload, allowStage = true): F
     filledPassword: true,
     submitted,
     skippedSubmit,
+    captchaMessage,
     submitButtonMissing,
     unsafeReason: context.unsafeReason,
     submitOutcome
@@ -3125,8 +3061,8 @@ function expandFillProfileFields(profile: FillProfilePayload): FillField[] {
   return fields.filter((field) => field.value.trim());
 }
 
-function findBestFillControl(field: FillField, usedControls: Set<FillControl>): { control: FillControl; score: number } | null {
-  const candidates = getAllFillControls(document)
+function findBestFillControl(field: FillField, usedControls: Set<FillControl>, allowed?: Set<FillControl>): { control: FillControl; score: number } | null {
+  const candidates = getAllFillControls(document).filter(control=>!allowed || allowed.has(control))
     .map((control) => ({ control, score: scoreFillProfileControl(field, control, usedControls) }))
     .filter((item) => item.score >= 34)
     .sort((left, right) => right.score - left.score);
@@ -3155,7 +3091,7 @@ function createFillFieldBinding(control: FillControl, field: FillField): FillFie
   };
 }
 
-function findBoundFillControl(binding: FillFieldBinding | undefined, usedControls: Set<FillControl>): FillControl | null {
+function findBoundFillControl(binding: FillFieldBinding | undefined, usedControls: Set<FillControl>, allowed?: Set<FillControl>): FillControl | null {
   if (!binding) return null;
 
   const candidates: FillControl[] = [];
@@ -3178,91 +3114,70 @@ function findBoundFillControl(binding: FillFieldBinding | undefined, usedControl
     if (indexed) candidates.push(indexed);
   }
 
-  return candidates.find((control) => isFillableControl(control) && !usedControls.has(control)) ?? null;
+  return candidates.find((control) => isFillableControl(control) && !usedControls.has(control) && (!allowed || allowed.has(control))) ?? null;
 }
 
 function bindingForField(profile: FillProfilePayload, field: FillField): FillFieldBinding | undefined {
   return profile.siteBinding?.fields.find((binding) => binding.key === field.key || binding.label === field.label);
 }
 
-function matchFillProfileField(profile: FillProfilePayload, field: FillField, usedControls: Set<FillControl>): { control: FillControl; score: number; binding: boolean } | null {
-  const boundControl = findBoundFillControl(bindingForField(profile, field), usedControls);
+function matchFillProfileField(profile: FillProfilePayload, field: FillField, usedControls: Set<FillControl>, allowed?: Set<FillControl>): { control: FillControl; score: number; binding: boolean } | null {
+  const boundControl = findBoundFillControl(bindingForField(profile, field), usedControls, allowed);
   if (boundControl) {
     return { control: boundControl, score: 999, binding: true };
   }
 
-  const automatic = findBestFillControl(field, usedControls);
+  const automatic = findBestFillControl(field, usedControls, allowed);
   return automatic ? { ...automatic, binding: false } : null;
 }
 
-function fillProfile(profile: FillProfilePayload): FillProfileFillResult {
-  const fields = expandFillProfileFields(profile);
+function planFillProfile(profile: FillProfilePayload, allowed?: Set<FillControl>) {
   const usedControls = new Set<FillControl>();
-  let filledCount = 0;
-  let matchedCount = 0;
-  let skippedCount = 0;
-  const diagnostics: FillProfileDiagnostic[] = [];
+  return expandFillProfileFields(profile).map(field => {
+    const match = matchFillProfileField(profile, field, usedControls, allowed);
+    if (match) usedControls.add(match.control);
+    const control = match?.control;
+    const current = control instanceof HTMLInputElement && ['checkbox','radio'].includes(control.type)
+      ? control.checked : Boolean(control?.value.trim());
+    const action = !match ? 'missing' : profile.onlyEmpty && current ? 'skip' : current ? 'replace' : 'fill';
+    return {field,match,action,oldValue:control?.value,oldChecked:control instanceof HTMLInputElement ? control.checked : undefined};
+  });
+}
 
-  for (const field of fields) {
-    const match = matchFillProfileField(profile, field, usedControls);
-    if (!match) {
-      diagnostics.push({
-        key: field.key,
-        label: field.label,
-        status: 'missing'
-      });
-      continue;
+async function reviewedFillProfile(profile: FillProfilePayload, allowed?: Set<FillControl>, authorize?: () => Promise<boolean>): Promise<FillProfileFillResult> {
+  const plan = planFillProfile(profile, allowed);
+  const epoch=credentialFillEpoch, url=location.href;
+  const repair = () => startFillProfileBinding(profile);
+  let result: FillProfileFillResult = {ok:false,error:'FILL_CANCELLED',filledCount:0,matchedCount:0,skippedCount:0,totalFields:plan.length};
+  const confirmed = await reviewFill(plan.map(row => ({
+    label:row.field.label,target:row.match ? controlLabel(row.match.control) : undefined,
+    action:row.action as ReviewRow['action'],value:row.field.value,secret:row.field.sensitivity !== 'normal'
+  })), async (isCurrent) => {
+    if(authorize && !await authorize())throw new Error('页面或密码库状态已变化，请取消后重新使用快捷键。');
+    if(!isCurrent() || epoch!==credentialFillEpoch || location.href!==url)throw new Error('页面或密码库状态已变化，请重新预览。');
+    for(const row of plan) {
+      const control=row.match?.control;
+      if(control && (!control.isConnected || !isFillableControl(control) || control.value!==row.oldValue || (control instanceof HTMLInputElement && control.checked!==row.oldChecked))) {
+        throw new Error('网页字段已变化，请取消后重新预览。');
+      }
     }
-
-    matchedCount += 1;
-
-    const currentValue = 'value' in match.control ? String(match.control.value ?? '').trim() : '';
-    if (profile.onlyEmpty && currentValue) {
-      skippedCount += 1;
-      usedControls.add(match.control);
-      diagnostics.push({
-        key: field.key,
-        label: field.label,
-        status: 'skipped',
-        controlLabel: controlLabel(match.control),
-        score: match.score,
-        binding: match.binding
-      });
-      continue;
+    const before=snapshotControls();
+    let filledCount=0,matchedCount=0,skippedCount=0;
+    const diagnostics:FillProfileDiagnostic[]=[];
+    for(const row of plan){
+      if(!row.match){diagnostics.push({key:row.field.key,label:row.field.label,status:'missing'});continue;}
+      matchedCount++;
+      const skipped=row.action==='skip';
+      if(skipped)skippedCount++;
+      const filled=!skipped && fillProfileControl(row.match.control,row.field.value);
+      if(filled)filledCount++;
+      diagnostics.push({key:row.field.key,label:row.field.label,status:skipped?'skipped':filled?'filled':'matched',controlLabel:controlLabel(row.match.control),score:row.match.score,binding:row.match.binding});
     }
-
-    if (fillProfileControl(match.control, field.value)) {
-      filledCount += 1;
-      usedControls.add(match.control);
-      diagnostics.push({
-        key: field.key,
-        label: field.label,
-        status: 'filled',
-        controlLabel: controlLabel(match.control),
-        score: match.score,
-        binding: match.binding
-      });
-    } else {
-      diagnostics.push({
-        key: field.key,
-        label: field.label,
-        status: 'matched',
-        controlLabel: controlLabel(match.control),
-        score: match.score,
-        binding: match.binding
-      });
-    }
-  }
-
-  return {
-    ok: filledCount > 0,
-    error: filledCount > 0 ? undefined : 'NO_FILL_PROFILE_FIELDS',
-    filledCount,
-    matchedCount,
-    skippedCount,
-    totalFields: fields.length,
-    diagnostics
-  };
+    rememberFill(before);
+    result={ok:filledCount>0,error:filledCount?undefined:'NO_FILL_PROFILE_FIELDS',filledCount,matchedCount,skippedCount,totalFields:plan.length,diagnostics};
+  }, repair);
+  if(confirmed)showFillResult(result.filledCount,repair);
+  return result;
 }
 
 function diagnoseFillProfile(profile: FillProfilePayload): FillProfileFillResult {
@@ -3375,7 +3290,7 @@ function renderManualBinding() {
         background: #ffffff;
         box-shadow: 0 18px 48px rgba(16, 24, 40, 0.2);
         color: #101828;
-        font-family: Satoshi, Geist, Outfit, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
         overflow: visible;
         animation: keypilot-bind-in 160ms ease-out both;
       }
@@ -3647,7 +3562,7 @@ async function saveManualBinding() {
   const binding: ManualBindingResult = {
     credentialId: credential.id,
     url: window.location.href,
-    domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+    domain: window.location.hostname.toLowerCase(),
     formFields: [
       createBoundField(usernameField, 'username', credential.username, scope),
       createBoundField(passwordField, 'password', credential.password, scope)
@@ -3670,7 +3585,8 @@ async function saveManualBinding() {
       renderManualBinding();
     }
 
-    window.setTimeout(() => stopManualBinding('已保存字段和登录按钮绑定。'), 1200);
+    stopManualBinding('已保存字段和登录按钮绑定。');
+    showRepairReady(() => {void handleInlineFill(credential.id,'fill');});
   } catch (error) {
     if (manualBinding) {
       manualBinding.status = inlineErrorMessage(error);
@@ -3691,6 +3607,32 @@ function captureLoginStructureFields(scope: ParentNode, usernameField: HTMLInput
   ].filter((field): field is CredentialFormField => Boolean(field));
 }
 
+async function saveDetectedPageRule(pageMode: SiteRulePageMode): Promise<RecognitionRuleApplyResult> {
+  const context = findLoginContext();
+  const passwordField = context?.passwordField;
+  const usernameField = context?.usernameField;
+  const scope = passwordField
+    ? passwordField.closest('form') ?? usernameField?.closest('form') ?? context.scope ?? getLoginScope(passwordField)
+    : context?.scope ?? document;
+  const submitButton = passwordField ? findSubmitButton(passwordField) : undefined;
+
+  const rule = {
+    url: window.location.href,
+    domain: window.location.hostname.toLowerCase(),
+    pathPattern: currentRulePathPattern(),
+    pageMode,
+    disablePasswordGenerator: pageMode === 'login' || pageMode === 'fill-profile',
+    formFields: passwordField ? captureLoginStructureFields(scope, usernameField, passwordField) : undefined,
+    formProfile: passwordField ? captureFormProfile(scope, usernameField, passwordField, submitButton ?? undefined) : undefined,
+    repairActions: DEFAULT_REPAIR_ACTIONS
+  };
+
+  return sendRuntimeMessage<RecognitionRuleApplyResult>({
+    type: 'KEYPILOT_APPLY_RECOGNITION_RULE',
+    rule
+  });
+}
+
 async function applyLoginRecognitionRule() {
   const context = findLoginContext();
   const passwordField = context?.passwordField;
@@ -3701,27 +3643,11 @@ async function applyLoginRecognitionRule() {
     return;
   }
 
-  const usernameField = context.usernameField;
-  const scope = passwordField.closest('form') ?? usernameField?.closest('form') ?? context.scope ?? getLoginScope(passwordField);
-  const submitButton = findSubmitButton(passwordField);
-
   recognitionDebugCopyStatus = '正在保存当前页面为登录页规则...';
   renderRecognitionDebugPanel();
 
   try {
-    const response = await sendRuntimeMessage<RecognitionRuleApplyResult>({
-      type: 'KEYPILOT_APPLY_RECOGNITION_RULE',
-      rule: {
-        url: window.location.href,
-        domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
-        pathPattern: currentRulePathPattern(),
-        pageMode: 'login',
-        disablePasswordGenerator: true,
-        formFields: captureLoginStructureFields(scope, usernameField, passwordField),
-        formProfile: captureFormProfile(scope, usernameField, passwordField, submitButton ?? undefined),
-        repairActions: DEFAULT_REPAIR_ACTIONS
-      }
-    });
+    const response = await saveDetectedPageRule('login');
 
     if (!response.ok) {
       throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'RULE_SAVE_FAILED'));
@@ -3751,7 +3677,7 @@ function renderFillProfileBinding() {
   const pathPattern = currentRulePathPattern();
   const scopeText = fillProfileBinding.scope === 'path' && pathPattern
     ? `仅当前路径：${pathPattern}`
-    : `整个域名：${window.location.hostname.replace(/^www\./i, '').toLowerCase()}`;
+    : `整个域名：${window.location.hostname.toLowerCase()}`;
   const options = fields
     .map((field) => `<option value="${escapeHtml(field.key)}" ${field.key === selectedField?.key ? 'selected' : ''}>${escapeHtml(field.label)}${boundKeys.has(field.key) ? ' · 已绑定' : ''}</option>`)
     .join('');
@@ -3766,7 +3692,7 @@ function renderFillProfileBinding() {
         background: #ffffff;
         box-shadow: 0 18px 48px rgba(16, 24, 40, 0.2);
         color: #101828;
-        font-family: Satoshi, Geist, Outfit, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
         overflow: hidden;
         animation: keypilot-bind-in 160ms ease-out both;
       }
@@ -4093,7 +4019,7 @@ async function saveFillProfileBinding() {
   const binding: FillProfileBindingResult = {
     profileId: fillProfileBinding.profile.id,
     url: window.location.href,
-    domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+    domain: window.location.hostname.toLowerCase(),
     pathPattern: fillProfileBinding.scope === 'path' ? currentRulePathPattern() : undefined,
     fields: fillProfileBinding.bindings
   };
@@ -4113,7 +4039,8 @@ async function saveFillProfileBinding() {
       renderFillProfileBinding();
     }
 
-    window.setTimeout(() => stopFillProfileBinding('已保存填表字段绑定。'), 1200);
+    stopFillProfileBinding('已保存填表字段绑定。');
+    showRepairReady(() => {void handleInlineFillProfile(binding.profileId);});
   } catch (error) {
     if (fillProfileBinding) {
       fillProfileBinding.status = inlineErrorMessage(error);
@@ -4174,7 +4101,7 @@ function renderBindingTestOverlay(elements: Array<{ element: HTMLElement; label:
         background: #ffffff;
         box-shadow: 0 18px 48px rgba(16, 24, 40, 0.2);
         color: #101828;
-        font-family: Satoshi, Geist, Outfit, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
         overflow: hidden;
         animation: keypilot-test-in 160ms ease-out both;
       }
@@ -4385,6 +4312,10 @@ function getInlineLoginAnchor(): HTMLInputElement | null {
     return null;
   }
 
+  if (!inlineLoginContextIsEligible(context)) {
+    return null;
+  }
+
   return context?.usernameField ?? context?.passwordField ?? null;
 }
 
@@ -4418,13 +4349,209 @@ function scoreFillProfileInlineAnchor(control: FillControl): number {
   return score;
 }
 
+const FILL_PROFILE_CONTEXT_SELECTOR = [
+  'form',
+  '[role="form"]',
+  '[class*="form"]',
+  '[class*="signup"]',
+  '[class*="register"]',
+  '[class*="application"]',
+  '[class*="checkout"]',
+  '[class*="address"]',
+  '[class*="contact"]',
+  '[class*="profile"]',
+  '[class*="quote"]',
+  '[class*="lead"]',
+  '[data-testid*="form"]',
+  '[data-test*="form"]',
+  '[data-qa*="form"]'
+].join(',');
+
+const FILL_PROFILE_ACTION_PATTERN =
+  /save|next|continue|proceed|apply|register|sign\s*up|create\s+account|update|checkout|保存|下一步|继续|申请|注册|更新|确认/i;
+
+const FILL_PROFILE_PAGE_PATTERN =
+  /register|registration|signup|sign\s*up|create\s+account|application|apply|checkout|shipping|billing|loan|insurance|vehicle|driver|identity|personal\s+information|account\s+information|address|profile|保存|下一步|继续|注册|申请|地址|资料|身份|车险|投保/i;
+
+const PASSIVE_FILL_PROFILE_PAGE_PATTERN =
+  /(?:^|[/?#&])(?:pricing|price|plans|compare|solutions|hosting|product|products|about|contact|support|blog|docs)(?:[/?#&=]|$)|pricing|source\s+code|hosting|custom\s+delivery|commercial\s+package|explore\s+live\s+demo|contact\s+sales|newsletter|subscribe|留言|订阅|联系|咨询|报价|演示/i;
+
+const PASSIVE_FILL_PROFILE_SCOPE_PATTERN =
+  /newsletter|subscribe|leave\s+this\s+field\s+empty|contact\s+(?:us|sales)|send\s+message|message|demo|pricing|source\s+code|hosting|custom\s+delivery|commercial\s+package|telegram|whatsapp|skype|your\s+role|company\s+website|work\s+email|留言|订阅|联系|咨询|报价|演示|客服/i;
+
+function fillControlHasFormContext(control: FillControl): boolean {
+  try {
+    return Boolean(control.closest(FILL_PROFILE_CONTEXT_SELECTOR));
+  } catch {
+    return Boolean(control.closest('form, [role="form"]'));
+  }
+}
+
+function fillControlScope(control: FillControl): ParentNode {
+  try {
+    return control.closest(FILL_PROFILE_CONTEXT_SELECTOR) ?? control.closest('form, [role="form"]') ?? document.body ?? document;
+  } catch {
+    return control.closest('form, [role="form"]') ?? document.body ?? document;
+  }
+}
+
+function fillScopeIntentText(scope: ParentNode): string {
+  const element = scopeElement(scope);
+  return [
+    element?.id ?? '',
+    String(element?.className ?? ''),
+    element?.getAttribute('aria-label') ?? '',
+    scopeHeadingText(scope),
+    scopeSubmitText(scope),
+    compactText(element?.textContent ?? '').slice(0, 1400)
+  ].join(' ');
+}
+
+function scopeLooksLikePassiveFillProfile(scope: ParentNode): boolean {
+  const element = scopeElement(scope);
+  const inFooter = Boolean(element?.closest('footer, [id*="footer" i], [class*="footer" i]'));
+  const text = fillScopeIntentText(scope);
+  const hasStrongFillSignal = FILL_PROFILE_PAGE_PATTERN.test(text);
+
+  return (inFooter || PASSIVE_FILL_PROFILE_SCOPE_PATTERN.test(text)) && !hasStrongFillSignal;
+}
+
+function pageLooksLikePassiveFillProfilePage(): boolean {
+  const pageScope = document.body ?? document.documentElement;
+  const pageText = [
+    window.location.pathname,
+    window.location.search,
+    document.title,
+    scopeHeadingText(pageScope),
+    scopeSubmitText(pageScope)
+  ].join(' ');
+
+  return PASSIVE_FILL_PROFILE_PAGE_PATTERN.test(pageText) && !FILL_PROFILE_PAGE_PATTERN.test(pageText);
+}
+
+function pageHasFillProfileContext(controls: FillControl[]): boolean {
+  if (controls.length < 2) return false;
+
+  const pageScope = document.body ?? document.documentElement;
+  const actionTexts = scopeSubmitTexts(pageScope);
+  const pageText = [
+    window.location.pathname,
+    window.location.search,
+    document.title,
+    scopeHeadingText(pageScope),
+    actionTexts.join(' ')
+  ].join(' ');
+  const pageHasStrongFillSignal = FILL_PROFILE_PAGE_PATTERN.test(pageText);
+
+  if (pageLooksLikePassiveFillProfilePage() && !pageHasStrongFillSignal) {
+    return false;
+  }
+
+  const active = document.activeElement;
+  const activeControl =
+    active instanceof HTMLInputElement || active instanceof HTMLSelectElement || active instanceof HTMLTextAreaElement
+      ? active
+      : null;
+
+  if (
+    activeControl &&
+    controls.includes(activeControl) &&
+    scoreFillProfileInlineAnchor(activeControl) >= 55 &&
+    !scopeLooksLikePassiveFillProfile(fillControlScope(activeControl))
+  ) {
+    return true;
+  }
+
+  const eligibleFormControls = controls.filter((control) => fillControlHasFormContext(control) && !scopeLooksLikePassiveFillProfile(fillControlScope(control)));
+  if (eligibleFormControls.length < 2) return false;
+
+  const scopeHasStrongFillSignal = eligibleFormControls.some((control) => FILL_PROFILE_PAGE_PATTERN.test(fillScopeIntentText(fillControlScope(control))));
+  if (scopeHasStrongFillSignal) {
+    return true;
+  }
+
+  if (!pageHasStrongFillSignal) return false;
+
+  return actionTexts.some((text) => FILL_PROFILE_ACTION_PATTERN.test(text)) || eligibleFormControls.length >= 3;
+}
+
+interface QuickFillScope {
+  controls: Set<FillControl>;
+  scope: ParentNode;
+  login?: LoginContext;
+}
+let quickFillState: {probe:QuickFillProbe; scopes:Map<string,QuickFillScope>; epoch:number; expiresAt:number} | undefined;
+for(const event of ['pagehide','popstate','hashchange'])window.addEventListener(event,()=>{
+  if(!quickFillState)return;
+  quickFillState=undefined;clearFillReview();
+});
+
+function probeQuickFill(): QuickFillProbe {
+  const active=document.activeElement;
+  // frameElement belongs to the parent realm, so instanceof HTMLElement is not reliable here.
+  const frame=window.frameElement, rect=frame?.getBoundingClientRect();
+  const style=frame?.ownerDocument.defaultView?.getComputedStyle(frame);
+  const frameVisible=!frame || Boolean(rect?.width && rect.height && style?.visibility!=='hidden' && style?.display!=='none' && style?.opacity!=='0');
+  const all=(frameVisible?getAllFillControls(document):[]).filter(control=>!(control instanceof HTMLInputElement && (control.type==='search' || /^(search|q|query)$/i.test(control.name) || getUnsafeReason(control))));
+  const groups=new Map<ParentNode,FillControl[]>();
+  for(const control of all){
+    const scope=control.form ?? control.closest('[role="form"]') ?? document.body;
+    const controls=groups.get(scope)??[];controls.push(control);groups.set(scope,controls);
+  }
+  const targets:QuickFillTarget[]=[], scopes=new Map<string,QuickFillScope>();
+  const add=(kind:QuickFillTarget['kind'],scope:ParentNode,controls:FillControl[],login?:LoginContext,uncertain=false)=>{
+    const id=String(targets.length), heading=scopeHeadingText(scope).trim().slice(0,70);
+    targets.push({id,kind,label:(kind==='login'?'登录账号':'填写资料')+(heading?' · '+heading:''),focused:document.hasFocus() && controls.includes(active as FillControl),uncertain});
+    scopes.set(id,{scope,controls:new Set(controls),login});
+  };
+  for(const [scope,controls] of groups){
+    const context=findLoginContext(scope);
+    const passwords=controls.filter((control):control is HTMLInputElement=>control instanceof HTMLInputElement && isPasswordInput(control));
+    const registration=siteRuleForcesRegistrationPage() || passwords.some(input=>input.autocomplete==='new-password' || isConfirmPasswordField(input)) || (!siteRuleForcesLoginPage() && scopeLooksLikeRegistration(scope));
+    const login=!registration && inlineSiteRule?.pageMode!=='fill-profile' && inlineLoginContextIsEligible(context) ? context : undefined;
+    if(login)add('login',scope,controls.filter(control=>control===login.usernameField || control===login.passwordField),{...login,scope});
+    const profileControls=controls.filter(control=>!(control instanceof HTMLInputElement && (isPasswordInput(control) || control.autocomplete==='username')) && control!==login?.usernameField);
+    const strong=profileControls.some(control=>scoreFillProfileInlineAnchor(control)>=54);
+    if(profileControls.length && (strong || (profileControls.length>=2 && !login))){
+      add('profile',scope,profileControls,undefined,!strong && !pageHasFillProfileContext(profileControls));
+    }
+  }
+  const probe={token:createPageUuid(),url:location.href,frameFocused:document.hasFocus() && active!==document.body && active!==document.documentElement && !(active instanceof HTMLIFrameElement),targets};
+  quickFillState={probe,scopes,epoch:credentialFillEpoch,expiresAt:Date.now()+120000};
+  return probe;
+}
+
+function quickFillTarget(token:string,targetId:string): QuickFillScope | undefined {
+  const state=quickFillState, target=state?.scopes.get(targetId);
+  if(!state || state.probe.token!==token || state.probe.url!==location.href || state.epoch!==credentialFillEpoch || Date.now()>state.expiresAt || !target)return;
+  if(target.scope instanceof Element && !target.scope.isConnected)return;
+  if([...target.controls].some(control=>!isFillableControl(control) || !control.isConnected || !(target.scope as Node).contains(control)))return;
+  return target;
+}
+
+async function applyQuickFill(message:{token:string;targetId:string;profile?:FillProfilePayload;credential?:FillCredentialPayload}) {
+  const target=quickFillTarget(message.token,message.targetId);
+  if(!target)return {ok:false,error:'QUICK_FILL_STALE'};
+  const authorize=async()=>{
+    const result=await sendRuntimeMessage<{ok:boolean}>({type:'KEYPILOT_VALIDATE_QUICK_FILL',token:message.token,targetId:message.targetId});
+    return result?.ok && quickFillTarget(message.token,message.targetId)===target;
+  };
+  if(!await authorize())return {ok:false,error:'QUICK_FILL_STALE'};
+  if(message.profile)return reviewedFillProfile({...message.profile,onlyEmpty:true},target.controls,authorize);
+  if(message.credential && target.login){
+    return fillCredential({...message.credential,autoSubmit:false,loginRequested:false},false,target.login);
+  }
+  return {ok:false,error:'NO_FILL_TARGET'};
+}
+
 function getFillProfileInlineAnchor(): HTMLInputElement | null {
   const controls = getAllFillControls(document).filter((control) => !(control instanceof HTMLInputElement && isPasswordInput(control)));
   if (controls.length < 2) return null;
+  if (!pageHasFillProfileContext(controls)) return null;
 
   const candidates = controls
     .map((control) => ({ control, score: scoreFillProfileInlineAnchor(control) }))
-    .filter((item) => item.control instanceof HTMLInputElement && item.score >= 38)
+    .filter((item) => item.control instanceof HTMLInputElement && item.score >= 54)
     .sort((left, right) => right.score - left.score);
 
   return (candidates[0]?.control as HTMLInputElement | undefined) ?? null;
@@ -4433,12 +4560,29 @@ function getFillProfileInlineAnchor(): HTMLInputElement | null {
 function getInlineAnchor(): HTMLInputElement | null {
   const fillAnchor = getFillProfileInlineAnchor();
   const loginAnchor = getInlineLoginAnchor();
+  const anchor = fillAnchor && (pageLooksLikeRegistration() || !loginAnchor)
+    ? fillAnchor
+    : loginAnchor ?? fillAnchor;
 
-  if (fillAnchor && (pageLooksLikeRegistration() || !loginAnchor)) {
-    return fillAnchor;
+  if (!anchor || !anchor.isConnected || !isVisibleInput(anchor)) return null;
+
+  return anchor;
+}
+
+function pinInlineAnchorForMenu() {
+  inlinePinnedAnchor = getInlineAnchor();
+}
+
+function clearPinnedInlineAnchor() {
+  inlinePinnedAnchor = null;
+}
+
+function getPositionInlineAnchor(): HTMLInputElement | null {
+  if (inlineMenuOpen && inlinePinnedAnchor?.isConnected && isVisibleInput(inlinePinnedAnchor)) {
+    return inlinePinnedAnchor;
   }
 
-  return loginAnchor ?? fillAnchor;
+  return getInlineAnchor();
 }
 
 function hasInlineVisibleItems(): boolean {
@@ -4452,8 +4596,62 @@ function hasInlineContextualItems(): boolean {
   return Boolean((loginAnchor && inlineMatches.length > 0) || (fillAnchor && inlineFillProfiles.length > 0));
 }
 
+function visibleActionCount(): number {
+  return Array.from(document.querySelectorAll<HTMLElement>('button, input[type="submit"], input[type="button"], a[href], [role="button"]'))
+    .filter(visibleElement)
+    .length;
+}
+
+function pageLooksEmptyForInline(): boolean {
+  const visibleInputs = getAllVisibleInputs(document);
+  const bodyText = compactText(document.body?.innerText ?? '');
+
+  return visibleInputs.length === 0 && visibleActionCount() === 0 && bodyText.length < 24;
+}
+
+function inlineSilenceReason(): InlineSilentRuleReason | null {
+  if (!inlineMatches.length && !inlineFillProfiles.length) return null;
+  if (getInlineAnchor()) return null;
+  if (findPasswordGeneratorContext()) return null;
+  if (pageLooksLikeRegistration()) return null;
+
+  if (pageLooksEmptyForInline()) return 'empty-page';
+  if (inlineFillProfiles.length && pageLooksLikePassiveFillProfilePage()) return 'passive-form';
+  if (inlineFillProfiles.length) return 'no-form-context';
+  return 'no-inline-anchor';
+}
+
+function maybeRecordInlineSilence(reason: InlineSilentRuleReason, confidence = 0.78) {
+  const key = `${window.location.origin}${window.location.pathname}:${reason}`;
+  const now = Date.now();
+
+  if (lastInlineSilenceRecordKey === key && now - lastInlineSilenceRecordAt < 1000 * 60 * 10) {
+    return;
+  }
+
+  lastInlineSilenceRecordKey = key;
+  lastInlineSilenceRecordAt = now;
+
+  void sendRuntimeMessage<{ ok: boolean }>({
+    type: 'KEYPILOT_RECORD_INLINE_SILENCE',
+    url: window.location.href,
+    reason,
+    confidence,
+    source: 'auto',
+    title: document.title || getBestPageTitle(document)
+  }).catch(() => undefined);
+}
+
+function inlineSilenceConfidence(reason: InlineSilentRuleReason): number {
+  if (reason === 'empty-page') return 0.92;
+  if (reason === 'passive-form') return 0.9;
+  if (reason === 'no-form-context') return 0.84;
+  return 0.8;
+}
+
 function hideInlineWidget() {
   inlineMenuOpen = false;
+  clearPinnedInlineAnchor();
   inlineMoreCredentialId = null;
   inlineMoreProfileId = null;
   if (inlineHost) inlineHost.style.display = 'none';
@@ -4473,16 +4671,8 @@ function getInlineInitial(match: InlineCredentialSummary): string {
   return (match.title || match.domain || match.username || 'K').slice(0, 1).toUpperCase();
 }
 
-function getRuntimeAssetUrl(path: string): string {
-  try {
-    return chrome.runtime.getURL(path);
-  } catch {
-    return '';
-  }
-}
-
 function floatingPositionKey(kind: FloatingIconKind): string {
-  const host = window.location.hostname.replace(/^www\./i, '').toLowerCase() || 'local';
+  const host = window.location.hostname.toLowerCase() || 'local';
   return `keypilot:floating:${kind}:${host}`;
 }
 
@@ -4716,11 +4906,6 @@ function disableNativeDragGhost(root: ParentNode | null) {
 }
 
 function renderDefaultInlineIcon(): string {
-  const iconUrl = getRuntimeAssetUrl('icons/default-site-32.png');
-  if (iconUrl) {
-    return `<img class="default-site-icon" src="${escapeHtml(iconUrl)}" alt="" draggable="false" />`;
-  }
-
   return `
     <svg class="default-site-icon" viewBox="0 0 64 64" aria-hidden="true">
       <rect x="2" y="2" width="60" height="60" rx="14" fill="#EAF2FF"/>
@@ -4737,6 +4922,7 @@ function inlineErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error || '');
 
   if (message === 'VAULT_LOCKED') return 'KeyPilot 已锁定，请先打开插件解锁。';
+  if (message === 'LOGIN_IN_PROGRESS') return '正在处理本次一键登录，请稍候。';
   if (message === 'SAVE_INBOX_NOT_READY') return '请先打开 KeyPilot 解锁一次，之后锁定状态也可以直接加密暂存。';
   if (message === 'NO_MATCHING_CREDENTIAL') return '当前网页没有匹配的账号。';
   if (message === 'NO_LOGIN_FORM') return '没有检测到登录表单。';
@@ -4748,6 +4934,8 @@ function inlineErrorMessage(error: unknown): string {
   if (message === 'INVALID_BINDING') return '绑定信息不完整，请重新选择字段。';
   if (message.includes('Receiving end does not exist')) return '页面脚本未就绪，请刷新网页后重试。';
 
+  if (message === 'FILL_CANCELLED') return '已取消填写，网页未改变。';
+  if (message === 'REAUTH_REQUIRED') return '请在 KeyPilot 密码库中验证主密码后查看或复制。';
   return message || '快捷填充失败，请稍后重试。';
 }
 
@@ -4822,6 +5010,7 @@ function openInlineMenuFromHover() {
   }
 
   inlineMenuOpen = true;
+  pinInlineAnchorForMenu();
   inlineMoreCredentialId = null;
   inlineMoreProfileId = null;
   inlineSearchNeedsFocus = false;
@@ -4845,6 +5034,7 @@ function closeInlineMenuFromHover() {
   inlineHoverCloseTimer = window.setTimeout(() => {
     inlineHoverCloseTimer = null;
     inlineMenuOpen = false;
+    clearPinnedInlineAnchor();
     inlineStatus = '';
     inlineFilterQuery = '';
     inlineMoreCredentialId = null;
@@ -4918,7 +5108,7 @@ function renderInlineMoreMenu(match: InlineCredentialSummary): string {
         <span>${inlineCommandIcon('home')}</span><strong>打开起始页</strong>
       </button>
       <button class="command" type="button" data-action="hide-domain" data-id="${escapeHtml(match.id)}">
-        <span>${inlineCommandIcon('hide')}</span><strong>不在此域中显示</strong>
+        <span>${inlineCommandIcon('hide')}</span><strong>不在此页面显示</strong>
       </button>
     </div>
   `;
@@ -5063,7 +5253,7 @@ function renderInlineProfileMoreMenu(profile: InlineFillProfileSummary): string 
         <span>${inlineCommandIcon('home')}</span><strong>打开起始页</strong>
       </button>
       <button class="command" type="button" data-action="hide-domain" data-id="${escapeHtml(profile.id)}">
-        <span>${inlineCommandIcon('hide')}</span><strong>不在此域中显示</strong>
+        <span>${inlineCommandIcon('hide')}</span><strong>不在此页面显示</strong>
       </button>
     </div>
   `;
@@ -5210,7 +5400,7 @@ function renderInlineWidget() {
         background: #ffffff;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
         color: #0f172a;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
         pointer-events: auto;
         animation: inline-menu-in 110ms ease-out both;
       }
@@ -5687,9 +5877,11 @@ function renderInlineWidget() {
         inlineMoreCredentialId = null;
         inlineMoreProfileId = null;
         if (inlineMenuOpen) {
+          pinInlineAnchorForMenu();
           inlineSearchNeedsFocus = false;
           scheduleInlineRefresh(0);
         } else {
+          clearPinnedInlineAnchor();
           inlineFilterQuery = '';
         }
         renderInlineWidget();
@@ -5699,6 +5891,7 @@ function renderInlineWidget() {
 
       if (action === 'close') {
         inlineMenuOpen = false;
+        clearPinnedInlineAnchor();
         inlineStatus = '';
         inlineFilterQuery = '';
         inlineMoreCredentialId = null;
@@ -5709,7 +5902,7 @@ function renderInlineWidget() {
       }
 
       if (action === 'report') {
-        inlineStatus = '请打开 KeyPilot 弹窗里的当前网站诊断，复现后把诊断结果发给开发者。';
+        void startInlineRepair();
         renderInlineWidget();
         return;
       }
@@ -5856,6 +6049,7 @@ function openInlineMoreMenuFromButton(button: HTMLButtonElement) {
   cancelInlineHoverClose();
   suppressInlineRefreshFor(900);
   inlineMenuOpen = true;
+  pinInlineAnchorForMenu();
   inlineMorePointerHandledUntil = Date.now() + 360;
 
   if (action === 'more') {
@@ -5990,7 +6184,7 @@ function renderInlineWidgetLegacy() {
         background: #ffffff;
         box-shadow: 0 16px 38px rgba(16, 24, 40, 0.18);
         color: #101828;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
         pointer-events: auto;
       }
       header {
@@ -6251,6 +6445,7 @@ function renderInlineWidgetLegacy() {
       if (action === 'toggle') {
         inlineMenuOpen = !inlineMenuOpen;
         if (inlineMenuOpen) {
+          pinInlineAnchorForMenu();
           scheduleInlineRefresh(0);
         }
         renderInlineWidget();
@@ -6260,6 +6455,7 @@ function renderInlineWidgetLegacy() {
 
       if (action === 'close') {
         inlineMenuOpen = false;
+        clearPinnedInlineAnchor();
         inlineStatus = '';
         renderInlineWidget();
         positionInlineWidget();
@@ -6267,7 +6463,7 @@ function renderInlineWidgetLegacy() {
       }
 
       if (action === 'report') {
-        inlineStatus = '请刷新网页后重试；如果仍然失败，可在 KeyPilot 里使用“绑定字段”校准此网站。';
+        void startInlineRepair();
         renderInlineWidget();
         return;
       }
@@ -6385,7 +6581,7 @@ function renderInlineCredentialEditor() {
         justify-items: end;
         background: rgba(15, 23, 42, 0.08);
         color: #101828;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
       }
       .drawer {
         width: min(430px, calc(100vw - 24px));
@@ -6814,6 +7010,7 @@ async function openInlineCredentialEditor(credentialId: string) {
   ensureInlineCredentialEditor();
 
   inlineMenuOpen = false;
+  clearPinnedInlineAnchor();
   inlineMoreCredentialId = null;
   inlineMoreProfileId = null;
   inlineStatus = '';
@@ -7049,6 +7246,21 @@ function findPasswordGeneratorContext(): PasswordGeneratorContext | null {
   const pageExplicitRegistrationSignal =
     passwordFields.some(hasExplicitRegistrationPasswordSignal) ||
     (passwordFields.length >= 2 && passwordFields.some(isConfirmPasswordField));
+  const loginContext = findLoginContext();
+  const pageHasRegistrationIntent =
+    pageExplicitRegistrationSignal ||
+    pageLooksLikeRegistration() ||
+    passwordFieldsLookLikeRegistration(passwordFields);
+
+  if (
+    inlineMatches.length > 0 &&
+    loginContext?.passwordField &&
+    passwordFields.includes(loginContext.passwordField) &&
+    inlineLoginContextIsEligible(loginContext) &&
+    !pageHasRegistrationIntent
+  ) {
+    return null;
+  }
 
   if (pageLooksLikeLoginUrl() && !pageExplicitRegistrationSignal) {
     return null;
@@ -7163,29 +7375,33 @@ function updatePasswordGeneratorOptions(patch: Partial<PasswordGeneratorOptions>
   positionPasswordGeneratorWidget();
 }
 
+// Inline artwork keeps page widgets independent of extension image requests and page image policies.
+function renderKeyPilotMark(): string {
+  return `
+    <svg viewBox="0 0 128 128" width="24" height="24" aria-hidden="true">
+      <rect width="128" height="128" rx="30" fill="#2563EB"/>
+      <path d="M64 17 105 31v31c0 25-20 44-41 54-21-10-41-29-41-54V31l41-14Z" fill="#FFFFFF"/>
+      <path d="M64 26 96 37v25c0 20-15 36-32 45-17-9-32-25-32-45V37l32-11Z" fill="#2563EB"/>
+      <circle cx="64" cy="55" r="9" fill="#FFFFFF"/>
+      <path d="m60 61-4 18h16l-4-18Z" fill="#FFFFFF"/>
+      <path d="m80 77 6 6 16-17" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+}
+
 function renderPasswordGeneratorIcon(): string {
-  const iconUrl = getRuntimeAssetUrl('icons/icon32.png');
   return `
     <span class="pg-mark" aria-hidden="true">
-      <svg viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="3" y="3" width="26" height="26" rx="8" fill="#2563EB"/>
-        <path d="M16 7.5 22 9.7v5.1c0 5.1-2.8 8.5-6 9.9-3.2-1.4-6-4.8-6-9.9V9.7l6-2.2Z" fill="#FFFFFF"/>
-        <path d="m14.9 17.7-2.4-2.3 1.3-1.4 1.2 1.2 3.4-3.5 1.4 1.4-4.9 4.6Z" fill="#2563EB"/>
-      </svg>
-      ${iconUrl ? `<img data-pg-icon src="${escapeHtml(iconUrl)}" alt="" draggable="false" />` : ''}
+      ${renderKeyPilotMark()}
     </span>
   `;
 }
 
 function renderPasswordGeneratorButtonIcon(): string {
-  const iconUrl = getRuntimeAssetUrl('icons/icon32.png');
   return `
-    <svg viewBox="0 0 32 32" aria-hidden="true" style="position:absolute;inset:5px;width:24px;height:24px;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none">
-      <rect x="3" y="3" width="26" height="26" rx="8" fill="#2563EB"></rect>
-      <path d="M16 7.5 22 9.7v5.1c0 5.1-2.8 8.5-6 9.9-3.2-1.4-6-4.8-6-9.9V9.7l6-2.2Z" fill="#FFFFFF"></path>
-      <path d="m14.9 17.7-2.4-2.3 1.3-1.4 1.2 1.2 3.4-3.5 1.4 1.4-4.9 4.6Z" fill="#2563EB"></path>
-    </svg>
-    ${iconUrl ? `<img data-keypilot-inline-icon src="${escapeHtml(iconUrl)}" alt="" draggable="false" style="position:absolute;inset:5px;width:24px;height:24px;display:block;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none" />` : ''}
+    <span style="position:absolute;inset:5px;width:24px;height:24px;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none">
+      ${renderKeyPilotMark()}
+    </span>
   `;
 }
 
@@ -7194,7 +7410,7 @@ function stylePasswordGeneratorInlineButton(button: HTMLButtonElement) {
   button.draggable = false;
   button.dataset.keypilotPasswordInlineTrigger = 'true';
   button.setAttribute('aria-label', '打开 KeyPilot 密码生成器');
-  button.title = 'KeyPilot 密码生成器：点击打开，拖动调整位置，双击恢复自动跟随';
+  button.removeAttribute('title');
   button.innerHTML = renderPasswordGeneratorButtonIcon();
   button.style.position = 'relative';
   button.style.display = 'grid';
@@ -7276,10 +7492,6 @@ function ensurePasswordGeneratorInlineTrigger(context: PasswordGeneratorContext)
     const eyeButton = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((button) => button !== passwordGeneratorInlineButton);
     container.insertBefore(passwordGeneratorInlineButton, eyeButton ?? null);
   }
-
-  passwordGeneratorInlineButton.querySelectorAll<HTMLImageElement>('img[data-keypilot-inline-icon]').forEach((image) => {
-    image.addEventListener('error', () => image.remove(), { once: true });
-  });
 
   return true;
 }
@@ -7410,7 +7622,7 @@ function renderPasswordGeneratorWidget() {
 
   const panel = passwordGeneratorOpen ? `
     <section class="pg-panel" role="dialog" aria-label="KeyPilot 密码生成器">
-      <header data-pg-drag-handle="true" title="拖动移动密码生成器，双击恢复自动跟随输入框">
+      <header data-pg-drag-handle="true" aria-label="拖动移动密码生成器，双击恢复自动跟随输入框">
         <span class="pg-brand">${renderPasswordGeneratorIcon()}</span>
         <strong>密码生成器 - KeyPilot</strong>
         <button type="button" class="pg-icon-button" data-pg-action="close" aria-label="关闭密码生成器">
@@ -7463,7 +7675,7 @@ function renderPasswordGeneratorWidget() {
     </section>
   ` : '';
   const fixedTrigger = passwordGeneratorManualPosition && passwordGeneratorOpen ? '' : passwordGeneratorInlineButton?.isConnected ? '' : `
-    <button class="pg-trigger" type="button" data-pg-action="toggle" aria-label="打开 KeyPilot 密码生成器" title="点击打开；拖动调整位置；双击恢复自动跟随">
+    <button class="pg-trigger" type="button" data-pg-action="toggle" aria-label="打开 KeyPilot 密码生成器">
       ${renderPasswordGeneratorIcon()}
     </button>
   `;
@@ -7522,15 +7734,13 @@ function renderPasswordGeneratorWidget() {
         height: 24px;
         place-items: center;
       }
-      .pg-mark svg,
-      .pg-mark img {
+      .pg-mark svg {
         position: absolute;
         inset: 0;
         width: 24px;
         height: 24px;
         display: block;
       }
-      .pg-mark img { object-fit: contain; }
       .pg-panel {
         position: absolute;
         top: 42px;
@@ -7547,7 +7757,7 @@ function renderPasswordGeneratorWidget() {
         background: #ffffff;
         box-shadow: 0 20px 48px rgba(16, 24, 40, .22);
         color: #101828;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
         pointer-events: auto;
         animation: pg-in 140ms ease-out both;
       }
@@ -7601,8 +7811,7 @@ function renderPasswordGeneratorWidget() {
         background: #eff6ff;
       }
       .pg-brand .pg-mark,
-      .pg-brand .pg-mark svg,
-      .pg-brand .pg-mark img {
+      .pg-brand .pg-mark svg {
         width: 24px;
         height: 24px;
       }
@@ -7662,7 +7871,7 @@ function renderPasswordGeneratorWidget() {
       .pg-output code {
         overflow: hidden;
         color: #0f172a;
-        font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+        font-family: ${MONO_FONT};
         font-size: 15px;
         font-weight: 760;
         text-overflow: ellipsis;
@@ -7890,10 +8099,6 @@ function renderPasswordGeneratorWidget() {
 
   attachPasswordGeneratorDragHandlers();
 
-  passwordGeneratorRoot.querySelectorAll<HTMLImageElement>('img[data-pg-icon]').forEach((image) => {
-    image.addEventListener('error', () => image.remove());
-  });
-
   passwordGeneratorRoot.querySelectorAll<HTMLInputElement>('[data-pg-option]').forEach((input) => {
     const commit = () => {
       const key = input.dataset.pgOption as keyof PasswordGeneratorOptions | undefined;
@@ -7956,7 +8161,8 @@ async function copyPasswordGeneratorValue() {
   if (!passwordGeneratorValue) return;
 
   try {
-    await navigator.clipboard.writeText(passwordGeneratorValue);
+    const copied = await sendRuntimeMessage<{ok:boolean}>({type:'KEYPILOT_COPY_GENERATED_PASSWORD',value:passwordGeneratorValue});
+    if(!copied.ok) throw new Error('CLIPBOARD_UNAVAILABLE');
     passwordGeneratorStatus = '已复制到剪贴板。';
   } catch {
     passwordGeneratorStatus = '复制失败，请手动选中密码复制。';
@@ -8047,6 +8253,11 @@ function positionPasswordGeneratorWidget() {
 function schedulePasswordGeneratorPosition() {
   if (passwordGeneratorDragInProgress || (passwordGeneratorManualPosition && passwordGeneratorOpen)) return;
 
+  if (passwordGeneratorOpen) {
+    positionPasswordGeneratorWidget();
+    return;
+  }
+
   if (passwordGeneratorPositionTimer) {
     window.clearTimeout(passwordGeneratorPositionTimer);
   }
@@ -8054,7 +8265,9 @@ function schedulePasswordGeneratorPosition() {
   passwordGeneratorPositionTimer = window.setTimeout(() => {
     if (passwordGeneratorDragInProgress || (passwordGeneratorManualPosition && passwordGeneratorOpen)) return;
 
-    renderPasswordGeneratorWidget();
+    if (!passwordGeneratorOpen) {
+      renderPasswordGeneratorWidget();
+    }
     positionPasswordGeneratorWidget();
   }, 60);
 }
@@ -8247,6 +8460,13 @@ function getInlineLoginAnchorDecision() {
     };
   }
 
+  if (!inlineLoginContextIsEligible(context)) {
+    return {
+      available: false,
+      reason: '只检测到用户名框，但当前页面没有登录 URL、登录按钮或登录标题信号。'
+    };
+  }
+
   const generatorContext = findPasswordGeneratorContext();
   if (generatorContext) {
     return {
@@ -8287,7 +8507,7 @@ function getRecognitionDebugSnapshot() {
     frame: {
       isTopFrame: window.top === window,
       url: window.location.href,
-      domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+      domain: window.location.hostname.toLowerCase(),
       title: document.title,
       readyState: document.readyState,
       visibilityState: document.visibilityState,
@@ -8489,7 +8709,7 @@ function renderRecognitionDebugPanel() {
       :host {
         all: initial;
         color-scheme: light;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
       }
 
       * {
@@ -8986,11 +9206,13 @@ function positionInlineWidget() {
   if (!inlineHost) return;
 
   if (inlineStateLoaded && !hasInlineContextualItems()) {
+    const reason = inlineSilenceReason();
+    if (reason) maybeRecordInlineSilence(reason, inlineSilenceConfidence(reason));
     hideInlineWidget();
     return;
   }
 
-  const anchor = getInlineAnchor();
+  const anchor = getPositionInlineAnchor();
 
   if (!anchor) {
     hideInlineWidget();
@@ -9133,7 +9355,9 @@ async function refreshInlineMatches() {
     inlineMatches = stabilizeInlineMatches(response.ok ? response.matches ?? [] : []);
     inlineFillProfiles = response.ok ? response.fillProfiles ?? [] : [];
     inlineLocked = Boolean(response.locked);
-    if (!getInlineAnchor() || !hasInlineContextualItems()) {
+    if (!getPositionInlineAnchor() || !hasInlineContextualItems()) {
+      const reason = inlineSilenceReason();
+      if (reason) maybeRecordInlineSilence(reason, inlineSilenceConfidence(reason));
       inlineStatus = '';
       hideInlineWidget();
       return;
@@ -9158,6 +9382,7 @@ async function refreshInlineMatches() {
 }
 
 async function handleInlineFill(credentialId: string, action: InlineCredentialFillRequest['action'], silent = false) {
+  if(!silent)repairTarget={kind:'credential',id:credentialId};
   if (!silent) {
     inlineStatus = action === 'login' ? '正在填写并提交...' : '正在填表...';
     renderInlineWidget();
@@ -9175,7 +9400,7 @@ async function handleInlineFill(credentialId: string, action: InlineCredentialFi
 
     if (!silent) {
       if (response.skippedSubmit) {
-        inlineStatus = '已填表。检测到验证码或敏感字段，未自动提交。';
+        inlineStatus = response.captchaMessage ?? '已填表。检测到验证码或敏感字段，未自动提交。';
       } else if (response.submitButtonMissing && action === 'login') {
         inlineStatus = '已填表，但没有找到可靠的登录按钮。点账号更多里的“绑定字段”重新选择按钮。';
       } else if (response.stage === 'usernameOnly') {
@@ -9216,6 +9441,7 @@ async function handleInlineFill(credentialId: string, action: InlineCredentialFi
 async function handleInlineBind(credentialId: string) {
   inlineMoreCredentialId = null;
   inlineMenuOpen = false;
+  clearPinnedInlineAnchor();
   inlineStatus = '正在启动字段绑定...';
   renderInlineWidget();
 
@@ -9232,12 +9458,16 @@ async function handleInlineBind(credentialId: string) {
     startManualBinding(response.credential);
   } catch (error) {
     inlineMenuOpen = true;
+    pinInlineAnchorForMenu();
     inlineStatus = inlineErrorMessage(error);
     renderInlineWidget();
   }
 }
 
 async function handleInlineFillProfile(profileId: string, silent = false, onlyEmpty = false) {
+  // Hovering selects a profile; only an explicit click may open the fill preview.
+  if (silent) return;
+  repairTarget={kind:'profile',id:profileId};
   if (silent) {
     suppressInlineRefreshFor(1600);
 
@@ -9270,6 +9500,7 @@ async function handleInlineFillProfile(profileId: string, silent = false, onlyEm
     }
 
     inlineMenuOpen = false;
+    clearPinnedInlineAnchor();
     inlineStatus = '';
     inlineFilterQuery = '';
     inlineMoreCredentialId = null;
@@ -9294,6 +9525,7 @@ async function handleInlineFillProfile(profileId: string, silent = false, onlyEm
 async function handleInlineBindProfile(profileId: string) {
   inlineMoreProfileId = null;
   inlineMenuOpen = false;
+  clearPinnedInlineAnchor();
   inlineStatus = '正在启动身份字段绑定...';
   renderInlineWidget();
 
@@ -9311,6 +9543,7 @@ async function handleInlineBindProfile(profileId: string) {
     renderInlineWidget();
   } catch (error) {
     inlineMenuOpen = true;
+    pinInlineAnchorForMenu();
     inlineStatus = inlineErrorMessage(error);
     renderInlineWidget();
   }
@@ -9320,6 +9553,7 @@ function openInlineProfileHome() {
   inlineMoreProfileId = null;
   inlineMoreCredentialId = null;
   inlineMenuOpen = false;
+  clearPinnedInlineAnchor();
   inlineStatus = '';
   renderInlineWidget();
 
@@ -9335,6 +9569,7 @@ function openInlineVaultHome() {
   inlineMoreProfileId = null;
   inlineMoreCredentialId = null;
   inlineMenuOpen = false;
+  clearPinnedInlineAnchor();
   inlineStatus = '';
   renderInlineWidget();
 
@@ -9421,10 +9656,10 @@ async function handleInlineCommand(credentialId: string, command: InlineCredenti
   inlineStatus =
     command === 'goto'
       ? '正在打开起始页...'
-      : command === 'delete'
-        ? '正在删除账号...'
+        : command === 'delete'
+          ? '正在删除账号...'
         : command === 'hide-domain'
-          ? '正在隐藏此域...'
+          ? '正在隐藏此页面...'
           : '正在打开账号编辑页...';
   renderInlineWidget();
 
@@ -9432,7 +9667,8 @@ async function handleInlineCommand(credentialId: string, command: InlineCredenti
     const response = await sendRuntimeMessage<InlineCredentialCommandResult>({
       type: 'KEYPILOT_INLINE_COMMAND',
       credentialId,
-      command
+      command,
+      title: document.title || getBestPageTitle(document)
     });
 
     if (!response.ok) {
@@ -9442,6 +9678,7 @@ async function handleInlineCommand(credentialId: string, command: InlineCredenti
     if (response.hidden || command === 'hide-domain') {
       inlineSuppressed = true;
       inlineMenuOpen = false;
+      clearPinnedInlineAnchor();
       inlineMoreCredentialId = null;
       inlineMoreProfileId = null;
       if (inlineHost) inlineHost.style.display = 'none';
@@ -9468,6 +9705,7 @@ async function refreshInlineMatchesLegacy() {
     inlineMatches = [];
     inlineLocked = false;
     inlineMenuOpen = false;
+    clearPinnedInlineAnchor();
     inlineMoreCredentialId = null;
     inlineMoreProfileId = null;
     positionInlineWidget();
@@ -9518,7 +9756,7 @@ async function handleInlineFillLegacy(credentialId: string, action: InlineCreden
     }
 
     if (response.skippedSubmit) {
-      inlineStatus = '已填充。检测到验证码或敏感字段，未自动提交。';
+      inlineStatus = response.captchaMessage ?? '已填充。检测到验证码或敏感字段，未自动提交。';
     } else if (response.submitButtonMissing && action === 'login') {
       inlineStatus = '已填充，但没有找到可靠的登录按钮。';
     } else if (response.stage === 'usernameOnly') {
@@ -9543,6 +9781,10 @@ function startInlineCredentialWidget() {
 
   document.addEventListener('focusin', (event) => {
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) {
+      if (inlineMenuOpen) {
+        scheduleInlinePosition();
+        return;
+      }
       scheduleInlineRefresh(80);
     }
   }, true);
@@ -9552,6 +9794,7 @@ function startInlineCredentialWidget() {
     const path = event.composedPath();
     if (!path.includes(inlineHost)) {
       inlineMenuOpen = false;
+      clearPinnedInlineAnchor();
       inlineStatus = '';
       renderInlineWidget();
       positionInlineWidget();
@@ -9561,11 +9804,16 @@ function startInlineCredentialWidget() {
   window.addEventListener('scroll', scheduleInlinePosition, true);
   window.addEventListener('resize', scheduleInlinePosition);
   window.setInterval(() => {
+    if (inlineMenuOpen) return;
     scheduleInlineRefresh(0);
   }, 10000);
 
   const observer = new MutationObserver((mutations) => {
     if (shouldIgnoreKeyPilotMutations(mutations)) return;
+    if (inlineMenuOpen) {
+      scheduleInlinePosition();
+      return;
+    }
     scheduleInlineRefresh(180);
   });
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'type'] });
@@ -9690,7 +9938,7 @@ function renderSavePrompt(status = '') {
         background: #ffffff;
         box-shadow: 0 14px 32px rgba(15, 23, 42, 0.15);
         color: #111827;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
       }
       header {
         display: grid;
@@ -9783,7 +10031,7 @@ function renderSavePrompt(status = '') {
         border-radius: 8px;
         background: #ffffff;
         color: #0f172a;
-        font: 12px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font: 13px ${UI_FONT};
         padding: 0 9px;
       }
       .name-field input:focus {
@@ -10025,7 +10273,7 @@ function renderSavePromptLegacy(status = '') {
         background: #ffffff;
         box-shadow: 0 18px 46px rgba(16, 24, 40, 0.2);
         color: #101828;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+        font-family: ${UI_FONT};
       }
       header {
         display: grid;
@@ -10310,7 +10558,7 @@ async function checkPendingSavePrompt() {
           {
             ...candidate,
             url: window.location.href,
-            domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+            domain: window.location.hostname.toLowerCase(),
             confirmedAt: Date.now(),
             successSignal: decision.signal
           },
@@ -10368,10 +10616,10 @@ function buildCandidateFromScope(scope: ParentNode, source: PendingLoginCandidat
   const url = window.location.href;
 
   return {
-    id: crypto.randomUUID(),
+    id: createPageUuid(),
     title: getBestPageTitle(scope),
     url,
-    domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+    domain: window.location.hostname.toLowerCase(),
     ...getPageIcon(),
     username,
     password: passwordField.value,
@@ -10548,7 +10796,7 @@ function sendCandidateAfterLikelySuccess(source: PendingLoginCandidate['source']
           candidate: {
             ...currentCandidate,
             url: window.location.href,
-            domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+            domain: window.location.hostname.toLowerCase(),
             capturedAt: Date.now(),
             confirmedAt: Date.now(),
             successSignal: decision.signal
@@ -10563,7 +10811,7 @@ function sendCandidateAfterLikelySuccess(source: PendingLoginCandidate['source']
             {
               ...currentCandidate,
               url: window.location.href,
-              domain: window.location.hostname.replace(/^www\./i, '').toLowerCase(),
+              domain: window.location.hostname.toLowerCase(),
               confirmedAt: Date.now(),
               successSignal: decision.signal
             },
@@ -10622,6 +10870,15 @@ document.addEventListener(
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   try {
+    if(message?.type==='KEYPILOT_PROBE_QUICK_FILL'){sendResponse(probeQuickFill());return false;}
+    if(message?.type==='KEYPILOT_FOCUS_QUICK_FILL'){sendResponse({ok:focusFillReview()});return false;}
+    if(message?.type==='KEYPILOT_CHOOSE_QUICK_FILL'){
+      if(!quickFillState || quickFillState.probe.token!==message.token){sendResponse(null);return false;}
+      void chooseFillOption(message.title,message.description,message.choices).then(sendResponse);return true;
+    }
+    if(message?.type==='KEYPILOT_APPLY_QUICK_FILL'){
+      void applyQuickFill(message).then(sendResponse).catch(()=>sendResponse({ok:false,error:'QUICK_FILL_FAILED'}));return true;
+    }
     if (message?.type === 'KEYPILOT_CONTENT_PING') {
       sendResponse(getPageMeta());
       return true;
@@ -10654,13 +10911,67 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return true;
     }
 
+    if (message?.type === 'KEYPILOT_REFRESH_INLINE') {
+      inlineSuppressed = false;
+      inlineRefreshSuppressedUntil = 0;
+      scheduleInlineRefresh(0);
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (message?.type === 'KEYPILOT_APPLY_PAGE_REPAIR_RULE') {
+      const pageMode = message.pageMode as SiteRulePageMode | undefined;
+
+      if (pageMode !== 'login' && pageMode !== 'register' && pageMode !== 'fill-profile') {
+        sendResponse({ ok: false, error: 'INVALID_PAGE_MODE' });
+        return true;
+      }
+
+      void saveDetectedPageRule(pageMode)
+        .then(async (response) => {
+          if (response.ok) {
+            inlineSiteRule = response.siteRule ?? inlineSiteRule;
+            inlineStateLoaded = true;
+            inlineSuppressed = false;
+            inlineRefreshSuppressedUntil = 0;
+            await refreshInlineMatches().catch(() => undefined);
+            positionInlineWidget();
+            positionPasswordGeneratorWidget();
+          }
+          sendResponse(response);
+        })
+        .catch((error) => {
+          sendResponse({
+            ok: false,
+            error: error instanceof Error ? error.message : 'RULE_SAVE_FAILED'
+          });
+        });
+      return true;
+    }
+
+    if (message?.type === 'KEYPILOT_SESSION_LOCKED') {
+      quickFillState=undefined;
+      credentialFillEpoch++;
+      clearTotpProbe();
+      repairTarget=null;clearFillReview();closeInlineCredentialEditor();clearSaveCandidateState();clearBindingTestOverlay();
+      stagedFill=null;stagedObserver?.disconnect();stagedObserver=null;manualBinding=null;fillProfileBinding=null;bindingHost?.remove();bindingHost=null;bindingRoot=null;bindingHighlight?.remove();bindingHighlight=null;
+      clearTimeout(submitOutcomeTimer ?? undefined);lastSubmitOutcome=null;clearLoginFeedback();
+      inlineMatches=[];inlineFillProfiles=[];inlineLocked=true;inlineMenuOpen=false;inlineStatus='密码库已锁定。';
+      passwordGeneratorValue='';passwordGeneratorOpen=false;passwordGeneratorHost?.remove();passwordGeneratorHost=null;passwordGeneratorRoot=null;inlineStateLoaded=false; renderInlineWidget(); sendResponse({ok:true}); return true;
+    }
+    if (message?.type === 'KEYPILOT_PROBE_TOTP') {
+      sendResponse(probeTotpFields(message.digits, message.expectedUrl, message.automatic===true)); return;
+    }
+    if (message?.type === 'KEYPILOT_FILL_TOTP_CODE') {
+      sendResponse(fillTotpFields(message.code, message.expectedUrl, message.expiresAt, message.automatic===true, message.token)); return;
+    }
     if (message?.type === 'KEYPILOT_FILL_CREDENTIAL') {
-      sendResponse(fillCredential(message.credential as FillCredentialPayload));
+      void fillCredential(message.credential as FillCredentialPayload).then(sendResponse).catch(() => sendResponse({ok:false,error:'FILL_FAILED'}));
       return true;
     }
 
     if (message?.type === 'KEYPILOT_FILL_PROFILE') {
-      sendResponse(fillProfile(message.profile as FillProfilePayload));
+      void reviewedFillProfile(message.profile as FillProfilePayload).then(sendResponse).catch(() => sendResponse({ok:false,error:'FILL_FAILED'}));
       return true;
     }
 
@@ -10713,3 +11024,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   return false;
 });
+
+async function startInlineRepair() {
+ const target = repairTarget;
+ const credential=target?.kind==='credential'?inlineMatches.find(item=>item.id===target.id):inlineMatches.length===1?inlineMatches[0]:undefined;
+ const profile=target?.kind==='profile'?inlineFillProfiles.find(item=>item.id===target.id):inlineFillProfiles.length===1?inlineFillProfiles[0]:undefined;
+ if (credential) await handleInlineBind(credential.id);
+ else if(profile) await handleInlineBindProfile(profile.id);
+ else {inlineStatus='请先选择要修复的账号或资料，再使用它的“绑定字段”操作。';renderInlineWidget();}
+}

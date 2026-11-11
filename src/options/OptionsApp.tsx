@@ -1,7 +1,15 @@
+import { vaultItemCount } from '../shared/credentialSecurity';
+import { saveCaptchaRule } from '../shared/captchaRuleStorage';
+import { BackupStatus } from '../shared/BackupStatusPanel';
+import { ReminderSettings } from '../shared/ReminderSettings';
+import { BackupRestorePanel, InitialBackupRestore } from '../shared/BackupRestorePanel';
+import { useSessionGuard } from '../shared/sessionGuard';
+import { authorizeSensitiveAction } from '../shared/sensitiveActions';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
   AlertTriangle,
+  ArrowLeft,
   AppWindow,
   BadgeCheck,
   BellDot,
@@ -34,8 +42,17 @@ import {
   DEFAULT_DIAGNOSTIC_LOG_RETENTION_DAYS,
   getDiagnosticLogEntries
 } from '../shared/diagnosticsLog';
-import { clearEncryptedVault, getEncryptedVault, saveEncryptedVault } from '../shared/storage';
-import type { DiagnosticLogEntry, UnlockedVaultSession, VaultEncrypted, VaultPlain } from '../shared/types';
+import { exportSiteRulesFile, mergeSiteRules, parseSiteRulesFile } from '../shared/siteRulesFile';
+import { clearEncryptedVault, getEncryptedVault } from '../shared/storage';
+import type {
+  DiagnosticLogEntry,
+  InlineSilentRule,
+  SiteRule,
+  SiteRulePageMode,
+  UnlockedVaultSession,
+  VaultEncrypted,
+  VaultPlain
+} from '../shared/types';
 import {
   changeVaultMasterPassword,
   clearVaultSessionCache,
@@ -49,6 +66,7 @@ import {
 
 type SectionKey =
   | 'general'
+  | 'reminders'
   | 'account'
   | 'security'
   | 'device'
@@ -62,6 +80,7 @@ type SectionKey =
   | 'referral';
 
 type NoticeKind = 'success' | 'error' | 'info';
+type SiteRuleModeFilter = 'all' | SiteRulePageMode;
 
 interface Notice {
   kind: NoticeKind;
@@ -70,6 +89,7 @@ interface Notice {
 
 const SECTIONS: Array<{ key: SectionKey; label: string; icon: ReactNode }> = [
   { key: 'general', label: '一般', icon: <Settings size={20} aria-hidden="true" /> },
+  { key: 'reminders', label: '提醒', icon: <BellDot size={20} aria-hidden="true" /> },
   { key: 'account', label: '账户&数据', icon: <UserCircle size={20} aria-hidden="true" /> },
   { key: 'security', label: '登录与安全', icon: <Lock size={20} aria-hidden="true" /> },
   { key: 'device', label: '设备&活动', icon: <MonitorSmartphone size={20} aria-hidden="true" /> },
@@ -83,6 +103,20 @@ const SECTIONS: Array<{ key: SectionKey; label: string; icon: ReactNode }> = [
   { key: 'referral', label: '分享', icon: <Gift size={20} aria-hidden="true" /> }
 ];
 
+const SETTINGS_GROUPS: Array<{ key: SectionKey; label: string; sections: SectionKey[] }> = [
+  { key: 'general', label: '一般', sections: ['general', 'hotkeys', 'reminders'] },
+  { key: 'account', label: '账户&数据', sections: ['account'] },
+  { key: 'security', label: '登录与安全', sections: ['security', 'device'] },
+  { key: 'autofill', label: '自动填表', sections: ['autofill', 'autosave', 'domains'] },
+  { key: 'advanced', label: '高级设置', sections: ['advanced'] },
+  { key: 'billing', label: '关于与工具', sections: ['billing', 'apps', 'referral'] }
+];
+
+function sectionFromHash(): SectionKey {
+  const hash = window.location.hash.slice(1);
+  return SECTIONS.find(section => section.key === hash)?.key ?? 'general';
+}
+
 function getErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -92,6 +126,9 @@ function getErrorMessage(error: unknown): string {
   if (message === 'UNSUPPORTED_VAULT') return 'Vault 版本暂不兼容。';
   if (message === 'PASSWORD_MISMATCH') return '两次输入的新主密码不一致。';
   if (message === 'PASSWORD_TOO_SHORT') return '新主密码至少需要 8 位。';
+  if (message === 'VAULT_WRITE_CONFLICT') return '这条记录已在另一个页面修改，请重新打开记录后再保存。';
+  if (message === 'MASTER_PASSWORD_TOO_SHORT') return '主密码至少需要 8 位。';
+  if (message === 'VAULT_LOCKED') return '密码库已锁定，请重新解锁。';
   return message || '操作失败，请稍后重试。';
 }
 
@@ -130,26 +167,34 @@ function splitDomainList(value: string): string[] {
     .filter(Boolean);
 }
 
-function vaultItemCount(vault: VaultPlain): number {
-  return (
-    vault.credentials.length +
-    (vault.secureNotes?.length ?? 0) +
-    (vault.identities?.length ?? 0) +
-    (vault.fillProfiles?.length ?? 0)
-  );
-}
-
 export function OptionsApp() {
   const [status, setStatus] = useState<'checking' | 'empty' | 'locked' | 'unlocked'>('checking');
-  const [activeSection, setActiveSection] = useState<SectionKey>('general');
+  const [activeSection, setActiveSection] = useState<SectionKey>(sectionFromHash);
+  const activeGroup = SETTINGS_GROUPS.find(group => group.sections.includes(activeSection))!;
+  function navigateSection(key: SectionKey) {
+    setActiveSection(key);
+    window.history.replaceState(null, "", "#" + key);
+    document.querySelector(".settings-content")?.scrollTo({ top: 0 });
+  }
+  useEffect(() => {
+    const sync = () => setActiveSection(sectionFromHash());
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
   const [encryptedVault, setEncryptedVault] = useState<VaultEncrypted | null>(null);
   const [session, setSession] = useState<UnlockedVaultSession | null>(null);
+  const [shortcuts,setShortcuts] = useState<chrome.commands.Command[]>([]);
+  useEffect(() => {if(globalThis.chrome?.commands)void chrome.commands.getAll().then(setShortcuts);},[]);
+  const shortcut = (name:string) => shortcuts.find(item=>item.name===name)?.shortcut || '未设置';
+  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice({kind:'info',text:'密码库已锁定，请重新解锁。'}); });
   const [notice, setNotice] = useState<Notice | null>(null);
   const [masterPassword, setMasterPassword] = useState('');
   const [unlocking, setUnlocking] = useState(false);
   const [blacklistDraft, setBlacklistDraft] = useState('');
   const [inlineBlacklistDraft, setInlineBlacklistDraft] = useState('');
-  const [backupPassword, setBackupPassword] = useState('');
+  const [siteRuleQuery, setSiteRuleQuery] = useState('');
+  const [siteRuleModeFilter, setSiteRuleModeFilter] = useState<SiteRuleModeFilter>('all');
+  const [silentRuleQuery, setSilentRuleQuery] = useState('');
   const [recoveryCodeToShow, setRecoveryCodeToShow] = useState('');
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
   const [diagnosticLogs, setDiagnosticLogs] = useState<DiagnosticLogEntry[]>([]);
@@ -185,6 +230,7 @@ export function OptionsApp() {
       folders: session.vault.folders?.length ?? 0,
       siteRules: session.vault.settings.siteRules?.length ?? 0,
       hiddenDomains: session.vault.settings.inlineBlacklist?.length ?? 0,
+      silentRules: session.vault.settings.inlineSilentRules?.length ?? 0,
       saveBlockedDomains: session.vault.settings.blacklist.length
     };
   }, [session]);
@@ -251,6 +297,112 @@ export function OptionsApp() {
     if (!session) return;
     await persist(upsertVaultSettings(session.vault, settings), message);
   }
+  async function removeCaptchaRule(origin:string){
+    if(!session)return;
+    try{
+      const next=await saveCaptchaRule(session,origin,null);setSession(next);setEncryptedVault(next.encryptedVault);
+      setNotice({kind:'success',text:'此网站的验证码规则已清除。'});
+    }catch(error){setNotice({kind:'error',text:getErrorMessage(error)});}
+  }
+
+  async function updateSiteRule(ruleId: string, patch: Partial<SiteRule>) {
+    if (!session) return;
+
+    const siteRules = (session.vault.settings.siteRules ?? []).map((rule) =>
+      rule.id === ruleId
+        ? {
+            ...rule,
+            ...patch,
+            updatedAt: Date.now()
+          }
+        : rule
+    );
+    await updateSettings({ siteRules }, '站点识别规则已更新。');
+  }
+
+  async function removeSiteRule(ruleId: string) {
+    if (!session) return;
+    const rule = session.vault.settings.siteRules?.find((item) => item.id === ruleId);
+    const confirmed = window.confirm(`确定删除 ${rule?.domain ?? '这条'} 站点识别规则吗？删除后该网站会重新学习表单结构。`);
+    if (!confirmed) return;
+
+    await updateSettings(
+      {
+        siteRules: (session.vault.settings.siteRules ?? []).filter((rule) => rule.id !== ruleId)
+      },
+      '站点识别规则已删除。'
+    );
+  }
+
+  async function clearSiteRules() {
+    if (!session) return;
+    const confirmed = window.confirm('确定清空全部站点识别规则吗？自动登录和填表会重新学习这些网站。');
+    if (!confirmed) return;
+
+    await updateSettings({ siteRules: [] }, '站点规则库已清空。');
+  }
+
+  function exportSiteRules() {
+    if (!session) return;
+    const siteRules = session.vault.settings.siteRules ?? [];
+
+    if (!siteRules.length) {
+      setNotice({ kind: 'info', text: '当前还没有可导出的站点识别规则。' });
+      return;
+    }
+
+    const blob = new Blob([exportSiteRulesFile(siteRules)], { type: 'application/json;charset=utf-8' });
+    downloadBlob(blob, `keypilot-site-rules-${timestampForFile()}.kprules`);
+    setNotice({ kind: 'success', text: `已导出 ${siteRules.length} 条站点识别规则。` });
+  }
+
+  function pickSiteRulesFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.kprules,.json,application/json';
+    input.addEventListener(
+      'change',
+      () => {
+        void importSiteRules(input.files?.[0]);
+      },
+      { once: true }
+    );
+    input.click();
+  }
+
+  async function importSiteRules(file: File | undefined) {
+    if (!session || !file) return;
+
+    try {
+      const importedRules = parseSiteRulesFile(await file.text());
+
+      if (!importedRules.length) {
+        setNotice({ kind: 'error', text: '没有识别到可导入的站点规则。' });
+        return;
+      }
+
+      const nextRules = mergeSiteRules(session.vault.settings.siteRules ?? [], importedRules);
+      await updateSettings({ siteRules: nextRules }, `已导入 ${importedRules.length} 条站点规则。`);
+    } catch {
+      setNotice({ kind: 'error', text: '规则文件格式不正确，请选择 KeyPilot .kprules 文件。' });
+    }
+  }
+
+  async function removeInlineSilentRule(ruleId: string) {
+    if (!session) return;
+
+    await updateSettings(
+      {
+        inlineSilentRules: (session.vault.settings.inlineSilentRules ?? []).filter((rule) => rule.id !== ruleId)
+      },
+      '自动静默规则已删除。'
+    );
+  }
+
+  async function clearInlineSilentRules() {
+    if (!session) return;
+    await updateSettings({ inlineSilentRules: [] }, '自动静默规则已清空。');
+  }
 
   async function loadDiagnosticLogs() {
     const settings = session?.vault.settings;
@@ -287,7 +439,7 @@ export function OptionsApp() {
         : {
             highSecurityMode: false
           },
-      checked ? '高安全模式已开启，已清除解锁缓存。' : '高安全模式已关闭。'
+      checked ? '高安全模式已开启，会话仅保留在后台内存；后台停止后需要重新解锁。' : '高安全模式已关闭。'
     );
   }
 
@@ -310,14 +462,9 @@ export function OptionsApp() {
     setNotice({ kind: 'success', text: '本地 Vault 已重置。' });
   }
 
-  function exportEncryptedBackup() {
-    if (!session) return;
-    const blob = new Blob([JSON.stringify(session.encryptedVault, null, 2)], { type: 'application/json;charset=utf-8' });
-    downloadBlob(blob, `keypilot-vault-backup-${timestampForFile()}.json`);
-    setNotice({ kind: 'success', text: '已导出加密备份 JSON。' });
-  }
 
-  function exportCsv() {
+  async function exportCsv() {
+    if (!await authorizeSensitiveAction()) return;
     if (!session) return;
     const confirmed = window.confirm('RoboForm CSV 会包含明文密码。请只保存在可信位置，用完后及时删除。是否继续？');
     if (!confirmed) return;
@@ -327,27 +474,6 @@ export function OptionsApp() {
     setNotice({ kind: 'success', text: '已导出 RoboForm CSV。' });
   }
 
-  async function importEncryptedBackup(file: File | undefined) {
-    if (!file) return;
-
-    if (!backupPassword) {
-      setNotice({ kind: 'error', text: '请先输入该备份对应的主密码。' });
-      return;
-    }
-
-    try {
-      const backup = JSON.parse(await file.text()) as VaultEncrypted;
-      const nextSession = await unlockVaultSession(backupPassword, backup);
-      await saveEncryptedVault(backup);
-      setSession(nextSession);
-      setEncryptedVault(backup);
-      setStatus('unlocked');
-      setBackupPassword('');
-      setNotice({ kind: 'success', text: '加密备份已导入并解锁。' });
-    } catch (error) {
-      setNotice({ kind: 'error', text: getErrorMessage(error) });
-    }
-  }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -414,7 +540,7 @@ export function OptionsApp() {
     }
 
     if (status === 'empty') {
-      return <EmptyVaultPanel onOpenVault={() => openExtensionPage('vault.html')} />;
+      return <><EmptyVaultPanel onOpenVault={() => openExtensionPage('vault.html')} /><InitialBackupRestore onRestored={next => {setSession(next);setEncryptedVault(next.encryptedVault);setStatus('unlocked');setActiveSection('account');setNotice({kind:'success',text:'完整备份已恢复，包含 2FA 和插件设置。'});}} /></>;
     }
 
     if (status === 'locked' || !session || !stats) {
@@ -431,19 +557,11 @@ export function OptionsApp() {
 
     const settings = session.vault.settings;
 
+    if (activeSection === 'reminders') return <SettingsSection title="提醒" description="可选的浏览器声音提醒，默认关闭。"><ReminderSettings session={session} onChange={setSession} /><button type="button" className="primary-action" onClick={() => openExtensionPage('vault.html#reminders')}>打开提醒中心</button></SettingsSection>;
+
     if (activeSection === 'general') {
       return (
         <SettingsSection title="一般" description="控制 KeyPilot 的默认入口、界面语言和工具栏行为。">
-          <SettingRow
-            title="语言"
-            description="选择 KeyPilot 应用界面语言。"
-            control={
-              <select value={settings.language} onChange={(event) => void updateSettings({ language: event.currentTarget.value as VaultPlain['settings']['language'] })}>
-                <option value="zh-CN">简体中文 (Simplified Chinese)</option>
-                <option value="en-US">English (United States)</option>
-              </select>
-            }
-          />
           <SettingRow
             title="打开扩展和起始页时显示"
             description="每次打开 KeyPilot 扩展或起始页时，默认使用选定的排序方式。"
@@ -463,12 +581,6 @@ export function OptionsApp() {
             onChange={(checked) => void updateSettings({ openStartPageOnToolbarClick: checked })}
           />
           <ToggleRow
-            title="同时显示书签和登录信息"
-            description="在登录名账户视图中同时显示书签类入口。"
-            checked={settings.showLoginBookmarksTogether}
-            onChange={(checked) => void updateSettings({ showLoginBookmarksTogether: checked })}
-          />
-          <ToggleRow
             title="在浏览器右键菜单中显示 KeyPilot 指令"
             description="KeyPilot 指令会出现在浏览器右键菜单中。"
             checked={settings.showContextMenuCommands}
@@ -480,12 +592,6 @@ export function OptionsApp() {
             checked={settings.useCompactPopupToolbar}
             onChange={(checked) => void updateSettings({ useCompactPopupToolbar: checked })}
           />
-          <ToggleRow
-            title="在网页底部显示 KeyPilot 工具栏"
-            description="保留给后续完整网页工具栏使用；当前网页内仍优先使用字段旁浮层。"
-            checked={settings.showWebBottomToolbar}
-            onChange={(checked) => void updateSettings({ showWebBottomToolbar: checked })}
-          />
         </SettingsSection>
       );
     }
@@ -493,6 +599,7 @@ export function OptionsApp() {
     if (activeSection === 'account') {
       return (
         <SettingsSection title="账户&数据" description="管理本地 Vault、导出备份和数据迁移。">
+          <BackupStatus session={session} onChange={setSession} />
           <div className="metrics-grid">
             <Metric label="全部项目" value={stats.items} />
             <Metric label="登录账号" value={stats.credentials} />
@@ -506,24 +613,12 @@ export function OptionsApp() {
             action={<span className="status-pill success">已创建</span>}
           />
           <div className="action-grid">
-            <button className="secondary-action" type="button" onClick={exportEncryptedBackup}>
-              <Download size={17} aria-hidden="true" />
-              导出加密备份
-            </button>
             <button className="secondary-action" type="button" onClick={exportCsv}>
               <Download size={17} aria-hidden="true" />
               导出 RoboForm CSV
             </button>
           </div>
-          <label className="field-block">
-            <span>导入加密备份</span>
-            <input type="password" value={backupPassword} onChange={(event) => setBackupPassword(event.currentTarget.value)} placeholder="备份对应主密码" />
-          </label>
-          <label className="file-action">
-            <Upload size={17} aria-hidden="true" />
-            选择 JSON 备份文件
-            <input type="file" accept="application/json,.json" onChange={(event) => void importEncryptedBackup(event.currentTarget.files?.[0])} />
-          </label>
+          <BackupRestorePanel session={session!} onRestored={next => {setSession(next);setEncryptedVault(next.encryptedVault);}} />
           <DangerZone onReset={resetVault} />
         </SettingsSection>
       );
@@ -548,13 +643,13 @@ export function OptionsApp() {
           <ToggleRow title="启动时自动锁定" checked={settings.lockOnStartup} onChange={(checked) => void updateSettings({ lockOnStartup: checked, lockOnStartupUserSet: true })} />
           <ToggleRow
             title="高安全模式"
-            description="开启后不缓存明文 Vault 和解锁密钥。关闭弹窗、刷新后台页或浏览器重启后，需要重新输入主密码。"
+            description="会话仅放在后台内存，不写入会话存储。后台休眠或浏览器重启后需要重新解锁。"
             checked={settings.highSecurityMode}
             onChange={(checked) => void toggleHighSecurityMode(checked)}
           />
           <ToggleRow
             title="查看密码时要求主密码"
-            description="复制密码仍可使用；查看明文密码时会提高安全门槛。"
+            description="查看、复制密码或明文导出前验证主密码；显示的密码会在 30 秒后隐藏。"
             checked={settings.requireMasterPasswordForReveal}
             onChange={(checked) => void updateSettings({ requireMasterPasswordForReveal: checked })}
           />
@@ -646,6 +741,12 @@ export function OptionsApp() {
         <SettingsSection title="自动填表" description="控制账号、密码、身份 ID 在网页中的填充方式。">
           <ToggleRow title="自动填充用户名和密码" description="检测到匹配登录表单时允许 KeyPilot 填入账号密码。" checked={settings.autoFill} onChange={(checked) => void updateSettings({ autoFill: checked })} />
           <ToggleRow title="允许一键登录自动点击登录按钮" description="一键登录会填入账号密码，并尝试点击页面登录按钮。" checked={settings.autoSubmit} onChange={(checked) => void updateSettings({ autoSubmit: checked })} />
+          <ToggleRow title="本地验证码识别（实验功能）" description="一键登录时自动识别图形验证码，填写首选结果并尝试登录一次，失败时交给你处理。单独点击识别仍可核对后按 Enter 填写；不需要的网站可单独关闭。" checked={Boolean(settings.captchaAssistEnabled)} onChange={(checked) => void updateSettings({ captchaAssistEnabled: checked })} />
+          <details className="captcha-rules-settings">
+            <summary>已记住的验证码网站规则（{Object.keys(settings.captchaSiteRules??{}).length}）</summary>
+            <p>规则按协议、域名和端口分别保存，随完整加密备份导出；合并备份时选择“站点识别规则”恢复。清除已关闭网站的规则后，该网站恢复自动提示。</p>
+            {Object.entries(settings.captchaSiteRules??{}).map(([origin,rule])=><ActionRow key={origin} icon={<Globe size={20} aria-hidden="true" />} title={origin} description={rule.disabled?'此网站已关闭验证码提示':`自动识别 · ${rule.expectedLength?`${rule.expectedLength} 位`:'自动判断位数'}`} action={<button className="secondary-action small" type="button" aria-label={`清除 ${origin} 的验证码规则`} onClick={()=>void removeCaptchaRule(origin)}>清除规则</button>} />)}
+          </details>
           <SettingRow
             title="复制后清空剪贴板"
             description="复制密码后，KeyPilot 会在指定时间后尝试清空剪贴板。"
@@ -703,11 +804,11 @@ export function OptionsApp() {
 
     if (activeSection === 'hotkeys') {
       return (
-        <SettingsSection title="快捷键" description="查看 KeyPilot 常用操作，并打开浏览器扩展快捷键管理。">
+        <SettingsSection title="快捷键" description="填写快捷键会识别登录账号或个人资料表单。先点击目标输入框；多份资料先选择，资料填写先预览，已有值会保留。">
           <div className="shortcut-list">
-            <ShortcutRow action="打开 KeyPilot 弹窗" shortcut="浏览器工具栏按钮" />
-            <ShortcutRow action="填写当前表单" shortcut="网页内图标或账号菜单" />
-            <ShortcutRow action="生成并填写密码" shortcut="注册密码框旁生成器" />
+            <ShortcutRow action="打开 KeyPilot 弹窗" shortcut={shortcut("_execute_action")} />
+            <ShortcutRow action="填写账号或个人资料" shortcut={shortcut("fill-current")} />
+            <ShortcutRow action="锁定密码库" shortcut={shortcut("lock-vault")} /><ShortcutRow action="搜索密码库" shortcut={shortcut("search-vault")} />
             <ShortcutRow action="浏览器级快捷键" shortcut="chrome://extensions/shortcuts" />
           </div>
           <button className="secondary-action" type="button" onClick={() => window.open('chrome://extensions/shortcuts', '_blank', 'noopener,noreferrer')}>
@@ -739,6 +840,10 @@ export function OptionsApp() {
     if (activeSection === 'advanced') {
       const diagnosticLimit = settings.diagnosticLogLimit ?? DEFAULT_DIAGNOSTIC_LOG_LIMIT;
       const diagnosticRetentionDays = settings.diagnosticLogRetentionDays ?? DEFAULT_DIAGNOSTIC_LOG_RETENTION_DAYS;
+      const siteRules = settings.siteRules ?? [];
+      const siteRuleStats = getSiteRuleStats(siteRules);
+      const filteredSiteRules = filterSiteRules(siteRules, siteRuleQuery, siteRuleModeFilter);
+      const inlineSilentRules = settings.inlineSilentRules ?? [];
 
       return (
         <SettingsSection title="高级设置" description="维护站点规则、浏览器指令和本地诊断能力。">
@@ -747,16 +852,73 @@ export function OptionsApp() {
             title="站点规则库"
             description={`当前保存 ${stats.siteRules} 条规则。清空后自动登录会重新学习表单结构。`}
             action={
-              <button className="secondary-action small" type="button" onClick={() => void updateSettings({ siteRules: [] }, '站点规则库已清空。')}>
-                清空规则
-              </button>
+              <div className="row-actions">
+                <button className="secondary-action small" type="button" onClick={exportSiteRules} disabled={!siteRules.length}>
+                  导出规则
+                </button>
+                <button className="secondary-action small" type="button" onClick={pickSiteRulesFile}>
+                  导入规则
+                </button>
+                <button className="secondary-action small danger" type="button" onClick={() => void clearSiteRules()} disabled={!siteRules.length}>
+                  清空规则
+                </button>
+              </div>
             }
           />
+          {siteRules.length ? (
+            <>
+              <SiteRuleOverview stats={siteRuleStats} active={siteRuleModeFilter} onChange={setSiteRuleModeFilter} />
+              <RuleManager
+                title="站点识别规则"
+                query={siteRuleQuery}
+                onQuery={setSiteRuleQuery}
+                placeholder="搜索域名、路径或规则来源"
+                meta={`${filteredSiteRules.length} / ${siteRules.length}`}
+              >
+              <SiteRuleList
+                rules={filteredSiteRules}
+                total={siteRules.length}
+                onPageModeChange={(id, pageMode) => void updateSiteRule(id, { pageMode })}
+                onPathPatternChange={(id, pathPattern) => void updateSiteRule(id, { pathPattern })}
+                onPasswordGeneratorChange={(id, disabled) => void updateSiteRule(id, { disablePasswordGenerator: disabled })}
+                onDelete={(id) => void removeSiteRule(id)}
+              />
+              </RuleManager>
+            </>
+          ) : (
+            <RuleEmptyState title="暂无站点识别规则" body="当你保存账号、绑定字段或手动标记页面后，这里会出现可管理的规则。" />
+          )}
           <ToggleRow
             title="在浏览器右键菜单中显示 KeyPilot 指令"
             checked={settings.showContextMenuCommands}
             onChange={(checked) => void updateSettings({ showContextMenuCommands: checked })}
           />
+          <ToggleRow
+            title="自动静默普通页面"
+            description="页面没有登录框、注册密码框或真实填表上下文时，KeyPilot 会学习路径级静默规则，避免网页内图标误弹。"
+            checked={settings.autoSilentInline !== false}
+            onChange={(checked) => void updateSettings({ autoSilentInline: checked }, checked ? '自动静默已开启。' : '自动静默已关闭。')}
+          />
+          <ActionRow
+            icon={<ShieldCheck size={20} aria-hidden="true" />}
+            title="自动静默规则"
+            description={`当前保存 ${inlineSilentRules.length} 条路径级规则，只影响网页内浮标，不影响插件弹窗。`}
+            action={
+              <button className="secondary-action small" type="button" onClick={() => void clearInlineSilentRules()} disabled={!inlineSilentRules.length}>
+                清空规则
+              </button>
+            }
+          />
+          {inlineSilentRules.length ? (
+            <RuleManager
+              title="自动静默规则"
+              query={silentRuleQuery}
+              onQuery={setSilentRuleQuery}
+              placeholder="搜索被静默的域名或路径"
+            >
+              <InlineSilentRuleList rules={filterInlineSilentRules(inlineSilentRules, silentRuleQuery)} total={inlineSilentRules.length} onDelete={(id) => void removeInlineSilentRule(id)} />
+            </RuleManager>
+          ) : null}
           <ActionRow
             icon={<CircleHelp size={20} aria-hidden="true" />}
             title="识别调试面板"
@@ -817,12 +979,12 @@ export function OptionsApp() {
 
     if (activeSection === 'billing') {
       return (
-        <SettingsSection title="许可&版本" description="当前版本为本地专业版，没有云端订阅和账单数据。">
+        <SettingsSection title="关于 KeyPilot" description="管理本机密码、验证码和身份资料。">
           <ActionRow
             icon={<BadgeCheck size={20} aria-hidden="true" />}
-            title="KeyPilot 本地专业版"
+            title="KeyPilot 浏览器扩展"
             description="功能在本机运行，不依赖云端账号。"
-            action={<span className="status-pill success">已启用</span>}
+            action={<span className="status-pill">v{globalThis.chrome?.runtime?.getManifest?.().version ?? "本地开发"}</span>}
           />
           <ActionRow
             icon={<ShieldCheck size={20} aria-hidden="true" />}
@@ -836,7 +998,7 @@ export function OptionsApp() {
 
     if (activeSection === 'apps') {
       return (
-        <SettingsSection title="应用程序" description="打开 KeyPilot 的独立页面和数据管理入口。">
+        <SettingsSection title="快捷入口" description="打开 KeyPilot 的独立页面和数据管理入口。">
           <div className="action-grid">
             <button className="secondary-action" type="button" onClick={() => openExtensionPage('vault.html')}>
               <AppWindow size={17} aria-hidden="true" />
@@ -874,16 +1036,23 @@ export function OptionsApp() {
   return (
     <main className="settings-shell">
       <aside className="settings-sidebar" aria-label="设置分类">
-        <div className="settings-title">设置</div>
+        <header className="settings-sidebar-head">
+          <a className="settings-back-link" href={extensionUrl('vault.html')}>
+            <ArrowLeft size={20} aria-hidden="true" />
+            <span>返回密码库</span>
+          </a>
+          <div className="settings-title">设置</div>
+        </header>
         <nav>
-          {SECTIONS.map((section) => (
+          {SETTINGS_GROUPS.map((section) => (
             <button
               key={section.key}
-              className={activeSection === section.key ? 'active' : ''}
+              className={activeGroup.key === section.key ? 'active' : ''}
+              aria-current={activeGroup.key === section.key ? 'page' : undefined}
               type="button"
-              onClick={() => setActiveSection(section.key)}
+              onClick={() => navigateSection(section.key)}
             >
-              {section.icon}
+              {SECTIONS.find(item => item.key === section.key)?.icon}
               <span>{section.label}</span>
             </button>
           ))}
@@ -896,6 +1065,11 @@ export function OptionsApp() {
 
       <section className="settings-content">
         {notice ? <NoticeToast notice={notice} onDismiss={() => setNotice(null)} /> : null}
+        {activeGroup.sections.length > 1 && <nav className="settings-subnav" aria-label={activeGroup.label + '子分类'}>
+          {activeGroup.sections.map(key => <button type="button" key={key} aria-current={key === activeSection ? 'page' : undefined} className={key === activeSection ? 'active' : ''} onClick={() => navigateSection(key)}>
+            {key === 'general' ? '偏好设置' : key === 'security' ? '密码与锁定' : key === 'autofill' ? '填写与登录' : key === 'billing' ? '关于 KeyPilot' : key === 'apps' ? '快捷入口' : key === 'referral' ? '分享说明' : SECTIONS.find(item => item.key === key)?.label}
+          </button>)}
+        </nav>}
         {renderContent()}
       </section>
     </main>
@@ -932,7 +1106,7 @@ function ToggleRow({ title, description, checked, onChange }: { title: string; d
       title={title}
       description={description}
       control={
-        <button className={checked ? 'switch on' : 'switch'} type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}>
+        <button className={checked ? 'switch on' : 'switch'} type="button" role="switch" aria-label={title} aria-checked={checked} onClick={() => onChange(!checked)}>
           <span />
         </button>
       }
@@ -968,6 +1142,338 @@ function ShortcutRow({ action, shortcut }: { action: string; shortcut: string })
       <span>{action}</span>
       <kbd>{shortcut}</kbd>
     </div>
+  );
+}
+
+function normalizeRuleSearch(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function normalizeSiteRulePathDraft(value: string): string | undefined {
+  const text = value.trim();
+  if (!text || text === '*') return undefined;
+  return text.startsWith('/') ? text : `/${text}`;
+}
+
+function getSiteRuleStats(rules: SiteRule[]) {
+  return rules.reduce(
+    (stats, rule) => {
+      const mode = rule.pageMode ?? 'auto';
+      stats.total += 1;
+      stats[mode] += 1;
+      stats.fields += rule.formFields?.length ?? 0;
+      if (rule.formProfile?.submit) stats.withSubmit += 1;
+      if (rule.disablePasswordGenerator) stats.generatorDisabled += 1;
+      return stats;
+    },
+    {
+      total: 0,
+      auto: 0,
+      login: 0,
+      register: 0,
+      'fill-profile': 0,
+      withSubmit: 0,
+      fields: 0,
+      generatorDisabled: 0
+    } satisfies Record<SiteRulePageMode | 'total' | 'withSubmit' | 'fields' | 'generatorDisabled', number>
+  );
+}
+
+function filterSiteRules(rules: SiteRule[], query: string, modeFilter: SiteRuleModeFilter): SiteRule[] {
+  const normalizedQuery = normalizeRuleSearch(query);
+  const sorted = [...rules]
+    .filter((rule) => modeFilter === 'all' || (rule.pageMode ?? 'auto') === modeFilter)
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+
+  if (!normalizedQuery) return sorted;
+
+  return sorted.filter((rule) =>
+    [
+      rule.domain,
+      rule.pathPattern ?? '',
+      rule.pageMode ?? 'auto',
+      rule.source,
+      rule.disablePasswordGenerator ? 'disable password generator 禁用密码生成器' : '',
+      rule.lastOutcome ?? ''
+    ].some((value) => value.toLowerCase().includes(normalizedQuery))
+  );
+}
+
+function filterInlineSilentRules(rules: InlineSilentRule[], query: string): InlineSilentRule[] {
+  const normalizedQuery = normalizeRuleSearch(query);
+  const sorted = [...rules].sort((left, right) => right.updatedAt - left.updatedAt);
+
+  if (!normalizedQuery) return sorted;
+
+  return sorted.filter((rule) =>
+    [
+      rule.domain,
+      rule.pathPattern ?? '',
+      rule.title ?? '',
+      rule.lastUrl ?? '',
+      rule.source ?? 'auto',
+      inlineSilentSourceText(rule.source),
+      rule.reason,
+      inlineSilentReasonText(rule.reason)
+    ].some((value) =>
+      value.toLowerCase().includes(normalizedQuery)
+    )
+  );
+}
+
+function siteRulePageModeText(pageMode?: SiteRulePageMode): string {
+  if (pageMode === 'login') return '登录页';
+  if (pageMode === 'register') return '注册页';
+  if (pageMode === 'fill-profile') return '填表页';
+  return '自动识别';
+}
+
+function siteRuleSourceText(source: SiteRule['source']): string {
+  if (source === 'manual-binding') return '手动校准';
+  if (source === 'save-prompt') return '保存账号';
+  if (source === 'auto-repair') return '自动修复';
+  return source;
+}
+
+function siteRuleFieldKindText(kind: NonNullable<SiteRule['formFields']>[number]['kind']): string {
+  if (kind === 'username') return '账号';
+  if (kind === 'password') return '密码';
+  return '文本';
+}
+
+function siteRuleOutcomeText(outcome?: SiteRule['lastOutcome']): string {
+  if (outcome === 'successLikely') return '疑似成功';
+  if (outcome === 'waitingVerification') return '等待验证';
+  if (outcome === 'navigated') return '已跳转';
+  if (outcome === 'stillOnLogin') return '仍在登录页';
+  if (outcome === 'errorVisible') return '页面报错';
+  if (outcome === 'blocked') return '被拦截';
+  if (outcome === 'checking') return '检测中';
+  return '未记录';
+}
+
+function siteRuleHealth(rule: SiteRule): 'good' | 'warning' | 'neutral' {
+  if ((rule.failureCount ?? 0) > (rule.successCount ?? 0)) return 'warning';
+  if ((rule.successCount ?? 0) > 0 || rule.formProfile?.submit) return 'good';
+  return 'neutral';
+}
+
+function SiteRuleOverview({
+  stats,
+  active,
+  onChange
+}: {
+  stats: ReturnType<typeof getSiteRuleStats>;
+  active: SiteRuleModeFilter;
+  onChange: (filter: SiteRuleModeFilter) => void;
+}) {
+  const filters: Array<{ key: SiteRuleModeFilter; label: string; value: number; hint: string }> = [
+    { key: 'all', label: '全部', value: stats.total, hint: '所有规则' },
+    { key: 'login', label: '登录页', value: stats.login, hint: '一键登录' },
+    { key: 'register', label: '注册页', value: stats.register, hint: '密码生成' },
+    { key: 'fill-profile', label: '填表页', value: stats['fill-profile'], hint: '身份资料' },
+    { key: 'auto', label: '自动', value: stats.auto, hint: '默认判断' }
+  ];
+
+  return (
+    <section className="site-rule-overview" aria-label="站点规则总览">
+      <div className="site-rule-overview-copy">
+        <strong>规则总览</strong>
+        <span>{stats.withSubmit} 条记录了登录按钮，{stats.fields} 个字段选择器，{stats.generatorDisabled} 条禁用密码生成器。</span>
+      </div>
+      <div className="site-rule-filter-grid" role="tablist" aria-label="站点规则筛选">
+        {filters.map((filter) => (
+          <button
+            key={filter.key}
+            className={active === filter.key ? 'active' : ''}
+            type="button"
+            role="tab"
+            aria-selected={active === filter.key}
+            onClick={() => onChange(filter.key)}
+          >
+            <strong>{filter.value}</strong>
+            <span>{filter.label}</span>
+            <small>{filter.hint}</small>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RuleManager({
+  title,
+  query,
+  onQuery,
+  placeholder,
+  meta,
+  children
+}: {
+  title: string;
+  query: string;
+  onQuery: (value: string) => void;
+  placeholder: string;
+  meta?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rule-manager" aria-label={title}>
+      <div className="rule-manager-head">
+        <div>
+          <strong>{title}</strong>
+          {meta ? <span>{meta}</span> : null}
+        </div>
+        <input value={query} onChange={(event) => onQuery(event.currentTarget.value)} placeholder={placeholder} />
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function RuleEmptyState({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rule-empty">
+      <strong>{title}</strong>
+      <span>{body}</span>
+    </div>
+  );
+}
+
+function SiteRuleList({
+  rules,
+  total,
+  onPageModeChange,
+  onPathPatternChange,
+  onPasswordGeneratorChange,
+  onDelete
+}: {
+  rules: SiteRule[];
+  total: number;
+  onPageModeChange: (id: string, pageMode: SiteRulePageMode) => void;
+  onPathPatternChange: (id: string, pathPattern?: string) => void;
+  onPasswordGeneratorChange: (id: string, disabled: boolean) => void;
+  onDelete: (id: string) => void;
+}) {
+  if (!rules.length) {
+    return <RuleEmptyState title="没有匹配的站点规则" body="换一个域名、路径或来源关键词再试。" />;
+  }
+
+  return (
+    <div className="site-rule-list" role="list" aria-label="站点识别规则列表">
+      <div className="rule-count">显示 {rules.length} / {total} 条</div>
+      {rules.slice(0, 40).map((rule) => (
+        <SiteRuleItem
+          key={rule.id}
+          rule={rule}
+          onPageModeChange={onPageModeChange}
+          onPathPatternChange={onPathPatternChange}
+          onPasswordGeneratorChange={onPasswordGeneratorChange}
+          onDelete={onDelete}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SiteRuleItem({
+  rule,
+  onPageModeChange,
+  onPathPatternChange,
+  onPasswordGeneratorChange,
+  onDelete
+}: {
+  rule: SiteRule;
+  onPageModeChange: (id: string, pageMode: SiteRulePageMode) => void;
+  onPathPatternChange: (id: string, pathPattern?: string) => void;
+  onPasswordGeneratorChange: (id: string, disabled: boolean) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [pathDraft, setPathDraft] = useState(rule.pathPattern ?? '');
+  const normalizedPath = normalizeSiteRulePathDraft(pathDraft);
+  const pathChanged = (normalizedPath ?? '') !== (rule.pathPattern ?? '');
+  const health = siteRuleHealth(rule);
+  const fields = rule.formFields ?? [];
+  const previewFields = fields.slice(0, 5);
+
+  useEffect(() => {
+    setPathDraft(rule.pathPattern ?? '');
+  }, [rule.id, rule.pathPattern]);
+
+  return (
+    <article className={`site-rule-item ${health}`} role="listitem">
+      <header className="site-rule-item-head">
+        <span className={`site-rule-dot ${health}`} aria-hidden="true" />
+        <div className="site-rule-main">
+          <strong title={`${rule.domain}${rule.pathPattern ?? ''}`}>{rule.domain}</strong>
+          <span>{rule.pathPattern || '整站规则'} · {siteRuleSourceText(rule.source)} · {formatDiagnosticTime(rule.updatedAt)}</span>
+        </div>
+        <span className={`site-rule-mode ${rule.pageMode ?? 'auto'}`}>{siteRulePageModeText(rule.pageMode)}</span>
+      </header>
+
+      <div className="site-rule-metrics">
+        <span>{fields.length} 字段</span>
+        <span>{rule.formProfile?.submit ? '已记录按钮' : '未记录按钮'}</span>
+        <span>成功 {rule.successCount ?? 0}</span>
+        <span>失败 {rule.failureCount ?? 0}</span>
+        <span>{siteRuleOutcomeText(rule.lastOutcome)}</span>
+      </div>
+
+      <div className="site-rule-path-editor">
+        <label>
+          <span>匹配路径</span>
+          <input
+            value={pathDraft}
+            onChange={(event) => setPathDraft(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && pathChanged) {
+                onPathPatternChange(rule.id, normalizedPath);
+              }
+            }}
+            placeholder="整站，或输入 /login、/account/*"
+          />
+        </label>
+        <button className="secondary-action small" type="button" disabled={!pathChanged} onClick={() => onPathPatternChange(rule.id, normalizedPath)}>
+          保存路径
+        </button>
+      </div>
+
+      <div className="site-rule-field-preview" aria-label={`${rule.domain} 字段摘要`}>
+        {previewFields.length ? (
+          previewFields.map((field, index) => (
+            <span key={`${field.kind}-${field.selector ?? field.name ?? field.label}-${index}`}>
+              {siteRuleFieldKindText(field.kind)} · {field.label || field.placeholder || field.name || field.selector || '未命名'}
+            </span>
+          ))
+        ) : (
+          <span>暂无字段结构，下一次成功填充后会自动补充。</span>
+        )}
+        {fields.length > previewFields.length ? <span>+{fields.length - previewFields.length} 个字段</span> : null}
+      </div>
+
+      <footer className="site-rule-controls">
+        <select
+          aria-label={`设置 ${rule.domain} 的页面类型`}
+          value={rule.pageMode ?? 'auto'}
+          onChange={(event) => onPageModeChange(rule.id, event.currentTarget.value as SiteRulePageMode)}
+        >
+          <option value="auto">自动识别</option>
+          <option value="login">登录页</option>
+          <option value="register">注册页</option>
+          <option value="fill-profile">填表页</option>
+        </select>
+        <button
+          className={rule.disablePasswordGenerator ? 'rule-chip active' : 'rule-chip'}
+          type="button"
+          aria-pressed={Boolean(rule.disablePasswordGenerator)}
+          onClick={() => onPasswordGeneratorChange(rule.id, !rule.disablePasswordGenerator)}
+        >
+          {rule.disablePasswordGenerator ? '生成器已禁用' : '允许密码生成器'}
+        </button>
+        <button className="text-danger small" type="button" onClick={() => onDelete(rule.id)}>
+          删除规则
+        </button>
+      </footer>
+    </article>
   );
 }
 
@@ -1014,6 +1520,50 @@ function DiagnosticLogList({ logs }: { logs: DiagnosticLogEntry[] }) {
             <span>{diagnosticOutcomeText(entry.outcome)}</span>
             {entry.signal ? <span>{entry.signal}</span> : null}
             {entry.counts ? <span>{Object.entries(entry.counts).slice(0, 4).map(([key, value]) => `${key}:${String(value)}`).join(' · ')}</span> : null}
+          </footer>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function inlineSilentReasonText(reason: InlineSilentRule['reason']): string {
+  if (reason === 'empty-page') return '空页面';
+  if (reason === 'passive-form') return '营销/留言表单';
+  if (reason === 'manual-hide') return '用户手动隐藏';
+  if (reason === 'no-form-context') return '没有填表上下文';
+  return '没有登录锚点';
+}
+
+function inlineSilentSourceText(source?: InlineSilentRule['source']): string {
+  return source === 'manual' ? '手动添加' : '自动学习';
+}
+
+function InlineSilentRuleList({ rules, total, onDelete }: { rules: InlineSilentRule[]; total: number; onDelete: (id: string) => void }) {
+  if (!rules.length) {
+    return <RuleEmptyState title="没有匹配的静默规则" body="换一个域名或路径关键词再试。" />;
+  }
+
+  return (
+    <div className="diagnostic-log-list" role="list" aria-label="自动静默规则">
+      <div className="rule-count">显示 {rules.length} / {total} 条</div>
+      {rules.slice(0, 12).map((rule) => (
+        <article className="diagnostic-log-item ignored" key={rule.id} role="listitem">
+          <div>
+            <strong>{rule.title || `${rule.domain}${rule.pathPattern ? rule.pathPattern : ''}`}</strong>
+            <span>{inlineSilentSourceText(rule.source)} · {inlineSilentReasonText(rule.reason)}</span>
+          </div>
+          <p>
+            {rule.domain}{rule.pathPattern ? rule.pathPattern : ''} · 置信度 {Math.round(rule.confidence * 100)}%，命中 {rule.matchCount} 次。
+            规则只隐藏网页内浮标，不影响插件弹窗。
+          </p>
+          <footer>
+            <time dateTime={new Date(rule.updatedAt).toISOString()}>{formatDiagnosticTime(rule.updatedAt)}</time>
+            {rule.lastMatchedAt ? <span>最后命中 {formatDiagnosticTime(rule.lastMatchedAt)}</span> : null}
+            {rule.expiresAt ? <span>{Math.max(1, Math.ceil((rule.expiresAt - Date.now()) / 86400000))} 天后过期</span> : null}
+            <button className="text-danger small" type="button" onClick={() => onDelete(rule.id)}>
+              删除
+            </button>
           </footer>
         </article>
       ))}

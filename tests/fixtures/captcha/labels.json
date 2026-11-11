@@ -1,0 +1,38 @@
+[
+  {
+    "file": "site-01.png",
+    "expected": "7bsh"
+  },
+  {
+    "file": "site-02.png",
+    "expected": "r8es"
+  },
+  {
+    "file": "site-03.png",
+    "expected": "22xf"
+  },
+  {
+    "file": "site-04.png",
+    "expected": "8h3p"
+  },
+  {
+    "file": "site-05.png",
+    "expected": "y3sd"
+  },
+  {
+    "file": "site-06.png",
+    "expected": "y8sv"
+  },
+  {
+    "file": "site-07.png",
+    "expected": "m36q"
+  },
+  {
+    "file": "user-inline-ukay.png",
+    "expected": "ukay"
+  },
+  {
+    "file": "user-preview-ukay.png",
+    "expected": "ukay"
+  }
+]

@@ -1,0 +1,3450 @@
+{
+  "description": "Frozen automatic full pipeline; 120 new synthetic equations with fonts absent from arithmetic-head training. No arithmetic hint, answer length or type supplied. Correctness compares the computed answer, not the recognized expression. Not real-world accuracy. Timing omitted.",
+  "version": "1.8.7",
+  "seed": 202611189,
+  "fonts": [
+    "Calibri",
+    "Cambria",
+    "Consolas"
+  ],
+  "count": 120,
+  "imagesSha256": "6b9fbd4485e35a99465473335337c09557167cea508bb09369b198d6667f8e83",
+  "summary": [
+    {
+      "operator": "+",
+      "total": 30,
+      "first": 27,
+      "any": 27
+    },
+    {
+      "operator": "-",
+      "total": 30,
+      "first": 28,
+      "any": 28
+    },
+    {
+      "operator": "*",
+      "total": 30,
+      "first": 30,
+      "any": 30
+    },
+    {
+      "operator": "/",
+      "total": 30,
+      "first": 28,
+      "any": 28
+    }
+  ],
+  "rows": [
+    {
+      "operator": "+",
+      "text": "20+19=",
+      "normalized": "20+19=",
+      "answer": "39",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.009742724872194231,
+      "lines": false,
+      "seed": 956654,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "39",
+            "expression": "20 + 19",
+            "confidence": 100
+          },
+          {
+            "text": "223",
+            "expression": "204 + 19",
+            "confidence": 70
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "27e3251c43b624ff2199ae07d699a883d8e2135124d0c4b973101f28f9f15b8d"
+    },
+    {
+      "operator": "+",
+      "text": "15+11=?",
+      "normalized": "15+11=?",
+      "answer": "26",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.0015856573544442655,
+      "lines": false,
+      "seed": 119582,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "26",
+            "expression": "15 + 11",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a168e23025c6da2a7517bceffe19c211f139e7a3ece8893c99a5b896bc050b46"
+    },
+    {
+      "operator": "+",
+      "text": "0+2=?",
+      "normalized": "0+2=?",
+      "answer": "2",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.027404227559454743,
+      "lines": true,
+      "seed": 151222,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "0+2-",
+            "confidence": 74
+          },
+          {
+            "text": "0x27",
+            "confidence": 93
+          },
+          {
+            "text": "o+2-",
+            "confidence": 0
+          },
+          {
+            "text": "0*2-",
+            "confidence": 0
+          }
+        ],
+        "uncertain": true,
+        "reason": "识别模型的读数存在分歧，请对照原图核对后填写。"
+      },
+      "imageSha256": "04c083c835b8486cf2ac2df7e56eee4d0fe3ac990d8cff47fde629056a3db0bf"
+    },
+    {
+      "operator": "+",
+      "text": "13+1=?",
+      "normalized": "13+1=?",
+      "answer": "14",
+      "font": "Calibri",
+      "bold": true,
+      "dark": true,
+      "angle": -0.0520395486522466,
+      "lines": false,
+      "seed": 380922,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "14",
+            "expression": "13 + 1",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "4836330de9578e55f28bbbff89ba484e21a325ab6bd77e4622fc3cebf016a4d9"
+    },
+    {
+      "operator": "+",
+      "text": "2+14=",
+      "normalized": "2+14=",
+      "answer": "16",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.03859537552576513,
+      "lines": false,
+      "seed": 397160,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "16",
+            "expression": "2 + 14",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "dc9b4a9d88b6eee35dc7bc38bf18e3fa0b47ecf205a3c1826dc809c667190cb2"
+    },
+    {
+      "operator": "+",
+      "text": "2+7=?",
+      "normalized": "2+7=?",
+      "answer": "9",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.009370932988822462,
+      "lines": false,
+      "seed": 362973,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "9",
+            "expression": "2 + 7",
+            "confidence": 100
+          },
+          {
+            "text": "31",
+            "expression": "24 + 7",
+            "confidence": 64
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "b17c844cdd237a20573dd479346fd8f4aa53dee6eda8508b7e5b913d5edfa986"
+    },
+    {
+      "operator": "+",
+      "text": "23+13=?",
+      "normalized": "23+13=?",
+      "answer": "36",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.02180538354907185,
+      "lines": true,
+      "seed": 407124,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "36",
+            "expression": "23 + 13",
+            "confidence": 100
+          },
+          {
+            "text": "26",
+            "expression": "23 + 3",
+            "confidence": 94
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "7abe1f76195a8a0c6c792fe9ddff97bab8951765908322a3d73968e2fd6bd418"
+    },
+    {
+      "operator": "+",
+      "text": "28+3=?",
+      "normalized": "28+3=?",
+      "answer": "31",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.04480809937231243,
+      "lines": false,
+      "seed": 438870,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "31",
+            "expression": "28 + 3",
+            "confidence": 100
+          },
+          {
+            "text": "287",
+            "expression": "284 + 3",
+            "confidence": 79
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a79088160917dc7d01ce56f312107b2fb4054c4249838c3a5d469f69ecc24548"
+    },
+    {
+      "operator": "+",
+      "text": "16+8=",
+      "normalized": "16+8=",
+      "answer": "24",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.007901631058193744,
+      "lines": false,
+      "seed": 896333,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "24",
+            "expression": "16 + 8",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "cd944abd2c7a7909ee17cc87cf456889597b64c320ba78b3531655c6a8c0f8a2"
+    },
+    {
+      "operator": "+",
+      "text": "10+5=?",
+      "normalized": "10+5=?",
+      "answer": "15",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.030074989628046753,
+      "lines": false,
+      "seed": 251143,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "15",
+            "expression": "10 + 5",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "35eb99770ef609df4658f0c02de629e689424d1d9340645f271713ff58c9dd2f"
+    },
+    {
+      "operator": "+",
+      "text": "14+12=?",
+      "normalized": "14+12=?",
+      "answer": "26",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06340374592225999,
+      "lines": true,
+      "seed": 308791,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "26",
+            "expression": "14 + 12",
+            "confidence": 100
+          },
+          {
+            "text": "56",
+            "expression": "14 + 42",
+            "confidence": 66
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "b31fb056e93c39a2f58a8698b87716bed132553a25295b1d52e97135df34026c"
+    },
+    {
+      "operator": "+",
+      "text": "26+8=?",
+      "normalized": "26+8=?",
+      "answer": "34",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.010181245794519784,
+      "lines": false,
+      "seed": 294325,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "34",
+            "expression": "26 + 8",
+            "confidence": 100
+          },
+          {
+            "text": "272",
+            "expression": "264 + 8",
+            "confidence": 54
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "50b1b35746984087b102387eaffe2503a9e2321e9f55220cadd7ed14e1eb19a1"
+    },
+    {
+      "operator": "+",
+      "text": "6+3=",
+      "normalized": "6+3=",
+      "answer": "9",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.0027354115946218375,
+      "lines": false,
+      "seed": 157606,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "9",
+            "expression": "6 + 3",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "28b7818bf73bd8da2cc5fac0db9d1ed167b74c897676046434187c07c6602bed"
+    },
+    {
+      "operator": "+",
+      "text": "0+1=?",
+      "normalized": "0+1=?",
+      "answer": "1",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.005263132080435754,
+      "lines": false,
+      "seed": 915166,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "1",
+            "expression": "0 + 1",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "6a0fab35f519aebae5aa341bfa5ff3354d97e4506f4b9836fa2c3743e3f218bc"
+    },
+    {
+      "operator": "+",
+      "text": "29+5=?",
+      "normalized": "29+5=?",
+      "answer": "34",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.014753595241345466,
+      "lines": true,
+      "seed": 392360,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "34",
+            "expression": "29 + 5",
+            "confidence": 99
+          },
+          {
+            "text": "299",
+            "expression": "294 + 5",
+            "confidence": 43
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "420035db3e1d9a4d8ce5844118f03192f02da6eef3db4386d8afd14a7401aa37"
+    },
+    {
+      "operator": "+",
+      "text": "13+5=?",
+      "normalized": "13+5=?",
+      "answer": "18",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.028175779366865758,
+      "lines": false,
+      "seed": 658572,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "18",
+            "expression": "13 + 5",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "f1a395393046648af6541eceac18ebf01218039981c2a1cfb897652b92dda92d"
+    },
+    {
+      "operator": "+",
+      "text": "18+9=",
+      "normalized": "18+9=",
+      "answer": "27",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.02064801941160113,
+      "lines": false,
+      "seed": 625432,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "27",
+            "expression": "18 + 9",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "5597aece0d8ea5836a11a11396e151e383cb19543d8322c0581f870e164ab581"
+    },
+    {
+      "operator": "+",
+      "text": "0+3=?",
+      "normalized": "0+3=?",
+      "answer": "3",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.04324015555903316,
+      "lines": false,
+      "seed": 450840,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "0+3->",
+            "confidence": 64
+          },
+          {
+            "text": "0x3s7",
+            "confidence": 82
+          },
+          {
+            "text": "0+3=>",
+            "confidence": 0
+          },
+          {
+            "text": "0+3--",
+            "confidence": 0
+          }
+        ],
+        "uncertain": true,
+        "reason": "识别模型的读数存在分歧，请对照原图核对后填写。"
+      },
+      "imageSha256": "3da907ef54fec6fae25024833c8cf087d2ce46235d09f38cd49c314f6eef4dff"
+    },
+    {
+      "operator": "+",
+      "text": "26+2=?",
+      "normalized": "26+2=?",
+      "answer": "28",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.05743417107034475,
+      "lines": true,
+      "seed": 210347,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "28",
+            "expression": "26 + 2",
+            "confidence": 98
+          },
+          {
+            "text": "266",
+            "expression": "264 + 2",
+            "confidence": 68
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "334932c8c3b0ea8c0e7ce4f9d7ee6e12aeaa6a13c15f79d3a07253af2fe3dd7f"
+    },
+    {
+      "operator": "+",
+      "text": "27+10=?",
+      "normalized": "27+10=?",
+      "answer": "37",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.023027538778260352,
+      "lines": false,
+      "seed": 636175,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "37",
+            "expression": "27 + 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "dc2727c7ea1f8544cae3202bd56b4f92aa7e11312d7eb5f7cdf6b6ec6c18bf0f"
+    },
+    {
+      "operator": "+",
+      "text": "0+15=",
+      "normalized": "0+15=",
+      "answer": "15",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.053500193920917816,
+      "lines": false,
+      "seed": 380969,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "15",
+            "expression": "0 + 15",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "d222d97220702948b326f599a006c309f03d32cddd7711afaa1141def7a2366e"
+    },
+    {
+      "operator": "+",
+      "text": "15+7=?",
+      "normalized": "15+7=?",
+      "answer": "22",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.0314692222699523,
+      "lines": false,
+      "seed": 930345,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "22",
+            "expression": "15 + 7",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "57a4f96b61fb8771f1a4c4a94bc617fdeb81236aadffd2a3a8b866aff3df7d93"
+    },
+    {
+      "operator": "+",
+      "text": "1+10=?",
+      "normalized": "1+10=?",
+      "answer": "11",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.05108506092336029,
+      "lines": true,
+      "seed": 743449,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "11",
+            "expression": "1 + 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "1c63cd540e36e71722e3d0d5ed4ee2d7809c2461361e52944acd829b50ae0fba"
+    },
+    {
+      "operator": "+",
+      "text": "0+17=?",
+      "normalized": "0+17=?",
+      "answer": "17",
+      "font": "Consolas",
+      "bold": true,
+      "dark": true,
+      "angle": -0.031728321639820936,
+      "lines": false,
+      "seed": 989085,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "ot17a-",
+            "confidence": 67
+          },
+          {
+            "text": "ot17s-",
+            "confidence": 0
+          },
+          {
+            "text": "ot17az",
+            "confidence": 0
+          },
+          {
+            "text": "ot17a=",
+            "confidence": 0
+          }
+        ],
+        "uncertain": true,
+        "reason": "图片处理后的读数存在分歧，请对照原图核对后填写。"
+      },
+      "imageSha256": "b4b4c2c3fea602ded5a9f8d769973af528da623b77ddb490540259cb4b1d96ec"
+    },
+    {
+      "operator": "+",
+      "text": "1+9=",
+      "normalized": "1+9=",
+      "answer": "10",
+      "font": "Calibri",
+      "bold": true,
+      "dark": true,
+      "angle": -0.016144634946249427,
+      "lines": false,
+      "seed": 675468,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "10",
+            "expression": "1 + 9",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "eff3416f89e922326a64eebd78334edf0824901efc29a25c95a36bddd440956f"
+    },
+    {
+      "operator": "+",
+      "text": "20+5=?",
+      "normalized": "20+5=?",
+      "answer": "25",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.012698834147304298,
+      "lines": false,
+      "seed": 71132,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "25",
+            "expression": "20 + 5",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "7d7eb96c4bb7a0e6c256b50dfb415269b11e405b676a6e19bf17c98c331e7cea"
+    },
+    {
+      "operator": "+",
+      "text": "4+5=?",
+      "normalized": "4+5=?",
+      "answer": "9",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.02936526705045253,
+      "lines": true,
+      "seed": 442231,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "9",
+            "expression": "4 + 5",
+            "confidence": 100
+          },
+          {
+            "text": "49",
+            "expression": "44 + 5",
+            "confidence": 44
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "84ac42a15f90dc7fa51df3e3273d80cb8b951e8800d70d0f5d721e0979b3ba51"
+    },
+    {
+      "operator": "+",
+      "text": "1+17=?",
+      "normalized": "1+17=?",
+      "answer": "18",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06700415157712997,
+      "lines": false,
+      "seed": 268897,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "18",
+            "expression": "1 + 17",
+            "confidence": 100
+          },
+          {
+            "text": "31",
+            "expression": "14 + 17",
+            "confidence": 72
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "dd698a60e110ebfc09746b936e03eedd8bdaa190753e6b0f02cb161809203a7b"
+    },
+    {
+      "operator": "+",
+      "text": "5+2=",
+      "normalized": "5+2=",
+      "answer": "7",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06392477571498603,
+      "lines": false,
+      "seed": 398232,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "7",
+            "expression": "5 + 2",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "926b97fbf0e7a48127af28b6657f171773e9319781f9f60b19ed95869184d44a"
+    },
+    {
+      "operator": "+",
+      "text": "28+12=?",
+      "normalized": "28+12=?",
+      "answer": "40",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.043490505367517474,
+      "lines": false,
+      "seed": 546402,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "40",
+            "expression": "28 + 12",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "1536176dc61868e6a865bf79ba82ac4fef6c7d68eda8ced3e9e0404a0f73fe6b"
+    },
+    {
+      "operator": "-",
+      "text": "7−9=",
+      "normalized": "7-9=",
+      "answer": "-2",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.04013868110720069,
+      "lines": false,
+      "seed": 320568,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-2",
+            "expression": "7 − 9",
+            "confidence": 98
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "70c0e7c9f576bb4e0f99f0b9b740c0c62d3c52fa3f66628c65e074b7189f31ff"
+    },
+    {
+      "operator": "-",
+      "text": "2-5=?",
+      "normalized": "2-5=?",
+      "answer": "-3",
+      "font": "Cambria",
+      "bold": false,
+      "dark": false,
+      "angle": 0.007135366955772043,
+      "lines": false,
+      "seed": 426654,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-3",
+            "expression": "2 − 5",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "35efd2bc26aea54a1d26583739e4c1738bfe29d9c2851932f3d6d8168be510ba"
+    },
+    {
+      "operator": "-",
+      "text": "19-8=?",
+      "normalized": "19-8=?",
+      "answer": "11",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": 0.012852075272239746,
+      "lines": true,
+      "seed": 26014,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "19-8=?",
+            "confidence": 77
+          },
+          {
+            "text": "198-",
+            "confidence": 91
+          },
+          {
+            "text": "saseet",
+            "confidence": 0
+          },
+          {
+            "text": "cas-eer",
+            "confidence": 0
+          }
+        ],
+        "uncertain": true,
+        "reason": "识别结果存在分歧或把握不足。请对照原图核对大小写和符号，选择候选或手动输入。"
+      },
+      "imageSha256": "d5d3d9d922a1dbd656111099bf3efb778e46eead087cdb9b8e6bbc9ccdf6ade8"
+    },
+    {
+      "operator": "-",
+      "text": "4−3=?",
+      "normalized": "4-3=?",
+      "answer": "1",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.033772889580577614,
+      "lines": false,
+      "seed": 171574,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "1",
+            "expression": "4 − 3",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "ac4b2364c638adb29f8e3d2f48ee0307e7d4866e62f6a1776f91d26f574be1c1"
+    },
+    {
+      "operator": "-",
+      "text": "29-15=",
+      "normalized": "29-15=",
+      "answer": "14",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.04872835501562804,
+      "lines": false,
+      "seed": 772727,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "14",
+            "expression": "29 − 15",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "63f1a7957ba34addb78185e6785fff88dd195460359c87d2c7eedefaeddf6f1e"
+    },
+    {
+      "operator": "-",
+      "text": "3-1=?",
+      "normalized": "3-1=?",
+      "answer": "2",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.010315601574257018,
+      "lines": false,
+      "seed": 759565,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "2",
+            "expression": "3 − 1",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "01d0a57af68f5d96c09af613058e52adcf7bef55c528e4622d6c06aa15e3f3d7"
+    },
+    {
+      "operator": "-",
+      "text": "14−14=?",
+      "normalized": "14-14=?",
+      "answer": "0",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.013286226433701814,
+      "lines": true,
+      "seed": 850743,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "0",
+            "expression": "14 − 14",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "2db232450adf3190b5858400511ff42b074db9726a8d781c587f8e38dde1581b"
+    },
+    {
+      "operator": "-",
+      "text": "26-6=?",
+      "normalized": "26-6=?",
+      "answer": "20",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06873827662318946,
+      "lines": false,
+      "seed": 451095,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "20",
+            "expression": "26 − 6",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "74e24d5c681ba71456b2a2122b0cae7ca5a74ace97ae488e2232cd22b5caa9a8"
+    },
+    {
+      "operator": "-",
+      "text": "4-6=",
+      "normalized": "4-6=",
+      "answer": "-2",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06587687058839947,
+      "lines": false,
+      "seed": 35952,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-2",
+            "expression": "4 − 6",
+            "confidence": 98
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "481e3614c7c1eb31bcdd78b672b0bff2a7bf4dac70fef2527d9c92496eb99abf"
+    },
+    {
+      "operator": "-",
+      "text": "5−10=?",
+      "normalized": "5-10=?",
+      "answer": "-5",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.049229010986164216,
+      "lines": false,
+      "seed": 304009,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-5",
+            "expression": "5 − 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "0bd08db63418059885825e4b0f8fb22739ac654f2990145da58bd0a678f3ecb2"
+    },
+    {
+      "operator": "-",
+      "text": "24-1=?",
+      "normalized": "24-1=?",
+      "answer": "23",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.00014989772345870735,
+      "lines": true,
+      "seed": 532438,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "23",
+            "expression": "24 − 1",
+            "confidence": 94
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "49cfb58806d934315cf2833f4a144b9aa6ed64d624456c8ef62a225cec37509f"
+    },
+    {
+      "operator": "-",
+      "text": "7-19=?",
+      "normalized": "7-19=?",
+      "answer": "-12",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.021894637960940603,
+      "lines": false,
+      "seed": 219982,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-12",
+            "expression": "7 − 19",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a2eae380549fd3c58045885596a3a89a753632bbe34ebd4f26c27685a5e11162"
+    },
+    {
+      "operator": "-",
+      "text": "29−14=",
+      "normalized": "29-14=",
+      "answer": "15",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": -0.0011186597915366294,
+      "lines": false,
+      "seed": 470428,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "15",
+            "expression": "29 − 14",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "8ffa33e65b393e9b9bef6ec690459521a5b3993866bbae77d9221dbdc0542d38"
+    },
+    {
+      "operator": "-",
+      "text": "13-5=?",
+      "normalized": "13-5=?",
+      "answer": "8",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.009249845007434488,
+      "lines": false,
+      "seed": 34203,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "8",
+            "expression": "13 − 5",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "902e9e747300deaf95fdb73214a390971b30304fd807ad15a958b5ca1c6468af"
+    },
+    {
+      "operator": "-",
+      "text": "3-17=?",
+      "normalized": "3-17=?",
+      "answer": "-14",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.03794842652510852,
+      "lines": true,
+      "seed": 274198,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-14",
+            "expression": "3 − 17",
+            "confidence": 98
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "55ac66306c42310a2905c4790c8b8d891c8d7a1839ccecd0740ac9a4da1c3e4f"
+    },
+    {
+      "operator": "-",
+      "text": "21−11=?",
+      "normalized": "21-11=?",
+      "answer": "10",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.021764174178242685,
+      "lines": false,
+      "seed": 364467,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "10",
+            "expression": "21 − 11",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "535fea6958ac35f081382ec92d0f5ed23d7ea1f74af3b97bb93158aef3600482"
+    },
+    {
+      "operator": "-",
+      "text": "24-6=",
+      "normalized": "24-6=",
+      "answer": "18",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.03045777747873217,
+      "lines": false,
+      "seed": 78512,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "18",
+            "expression": "24 − 6",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a8627513fb43d92faffd5a47f1f89ff559801c225171b27d92d7384facc3951b"
+    },
+    {
+      "operator": "-",
+      "text": "0-16=?",
+      "normalized": "0-16=?",
+      "answer": "-16",
+      "font": "Consolas",
+      "bold": false,
+      "dark": true,
+      "angle": 0.02920398526825011,
+      "lines": false,
+      "seed": 475915,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-16",
+            "expression": "0 − 16",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "9beaf03d01319ed11d59e7f14d1d412dd552fc5e0f44f993bf3bc2a4eb438d05"
+    },
+    {
+      "operator": "-",
+      "text": "7−3=?",
+      "normalized": "7-3=?",
+      "answer": "4",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06039099430199713,
+      "lines": true,
+      "seed": 166135,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "4",
+            "expression": "7 − 3",
+            "confidence": 97
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "e5b97a02365ce040124ee1e09fac2017af02b2fa77f3e1c484d294e00ece8fce"
+    },
+    {
+      "operator": "-",
+      "text": "3-4=?",
+      "normalized": "3-4=?",
+      "answer": "-1",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.03640987260267139,
+      "lines": false,
+      "seed": 856111,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-1",
+            "expression": "3 − 4",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "6d6ff7453b33197245501471473762a9741cbbaef4ea1cf75730f0ed7545de87"
+    },
+    {
+      "operator": "-",
+      "text": "17-13=",
+      "normalized": "17-13=",
+      "answer": "4",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.02314664415549487,
+      "lines": false,
+      "seed": 935088,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "4",
+            "expression": "17 − 13",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "19b862272190268d958d04297440e6ef3973c0b00ce5d4a7a57370e9ae415fd6"
+    },
+    {
+      "operator": "-",
+      "text": "0−3=?",
+      "normalized": "0-3=?",
+      "answer": "-3",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.03144202711991966,
+      "lines": false,
+      "seed": 594580,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-3",
+            "expression": "0 − 3",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "20d43b9177bb1cb46b18a94f1649fbef125095cf56c75fb4c3dfe8826fd2dd67"
+    },
+    {
+      "operator": "-",
+      "text": "21-1=?",
+      "normalized": "21-1=?",
+      "answer": "20",
+      "font": "Cambria",
+      "bold": true,
+      "dark": true,
+      "angle": 0.04295052718836814,
+      "lines": true,
+      "seed": 495126,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "20",
+            "expression": "21 − 1",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "f78288429e4c2b5c8824dc853488e084e5c281d9f24f085bf4e983fb83a709d1"
+    },
+    {
+      "operator": "-",
+      "text": "29-10=?",
+      "normalized": "29-10=?",
+      "answer": "19",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": 0.059803018085658556,
+      "lines": false,
+      "seed": 583775,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "19",
+            "expression": "29 − 10",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "cf0821747d6686c15bb6db127d41ad905a27d3ed91311d5a59e94fd5083899b0"
+    },
+    {
+      "operator": "-",
+      "text": "26−12=",
+      "normalized": "26-12=",
+      "answer": "14",
+      "font": "Calibri",
+      "bold": true,
+      "dark": true,
+      "angle": -0.05160932993981988,
+      "lines": false,
+      "seed": 450938,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "14",
+            "expression": "26 − 12",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "77383e5048701ee274be9fac53401460ba30db91520c9e3265186bdbce141690"
+    },
+    {
+      "operator": "-",
+      "text": "6-18=?",
+      "normalized": "6-18=?",
+      "answer": "-12",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.03696631389670074,
+      "lines": false,
+      "seed": 67218,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "-12",
+            "expression": "6 − 18",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "e935a8e966bc19645a3763f6445a1a489dfea6022b20794cc386971c74305fbe"
+    },
+    {
+      "operator": "-",
+      "text": "10-5=?",
+      "normalized": "10-5=?",
+      "answer": "5",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.016149984910152855,
+      "lines": true,
+      "seed": 67263,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "105-",
+            "confidence": 89
+          },
+          {
+            "text": "1053",
+            "confidence": 86
+          },
+          {
+            "text": "1o5-",
+            "confidence": 0
+          },
+          {
+            "text": "1e-5-3",
+            "confidence": 78
+          }
+        ],
+        "uncertain": true,
+        "reason": "识别模型的读数存在分歧，请对照原图核对后填写。"
+      },
+      "imageSha256": "4b8a853af3ae810635d9b3e77294beba2d24ee85276ea014dbf7a9797a16dde9"
+    },
+    {
+      "operator": "-",
+      "text": "19−9=?",
+      "normalized": "19-9=?",
+      "answer": "10",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.02174589300528169,
+      "lines": false,
+      "seed": 717820,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "10",
+            "expression": "19 − 9",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "0070bf863a90a5e19b6171299b263ac3ea798ada1f8c4b0be39c450446e1d634"
+    },
+    {
+      "operator": "-",
+      "text": "22-7=",
+      "normalized": "22-7=",
+      "answer": "15",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.018552904468961063,
+      "lines": false,
+      "seed": 640987,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "15",
+            "expression": "22 − 7",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "2b2dcf0e6835ea1e67452f8cef36dd1ded455edf5bedbc71750ef1eeb81e7442"
+    },
+    {
+      "operator": "-",
+      "text": "23-19=?",
+      "normalized": "23-19=?",
+      "answer": "4",
+      "font": "Consolas",
+      "bold": true,
+      "dark": true,
+      "angle": -0.028446398461237553,
+      "lines": false,
+      "seed": 297505,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "4",
+            "expression": "23 − 19",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a5e36dba08c343dc52ac9b82658d51e7bb21174acc439b5fa254b19bf82ee7be"
+    },
+    {
+      "operator": "*",
+      "text": "6×11=",
+      "normalized": "6*11=",
+      "answer": "66",
+      "font": "Calibri",
+      "bold": true,
+      "dark": true,
+      "angle": 0.004012300525791944,
+      "lines": false,
+      "seed": 839872,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "66",
+            "expression": "6 × 11",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "f6d453675b380bce218632caea35a3109cf2ea8200ce1415050f846b51c82a5f"
+    },
+    {
+      "operator": "*",
+      "text": "21*8=?",
+      "normalized": "21*8=?",
+      "answer": "168",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.015986073911190033,
+      "lines": false,
+      "seed": 590903,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "168",
+            "expression": "21 × 8",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "e798d407b40a5eaad68e8efabbcb0bab712245bd97cab9988678c2853d1184ef"
+    },
+    {
+      "operator": "*",
+      "text": "14x19=?",
+      "normalized": "14*19=?",
+      "answer": "266",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.028232551836408677,
+      "lines": true,
+      "seed": 819314,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "266",
+            "expression": "14 × 19",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "2195cf3fe8947783eb848cc2c198b405f3ce3c065482cae02fce3dfb9ae36565"
+    },
+    {
+      "operator": "*",
+      "text": "16×2=?",
+      "normalized": "16*2=?",
+      "answer": "32",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.027103656223043802,
+      "lines": false,
+      "seed": 783391,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "32",
+            "expression": "16 × 2",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "76511a64a762770c85c5bfc1151ff4e316b1c5943abd741686d4c5c882828d98"
+    },
+    {
+      "operator": "*",
+      "text": "14*17=",
+      "normalized": "14*17=",
+      "answer": "238",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.05557990757282824,
+      "lines": false,
+      "seed": 409977,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "238",
+            "expression": "14 × 17",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "796d424931fdd7dc4b3a5fdfb89689a7f96f1228824c53763fac0ac7b9033d85"
+    },
+    {
+      "operator": "*",
+      "text": "2x18=?",
+      "normalized": "2*18=?",
+      "answer": "36",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.05244352405890823,
+      "lines": false,
+      "seed": 329752,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "36",
+            "expression": "2 × 18",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "f05571255feac4f084b8b695caa7c8c5fad340defa3608f3d20231ec3b6db52f"
+    },
+    {
+      "operator": "*",
+      "text": "19×15=?",
+      "normalized": "19*15=?",
+      "answer": "285",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.008176958556286992,
+      "lines": true,
+      "seed": 392788,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "285",
+            "expression": "19 × 15",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "147238e13cd1d8d417fe068333858cb1bfc7f6c70d04d3feb486b986a7cc7b57"
+    },
+    {
+      "operator": "*",
+      "text": "26*6=?",
+      "normalized": "26*6=?",
+      "answer": "156",
+      "font": "Cambria",
+      "bold": false,
+      "dark": false,
+      "angle": 0.04218095521442593,
+      "lines": false,
+      "seed": 696627,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "156",
+            "expression": "26 × 6",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "24d4f189194190ca813a9643876f2dc0df647be4dd2533a8afe879bb7de1b425"
+    },
+    {
+      "operator": "*",
+      "text": "18x10=",
+      "normalized": "18*10=",
+      "answer": "180",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.04674487988930196,
+      "lines": false,
+      "seed": 156084,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "180",
+            "expression": "18 × 10",
+            "confidence": 100
+          },
+          {
+            "text": "288",
+            "expression": "18 × 16",
+            "confidence": 66
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "08a70ddcf9e5c43a0eb10d4294ace3707468c8a9016d7ccef6b3fb14a56df4a3"
+    },
+    {
+      "operator": "*",
+      "text": "4×5=?",
+      "normalized": "4*5=?",
+      "answer": "20",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06788564790040255,
+      "lines": false,
+      "seed": 722292,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "20",
+            "expression": "4 × 5",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "38b47472428324e663995ef5e706b892a7f2806ce74aa98931e0894583310be1"
+    },
+    {
+      "operator": "*",
+      "text": "28*4=?",
+      "normalized": "28*4=?",
+      "answer": "112",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06942500023636967,
+      "lines": true,
+      "seed": 675221,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "112",
+            "expression": "28 × 4",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "b3466324c70ca570ceb3a2cf43269ed347dd5103c4da6cf7c597ebd06ea4a19d"
+    },
+    {
+      "operator": "*",
+      "text": "1x2=?",
+      "normalized": "1*2=?",
+      "answer": "2",
+      "font": "Consolas",
+      "bold": true,
+      "dark": true,
+      "angle": 0.0058078350592404605,
+      "lines": false,
+      "seed": 783582,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "2",
+            "expression": "1 × 2",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "5d174aae44054a8f5d3a8ecef20824d5fd2106fa2e5b49f46c7ec08ebdb4f987"
+    },
+    {
+      "operator": "*",
+      "text": "8×3=",
+      "normalized": "8*3=",
+      "answer": "24",
+      "font": "Calibri",
+      "bold": true,
+      "dark": true,
+      "angle": 0.0652059946069494,
+      "lines": false,
+      "seed": 80161,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "24",
+            "expression": "8 × 3",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "bd92862fc7fc6d21e7f61b048d611829e06e054b2076110ccc98d853158802c7"
+    },
+    {
+      "operator": "*",
+      "text": "15*13=?",
+      "normalized": "15*13=?",
+      "answer": "195",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.00016319645568728448,
+      "lines": false,
+      "seed": 54499,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "195",
+            "expression": "15 × 13",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "c2fa5231bf990f3672ab777771b807d29a2892d383d71111c4c27cec75d12117"
+    },
+    {
+      "operator": "*",
+      "text": "26x1=?",
+      "normalized": "26*1=?",
+      "answer": "26",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.05244650450069458,
+      "lines": true,
+      "seed": 893896,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "26",
+            "expression": "26 × 1",
+            "confidence": 98
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "7e95d958cf8a05d28a1a53b6f356a7c7540affce7aed5bfc9a7dda4c36668097"
+    },
+    {
+      "operator": "*",
+      "text": "4×10=?",
+      "normalized": "4*10=?",
+      "answer": "40",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": 0.026230467846617107,
+      "lines": false,
+      "seed": 946727,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "40",
+            "expression": "4 × 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "d5102196f8d94ba7344c59a230d3ad8e64ff8deb4bfba485d84c7e5a54f0d90a"
+    },
+    {
+      "operator": "*",
+      "text": "15*10=",
+      "normalized": "15*10=",
+      "answer": "150",
+      "font": "Cambria",
+      "bold": true,
+      "dark": true,
+      "angle": -0.0200247112615034,
+      "lines": false,
+      "seed": 646692,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "150",
+            "expression": "15 × 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "d78cd73e677adcc6de9867f83c50fc10cac0e5ac9fafeba3bb980a389c3fedcf"
+    },
+    {
+      "operator": "*",
+      "text": "6x16=?",
+      "normalized": "6*16=?",
+      "answer": "96",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.01787558801472187,
+      "lines": false,
+      "seed": 901355,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "96",
+            "expression": "6 × 16",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "c42690f6590b65ac6a8babefc5b0d40969e4a0e15592368552d39878f75d4430"
+    },
+    {
+      "operator": "*",
+      "text": "12×10=?",
+      "normalized": "12*10=?",
+      "answer": "120",
+      "font": "Calibri",
+      "bold": true,
+      "dark": true,
+      "angle": -0.004754202910698951,
+      "lines": true,
+      "seed": 810354,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "120",
+            "expression": "12 × 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "8ff7e7a8fd2e7b08003160f922bfc83862c0ab9b8e58d8436a383a7c4ea6fe53"
+    },
+    {
+      "operator": "*",
+      "text": "0*13=?",
+      "normalized": "0*13=?",
+      "answer": "0",
+      "font": "Cambria",
+      "bold": false,
+      "dark": false,
+      "angle": -0.05399550429545343,
+      "lines": false,
+      "seed": 116158,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "0",
+            "expression": "0 × 13",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "6429b9afc3e3b277f2ec8fb90b8a6c27c8f5d04b5ae8d40413001a212629da40"
+    },
+    {
+      "operator": "*",
+      "text": "6x8=",
+      "normalized": "6*8=",
+      "answer": "48",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.01720166405197233,
+      "lines": false,
+      "seed": 165667,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "48",
+            "expression": "6 × 8",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "aafeda6a78b6a1fdfd131e58c0ffcf5e1140a1ecf51bcdd16afba17af63cd7c2"
+    },
+    {
+      "operator": "*",
+      "text": "12×12=?",
+      "normalized": "12*12=?",
+      "answer": "144",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": 0.005017330367118121,
+      "lines": false,
+      "seed": 106277,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "144",
+            "expression": "12 × 12",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "c32e43900337359ffd0d04349248abd8e265ffaae9a1dcefd85459bdd2855d92"
+    },
+    {
+      "operator": "*",
+      "text": "21*10=?",
+      "normalized": "21*10=?",
+      "answer": "210",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.012281470824964346,
+      "lines": true,
+      "seed": 627318,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "210",
+            "expression": "21 × 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "fd85c344bb253a62851e19b25d3df8ae91bff1de3dc8f290f9e841e145b9c6fe"
+    },
+    {
+      "operator": "*",
+      "text": "17x1=?",
+      "normalized": "17*1=?",
+      "answer": "17",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.04732336563058198,
+      "lines": false,
+      "seed": 270523,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "17",
+            "expression": "17 × 1",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "45e4ed387f5a9ec46579d269478d39c86dcd7bacc266c44e8a863bd6d16b28b5"
+    },
+    {
+      "operator": "*",
+      "text": "4×11=",
+      "normalized": "4*11=",
+      "answer": "44",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06478624787647277,
+      "lines": false,
+      "seed": 516400,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "44",
+            "expression": "4 × 11",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "e37cddaaf4c1456a18268b102912c51f1f76616ea246dbf866a5edd5b052f012"
+    },
+    {
+      "operator": "*",
+      "text": "4*17=?",
+      "normalized": "4*17=?",
+      "answer": "68",
+      "font": "Cambria",
+      "bold": true,
+      "dark": true,
+      "angle": 0.03354824807494879,
+      "lines": false,
+      "seed": 433403,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "68",
+            "expression": "4 × 17",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "978cd97dc87c5398d76c1b21828e988c96bc156d5945b42a49e52826fad5b149"
+    },
+    {
+      "operator": "*",
+      "text": "28x4=?",
+      "normalized": "28*4=?",
+      "answer": "112",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06421890416648239,
+      "lines": true,
+      "seed": 103623,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "112",
+            "expression": "28 × 4",
+            "confidence": 94
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "d3fa8a08de18c57b8bdcc4295a3c709fcf6510aed853bfb0fd9ff3553dddfbeb"
+    },
+    {
+      "operator": "*",
+      "text": "12×9=?",
+      "normalized": "12*9=?",
+      "answer": "108",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.01892406704835594,
+      "lines": false,
+      "seed": 716756,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "108",
+            "expression": "12 × 9",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "79df92750e765d4a4cb8e6c3472363262a649226f4200090df220d14eeb2a625"
+    },
+    {
+      "operator": "*",
+      "text": "19*17=",
+      "normalized": "19*17=",
+      "answer": "323",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06409434930887074,
+      "lines": false,
+      "seed": 259044,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "323",
+            "expression": "19 × 17",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a3d503a573353f72760abcb338a5e21fa7a97a7d7e975d200aefbc9806f4989b"
+    },
+    {
+      "operator": "*",
+      "text": "16x12=?",
+      "normalized": "16*12=?",
+      "answer": "192",
+      "font": "Consolas",
+      "bold": false,
+      "dark": true,
+      "angle": -0.007840648386627437,
+      "lines": false,
+      "seed": 627098,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "192",
+            "expression": "16 × 12",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "9737ac89153044b532c31065e1be22809f2b34185bb1f386942119803a0b05c3"
+    },
+    {
+      "operator": "/",
+      "text": "64÷16=",
+      "normalized": "64/16=",
+      "answer": "4",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06313665566965938,
+      "lines": false,
+      "seed": 723364,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "4",
+            "expression": "64 ÷ 16",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "2c7e4e3f48923a1d4de9d340618eef507d580f8d93f7bda272721728e3d828e2"
+    },
+    {
+      "operator": "/",
+      "text": "12/2=?",
+      "normalized": "12/2=?",
+      "answer": "6",
+      "font": "Cambria",
+      "bold": true,
+      "dark": true,
+      "angle": 0.06958289695903659,
+      "lines": false,
+      "seed": 104358,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "6",
+            "expression": "12 ÷ 2",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "8a2907289b4ee2847fc05390037320ecd658eda32fd7a040c734fc486d8f5753"
+    },
+    {
+      "operator": "/",
+      "text": "36÷12=?",
+      "normalized": "36/12=?",
+      "answer": "3",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.02642530167475343,
+      "lines": true,
+      "seed": 416569,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "3",
+            "expression": "36 ÷ 12",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "871d78cdf6e566d371485b6b32aeee986583a29154cfc2d22f09aed2397495cc"
+    },
+    {
+      "operator": "/",
+      "text": "14/14=?",
+      "normalized": "14/14=?",
+      "answer": "1",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06643120026215911,
+      "lines": false,
+      "seed": 119042,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "1",
+            "expression": "14 ÷ 14",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "902935a1581d5febb63c9cfdf70b289648a35cc41d44191afc5648b6f044fc83"
+    },
+    {
+      "operator": "/",
+      "text": "72÷9=",
+      "normalized": "72/9=",
+      "answer": "8",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.0054417716152966025,
+      "lines": false,
+      "seed": 485339,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "8",
+            "expression": "72 ÷ 9",
+            "confidence": 100
+          },
+          {
+            "text": "81",
+            "expression": "72 + 9",
+            "confidence": 73
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "f34454bef37501b6fd2b96b89ff0aefe5162496199351a1e1c5926e9a1b47c8b"
+    },
+    {
+      "operator": "/",
+      "text": "38/19=?",
+      "normalized": "38/19=?",
+      "answer": "2",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.013715919237583876,
+      "lines": false,
+      "seed": 667988,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "2",
+            "expression": "38 ÷ 19",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "18fc17cb10216d5a644adb77f8f81bf84e86eefd0ab59502a2cf9844b8be7a73"
+    },
+    {
+      "operator": "/",
+      "text": "108÷9=?",
+      "normalized": "108/9=?",
+      "answer": "12",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": 0.057297458741813904,
+      "lines": true,
+      "seed": 825440,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "12",
+            "expression": "108 ÷ 9",
+            "confidence": 99
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "cc7af6fba52dfb2604092c4fdb68aa1b6da8fc8c41cc2d05c0d649c6de163ae8"
+    },
+    {
+      "operator": "/",
+      "text": "48/8=?",
+      "normalized": "48/8=?",
+      "answer": "6",
+      "font": "Cambria",
+      "bold": true,
+      "dark": true,
+      "angle": -0.05686769464984537,
+      "lines": false,
+      "seed": 311517,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "6",
+            "expression": "48 ÷ 8",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "c4fdae66a8654ca9fb2951e65a5e3013fbbd9a91d8602398321890d858910b31"
+    },
+    {
+      "operator": "/",
+      "text": "51÷17=",
+      "normalized": "51/17=",
+      "answer": "3",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": -0.03206433860585094,
+      "lines": false,
+      "seed": 927368,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "3",
+            "expression": "51 ÷ 17",
+            "confidence": 100
+          },
+          {
+            "text": "68",
+            "expression": "51 + 17",
+            "confidence": 90
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "3e501c07a1c4623e7bfb7447700642ad492836c6fa15c5435007ac2a12bedc2b"
+    },
+    {
+      "operator": "/",
+      "text": "162/18=?",
+      "normalized": "162/18=?",
+      "answer": "9",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06919079618528486,
+      "lines": false,
+      "seed": 235922,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "9",
+            "expression": "162 ÷ 18",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "724c9156d57b605fe7d66343575fb5a0f54b10a2e9783cbebaa8ddc54a6058ce"
+    },
+    {
+      "operator": "/",
+      "text": "204÷17=?",
+      "normalized": "204/17=?",
+      "answer": "12",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.009608271662145854,
+      "lines": true,
+      "seed": 938842,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "12",
+            "expression": "204 ÷ 17",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "7634f3c08f29bc5c0d5ebc8c518c581fcd0acae8b04c1152d6392b85a6689191"
+    },
+    {
+      "operator": "/",
+      "text": "14/14=?",
+      "normalized": "14/14=?",
+      "answer": "1",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": 0.001059053596109152,
+      "lines": false,
+      "seed": 315975,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "1",
+            "expression": "14 ÷ 14",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "372b338193f9650c48e889ff4778b72b23e1e4002cb655888ad9bef2746ac205"
+    },
+    {
+      "operator": "/",
+      "text": "16÷16=",
+      "normalized": "16/16=",
+      "answer": "1",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": 0.004625775385648013,
+      "lines": false,
+      "seed": 727309,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "1",
+            "expression": "16 ÷ 16",
+            "confidence": 100
+          },
+          {
+            "text": "32",
+            "expression": "16 + 16",
+            "confidence": 92
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "4e307798bb2f56ef0ffb241b9ad123334d288c2325980cd95e403d7e4eabe8f2"
+    },
+    {
+      "operator": "/",
+      "text": "45/9=?",
+      "normalized": "45/9=?",
+      "answer": "5",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.030127887409180407,
+      "lines": false,
+      "seed": 177423,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "5",
+            "expression": "45 ÷ 9",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "01f466d4788a3afeab8d6e68e0f2df9ed68349c2fa24fef3d2b8985ffa1d5c7d"
+    },
+    {
+      "operator": "/",
+      "text": "21÷3=?",
+      "normalized": "21/3=?",
+      "answer": "7",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": 0.0691072521544993,
+      "lines": true,
+      "seed": 942442,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "21-3-",
+            "confidence": 73
+          },
+          {
+            "text": "21;3-",
+            "confidence": 0
+          },
+          {
+            "text": "21*3-",
+            "confidence": 0
+          },
+          {
+            "text": "21-3>",
+            "confidence": 0
+          }
+        ],
+        "uncertain": true,
+        "reason": "图片处理后的读数存在分歧，请对照原图核对后填写。"
+      },
+      "imageSha256": "dfe8c706a9b9e40e0bb7f7987a94c3178f4628ee8ad8f935187b2332c51724e3"
+    },
+    {
+      "operator": "/",
+      "text": "171/19=?",
+      "normalized": "171/19=?",
+      "answer": "9",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06994533171877265,
+      "lines": false,
+      "seed": 259490,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "9",
+            "expression": "171 ÷ 19",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "64bbba591163bf1643c9eced159692e33ba9c3c6ef7342aa1ed28efd540eea89"
+    },
+    {
+      "operator": "/",
+      "text": "65÷13=",
+      "normalized": "65/13=",
+      "answer": "5",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.04326962469145656,
+      "lines": false,
+      "seed": 78642,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "5",
+            "expression": "65 ÷ 13",
+            "confidence": 100
+          },
+          {
+            "text": "78",
+            "expression": "65 + 13",
+            "confidence": 91
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "85c51d507ed08da1af0ac0265e87aad0d6287bee76ce58354fafdce6b43e7d2f"
+    },
+    {
+      "operator": "/",
+      "text": "95/19=?",
+      "normalized": "95/19=?",
+      "answer": "5",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.02812539326027036,
+      "lines": false,
+      "seed": 877378,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "5",
+            "expression": "95 ÷ 19",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "0920b381c069fce1b65fe6fabde1a8c937618df3fcc329764eec723d8797ce6d"
+    },
+    {
+      "operator": "/",
+      "text": "20÷5=?",
+      "normalized": "20/5=?",
+      "answer": "4",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": -0.05751858806237579,
+      "lines": true,
+      "seed": 537535,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "candidates": [
+          {
+            "text": "20-5-",
+            "confidence": 67
+          },
+          {
+            "text": "20s5s3",
+            "confidence": 76
+          },
+          {
+            "text": "2o-5-",
+            "confidence": 0
+          },
+          {
+            "text": "20+5-",
+            "confidence": 0
+          }
+        ],
+        "uncertain": true,
+        "reason": "识别模型的读数存在分歧，请对照原图核对后填写。"
+      },
+      "imageSha256": "d5ab360e5b064755e4551b85f0758fccd321d3f03fc579c34a2bf96d371ddcae"
+    },
+    {
+      "operator": "/",
+      "text": "40/10=?",
+      "normalized": "40/10=?",
+      "answer": "4",
+      "font": "Cambria",
+      "bold": false,
+      "dark": false,
+      "angle": -0.00953747356310487,
+      "lines": false,
+      "seed": 284763,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "4",
+            "expression": "40 ÷ 10",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "5a863a5084179c117b394cab3201ec13749cb06d5c7ca88bd3e0c9f56079225a"
+    },
+    {
+      "operator": "/",
+      "text": "72÷8=",
+      "normalized": "72/8=",
+      "answer": "9",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.026405222881585363,
+      "lines": false,
+      "seed": 690474,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "9",
+            "expression": "72 ÷ 8",
+            "confidence": 99
+          },
+          {
+            "text": "80",
+            "expression": "72 + 8",
+            "confidence": 87
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "d83bc06ddf75fbfe4a764d97301bac2103a89474dd14a88d1b5e27054b019b52"
+    },
+    {
+      "operator": "/",
+      "text": "49/7=?",
+      "normalized": "49/7=?",
+      "answer": "7",
+      "font": "Calibri",
+      "bold": false,
+      "dark": false,
+      "angle": -0.012810501474887133,
+      "lines": false,
+      "seed": 736300,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "7",
+            "expression": "49 ÷ 7",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "a32739b6cc900c4ba02887f233c12d7848425fcba199ecd826322955dbbfa7af"
+    },
+    {
+      "operator": "/",
+      "text": "56÷14=?",
+      "normalized": "56/14=?",
+      "answer": "4",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": -0.02264473726972938,
+      "lines": true,
+      "seed": 941040,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "4",
+            "expression": "56 ÷ 14",
+            "confidence": 99
+          },
+          {
+            "text": "70",
+            "expression": "56 + 14",
+            "confidence": 81
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "c3c02de845bc0ac55f7beaf7664ae0134b527e1becd38ca991f9b97de652cd5c"
+    },
+    {
+      "operator": "/",
+      "text": "102/17=?",
+      "normalized": "102/17=?",
+      "answer": "6",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.0342195244692266,
+      "lines": false,
+      "seed": 550118,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "6",
+            "expression": "102 ÷ 17",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "321be73949734c423921269460be3097640e622ec07c6b546053933dc73cfe14"
+    },
+    {
+      "operator": "/",
+      "text": "144÷12=",
+      "normalized": "144/12=",
+      "answer": "12",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": -0.06325642017647624,
+      "lines": false,
+      "seed": 787537,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "12",
+            "expression": "144 ÷ 12",
+            "confidence": 100
+          },
+          {
+            "text": "156",
+            "expression": "144 + 12",
+            "confidence": 91
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "3a3bea3796e32ca897a567743e5a3631e8523b33b58f1926b69b72bd42f0570d"
+    },
+    {
+      "operator": "/",
+      "text": "80/8=?",
+      "normalized": "80/8=?",
+      "answer": "10",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.03815019948408008,
+      "lines": false,
+      "seed": 170326,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "10",
+            "expression": "80 ÷ 8",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "700a8a30b269d4b93c09f4ca8cfbe71a0c2fff3542c4d9a64e2d52d2050fe269"
+    },
+    {
+      "operator": "/",
+      "text": "140÷14=?",
+      "normalized": "140/14=?",
+      "answer": "10",
+      "font": "Consolas",
+      "bold": true,
+      "dark": false,
+      "angle": 0.04229081625118852,
+      "lines": true,
+      "seed": 885500,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "10",
+            "expression": "140 ÷ 14",
+            "confidence": 100
+          },
+          {
+            "text": "154",
+            "expression": "140 + 14",
+            "confidence": 82
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "46aae4e7e84f29cee885da3579b70179f9b6da7762656fac402f842a45edf9af"
+    },
+    {
+      "operator": "/",
+      "text": "105/15=?",
+      "normalized": "105/15=?",
+      "answer": "7",
+      "font": "Calibri",
+      "bold": true,
+      "dark": false,
+      "angle": 0.06376271253451705,
+      "lines": false,
+      "seed": 229507,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "7",
+            "expression": "105 ÷ 15",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "79af4c19b49e7054a5c3f246323575b9f096826728aeeb63bafb950b06f96a7b"
+    },
+    {
+      "operator": "/",
+      "text": "55÷11=",
+      "normalized": "55/11=",
+      "answer": "5",
+      "font": "Cambria",
+      "bold": true,
+      "dark": false,
+      "angle": 0.05177620785310865,
+      "lines": false,
+      "seed": 110187,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "5",
+            "expression": "55 ÷ 11",
+            "confidence": 100
+          },
+          {
+            "text": "66",
+            "expression": "55 + 11",
+            "confidence": 86
+          }
+        ],
+        "uncertain": true,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "0ed60d0f4d38e52af24ef5feef57cb0ce157bfaac880220df5ae488c13468421"
+    },
+    {
+      "operator": "/",
+      "text": "10/1=?",
+      "normalized": "10/1=?",
+      "answer": "10",
+      "font": "Consolas",
+      "bold": false,
+      "dark": false,
+      "angle": -0.04222815366461873,
+      "lines": false,
+      "seed": 611220,
+      "result": {
+        "ok": true,
+        "engine": "auto",
+        "arithmetic": true,
+        "candidates": [
+          {
+            "text": "10",
+            "expression": "10 ÷ 1",
+            "confidence": 100
+          }
+        ],
+        "uncertain": false,
+        "reason": "已自动计算，请核对算式后确认填写。"
+      },
+      "imageSha256": "724d25a2c4b5ae78cd117ead1d6171ddfbd9f4ba638ab5664e56422bdb15c877"
+    }
+  ]
+}

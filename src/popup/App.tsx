@@ -1,4 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { CopyButton } from '../shared/CopyButton';
+import { navigateAccountList } from '../shared/listNavigation';
+import { siteLoginSettings } from '../shared/loginSettings';
+import { CredentialSecurityPanel } from '../shared/CredentialSecurityPanel';
+import { AuthenticatorPanel } from '../shared/AuthenticatorPanel';
+import { Bell } from 'lucide-react';
+import { BackupStatus } from '../shared/BackupStatusPanel';
+import { SensitiveValue } from '../shared/SensitiveValue';
+import { BackupRestorePanel, InitialBackupRestore } from '../shared/BackupRestorePanel';
+import { copyProtectedText } from '../shared/clipboard';
+import { useSessionGuard } from '../shared/sessionGuard';
+import { authorizeSensitiveAction, useSecretVisibility } from '../shared/sensitiveActions';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
   AlertTriangle,
@@ -42,9 +54,9 @@ import { parseCredentialCsv, type ImportPreview, type ImportPreviewRow, type Imp
 import { exportRoboFormCsv } from '../shared/csvExport';
 import { generateRecoveryCode } from '../shared/crypto';
 import { credentialMatchesUrl, domainsMatch, extractDomain, extractMatchDomain, normalizeMatchUrl, normalizeUrl } from '../shared/domain';
-import { getIconCandidates, getRootFaviconUrl, toHttpIconUrl } from '../shared/icons';
+import { getRootFaviconUrl, toHttpIconUrl } from '../shared/icons';
 import { defaultGeneratorOptions, generatePassword, measurePasswordStrength, type PasswordGeneratorOptions } from '../shared/passwordGenerator';
-import { clearEncryptedVault, getEncryptedVault, saveEncryptedVault } from '../shared/storage';
+import { clearEncryptedVault, getEncryptedVault } from '../shared/storage';
 import {
   addCredentialToVault,
   buildCredential,
@@ -76,9 +88,13 @@ import type {
   FillProfile,
   FillProfileFillResult,
   FillProfilePayload,
+  InlineSilentRuleSummary,
   InlineDiagnosticsResult,
   PendingLoginCandidate,
+  RecognitionRuleApplyResult,
   SiteRule,
+  SiteRulePageMode,
+  SiteRuleSummary,
   SiteRuleField,
   SubmitOutcome,
   SubmitRepairAction,
@@ -88,7 +104,7 @@ import type {
 } from '../shared/types';
 
 type NoticeKind = 'success' | 'error' | 'info';
-type ViewKey = 'home' | 'vault' | 'generator' | 'import' | 'settings' | 'detail' | 'edit';
+type ViewKey = 'totp' | 'home' | 'vault' | 'generator' | 'import' | 'settings' | 'detail' | 'edit';
 type ConflictImportAction = 'skip' | 'update' | 'keep';
 type SaveLoginMode = 'save' | 'update' | 'new' | 'skip' | 'blacklist';
 const DEFAULT_REPAIR_ACTIONS: SubmitRepairAction[] = ['commit-fields', 'wait-enabled-click', 'retry-click', 'click-nearby', 'enter-password', 'request-submit'];
@@ -146,6 +162,15 @@ interface OpenTabResult {
   tabId?: number;
 }
 
+interface InlinePageState {
+  ok: boolean;
+  error?: string;
+  locked?: boolean;
+  hidden?: boolean;
+  silentRule?: InlineSilentRuleSummary;
+  siteRule?: SiteRuleSummary;
+}
+
 function getErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -178,6 +203,10 @@ function getErrorMessage(error: unknown): string {
     return '主密码错误，请重新输入。';
   }
 
+  if (message === 'VAULT_WRITE_CONFLICT') return '这条记录已在另一个页面修改，请重新打开记录后再保存。';
+  if (message === 'MASTER_PASSWORD_TOO_SHORT') return '主密码至少需要 8 位。';
+  if (message === 'FILL_CANCELLED') return '已取消填写，网页未改变。';
+  if (message === 'VAULT_LOCKED') return '密码库已锁定，请重新解锁。';
   return message || '操作失败，请稍后重试。';
 }
 
@@ -193,7 +222,7 @@ function submitOutcomeNotice(outcome?: SubmitOutcome): Notice | null {
   }
 
   if (outcome.status === 'navigated' || outcome.status === 'successLikely') {
-    return { kind: 'success', text: outcome.message };
+    return { kind: 'info', text: outcome.message };
   }
 
   return { kind: 'info', text: outcome.message };
@@ -425,6 +454,19 @@ async function getActiveTabDiagnostics(): Promise<InlineDiagnosticsResult | null
   }
 }
 
+async function getInlinePageState(url?: string): Promise<InlinePageState | null> {
+  if (!canUseExtensionApi()) return null;
+
+  try {
+    return await sendRuntimeMessage<InlinePageState>({
+      type: 'KEYPILOT_GET_INLINE_PAGE_STATE',
+      url
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function getCurrentTab(): Promise<CurrentTabInfo | null> {
   return new Promise((resolve) => {
     if (!globalThis.chrome?.tabs?.query) {
@@ -435,7 +477,7 @@ async function getCurrentTab(): Promise<CurrentTabInfo | null> {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
 
-      if (!tab?.url) {
+      if (chrome.runtime.lastError || !tab?.url || !/^https?:\/\//i.test(tab.url)) {
         resolve(null);
         return;
       }
@@ -456,7 +498,7 @@ async function getCurrentTab(): Promise<CurrentTabInfo | null> {
       }
 
       void getPageMetaFromTab(tab.id).then((meta) => {
-        const metaUrl = meta?.url || baseInfo.url;
+        const metaUrl = meta?.url && /^https?:\/\//i.test(meta.url) ? meta.url : baseInfo.url;
         const iconUrl = toHttpIconUrl(meta?.iconUrl) ?? getRootFaviconUrl(metaUrl);
 
         resolve({
@@ -501,14 +543,15 @@ function fillFieldValue(fields: FillField[], key: string): string {
 }
 
 function fillProfileSummary(profile: FillProfile): string {
+  const publicFields = profile.fields.filter(field => field.sensitivity === 'normal');
   const fullName =
-    fillFieldValue(profile.fields, 'fullName') ||
-    [fillFieldValue(profile.fields, 'firstName'), fillFieldValue(profile.fields, 'lastName')].filter(Boolean).join(' ');
-  const email = fillFieldValue(profile.fields, 'email');
-  const phone = fillFieldValue(profile.fields, 'phone');
-  const business = fillFieldValue(profile.fields, 'businessName') || fillFieldValue(profile.fields, 'dbaName');
-  const loanAmount = fillFieldValue(profile.fields, 'loanAmount');
-  const vehicle = [fillFieldValue(profile.fields, 'vehicleYear'), fillFieldValue(profile.fields, 'vehicleMake'), fillFieldValue(profile.fields, 'vehicleModel')]
+    fillFieldValue(publicFields, 'fullName') ||
+    [fillFieldValue(publicFields, 'firstName'), fillFieldValue(publicFields, 'lastName')].filter(Boolean).join(' ');
+  const email = fillFieldValue(publicFields, 'email');
+  const phone = fillFieldValue(publicFields, 'phone');
+  const business = fillFieldValue(publicFields, 'businessName') || fillFieldValue(publicFields, 'dbaName');
+  const loanAmount = fillFieldValue(publicFields, 'loanAmount');
+  const vehicle = [fillFieldValue(publicFields, 'vehicleYear'), fillFieldValue(publicFields, 'vehicleMake'), fillFieldValue(publicFields, 'vehicleModel')]
     .filter(Boolean)
     .join(' ');
 
@@ -572,7 +615,7 @@ function fillFieldGroupLabel(group: FillField['group']): string {
     loan: '贷款',
     employment: '工作',
     finance: '财务',
-    sensitive: '敏感资料',
+    sensitive: '证件资料',
     custom: '其他'
   };
 
@@ -676,6 +719,7 @@ function createDraft(credential?: Credential, password = ''): EditDraft {
 export function App() {
   const [status, setStatus] = useState<VaultStatus>('checking');
   const [session, setSession] = useState<UnlockedVaultSession | null>(null);
+  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice({kind:'info',text:'密码库已锁定，请重新解锁。'}); });
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [recoveryCodeToShow, setRecoveryCodeToShow] = useState<string | null>(null);
@@ -690,6 +734,10 @@ export function App() {
         if (cachedSession) {
           setSession(cachedSession);
           setStatus('unlocked');
+          if (cachedSession.vault.settings.openStartPageOnToolbarClick && canUseExtensionApi()) {
+            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+            if (/^(chrome:\/\/(newtab|new-tab-page)\/?|edge:\/\/newtab\/?|about:blank)$/.test(tab?.url ?? '')) openVaultHomePage();
+          }
           return;
         }
 
@@ -708,23 +756,6 @@ export function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!session || session.vault.settings.autoLockMinutes <= 0) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(
-      () => {
-        void clearVaultSessionCache();
-        setSession(null);
-        setStatus('locked');
-        setNotice({ kind: 'info', text: '已按设置自动锁定 Vault。' });
-      },
-      session.vault.settings.autoLockMinutes * 60 * 1000
-    );
-
-    return () => window.clearTimeout(timer);
-  }, [session]);
 
   function handleUnlocked(nextSession: UnlockedVaultSession, recoveryCode?: string) {
     setSession(nextSession);
@@ -739,6 +770,8 @@ export function App() {
     });
     if (recoveryCode) {
       setRecoveryCodeToShow(recoveryCode);
+    } else if (nextSession.vault.settings.openStartPageOnLogin) {
+      openVaultHomePage();
     }
   }
 
@@ -841,11 +874,11 @@ function PopupHome({
   const [activeView, setActiveView] = useState<ViewKey>('home');
   const [previousView, setPreviousView] = useState<ViewKey>('home');
   const [query, setQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(session.vault.credentials[0]?.id ?? null);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
   const [diagnostics, setDiagnostics] = useState<InlineDiagnosticsResult | null>(null);
+  const [inlinePageState, setInlinePageState] = useState<InlinePageState | null>(null);
   const [pendingCandidate, setPendingCandidate] = useState<PendingLoginCandidate | null>(null);
   const [launchHashHandled, setLaunchHashHandled] = useState(false);
   const [renameFillProfileTarget, setRenameFillProfileTarget] = useState<FillProfile | null>(null);
@@ -898,8 +931,9 @@ function PopupHome({
 
   const currentMatches = useMemo(() => {
     if (!currentTab?.url) return [];
-    return session.vault.credentials.filter((credential) => credentialMatchesUrl(credential, currentTab.url));
-  }, [currentTab?.url, session.vault.credentials]);
+    const preferred=siteLoginSettings(session.vault.settings,currentTab.url).defaultCredentialId;
+    return session.vault.credentials.filter((credential) => credentialMatchesUrl(credential, currentTab.url)).sort((a,b)=>Number(b.id===preferred)-Number(a.id===preferred));
+  }, [currentTab?.url, session.vault.credentials, session.vault.settings.siteLoginSettings]);
   const currentDomainAutoSaveEnabled = useMemo(() => {
     if (!currentTab?.domain) return session.vault.settings.autoPromptSave;
 
@@ -948,9 +982,11 @@ function PopupHome({
   }, [launchHashHandled, session.vault.credentials]);
 
   async function refreshCurrentTab() {
-    const [tab, nextDiagnostics] = await Promise.all([getCurrentTab(), getActiveTabDiagnostics()]);
+    const tab = await getCurrentTab();
+    const [nextDiagnostics, nextInlinePageState] = await Promise.all([getActiveTabDiagnostics(), getInlinePageState(tab?.url)]);
     setCurrentTab(tab);
     setDiagnostics(nextDiagnostics);
+    setInlinePageState(nextInlinePageState);
   }
 
   async function handleToggleRecognitionDebug() {
@@ -978,6 +1014,63 @@ function PopupHome({
     }
   }
 
+  async function refreshInlineWidgetInTab() {
+    if (!currentTab?.id) return;
+
+    await sendActiveTabMessage<{ ok: boolean }>(currentTab.id, {
+      type: 'KEYPILOT_REFRESH_INLINE'
+    }).catch(() => undefined);
+  }
+
+  async function handleRestoreInlineForPage() {
+    if (!currentTab?.url) {
+      onNotice({ kind: 'error', text: '当前页没有可恢复的网页地址。' });
+      return;
+    }
+
+    try {
+      const response = await sendRuntimeMessage<{ ok: boolean; removedCount?: number; error?: string; locked?: boolean }>({
+        type: 'KEYPILOT_RESTORE_INLINE_FOR_PAGE',
+        url: currentTab.url,
+        ruleId: inlinePageState?.silentRule?.id
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'RESTORE_INLINE_FAILED'));
+      }
+
+      await refreshInlineWidgetInTab();
+      await refreshCurrentTab();
+      onNotice({ kind: 'success', text: response.removedCount ? '已恢复本页浮标。' : '本页没有自动静默规则。' });
+    } catch (error) {
+      onNotice({ kind: 'error', text: getErrorMessage(error) });
+    }
+  }
+
+  async function handleMarkCurrentPageMode(pageMode: SiteRulePageMode) {
+    if (!currentTab?.id || (!currentTab?.url && !currentTab?.domain)) {
+      onNotice({ kind: 'error', text: '当前页没有可保存的站点信息。' });
+      return;
+    }
+
+    try {
+      const response = await sendActiveTabMessage<RecognitionRuleApplyResult>(currentTab.id, {
+        type: 'KEYPILOT_APPLY_PAGE_REPAIR_RULE',
+        pageMode
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error ?? (response.locked ? 'VAULT_LOCKED' : 'RECOGNITION_RULE_SAVE_FAILED'));
+      }
+
+      await refreshInlineWidgetInTab();
+      await refreshCurrentTab();
+      onNotice({ kind: 'success', text: `已将本页标记为${siteRuleModeLabel(pageMode)}。` });
+    } catch (error) {
+      onNotice({ kind: 'error', text: getErrorMessage(error) });
+    }
+  }
+
   function refreshSubmitOutcomeNotice(delay = 1900, attempt = 0) {
     window.setTimeout(() => {
       void getActiveTabDiagnostics()
@@ -997,6 +1090,10 @@ function PopupHome({
     const nextSession = await persistVaultSession(session, vault);
     await onSessionChange(nextSession, message);
     return nextSession;
+  }
+
+  async function handleDismissOnboarding() {
+    await persist(upsertVaultSettings(session.vault, { onboardingDismissed: true }), '快速开始已关闭。');
   }
 
   function go(view: ViewKey) {
@@ -1103,15 +1200,16 @@ function PopupHome({
     await persist(updateCredentialInVault(session.vault, { ...credential, pinned: !credential.pinned }), credential.pinned ? '已取消收藏。' : '已收藏。');
   }
 
-  async function handleCopy(label: string, value: string, clearLater = false) {
-    await navigator.clipboard.writeText(value);
-    onNotice({ kind: 'success', text: label });
-
-    if (clearLater) {
-      window.setTimeout(() => {
-        void navigator.clipboard.writeText('');
-      }, session.vault.settings.clearClipboardSeconds * 1000);
+  async function handleCopy(label: string, value: string, clearLater = true) {
+    try {
+      if (!await copyProtectedText(value, clearLater)) return false;
+      onNotice({ kind: 'success', text: label.startsWith('已复制') ? label : `已复制${label}。` });
+      return true;
+    } catch {
+      onNotice({ kind: 'error', text: '复制失败，请确认密码库已解锁后重试。' });
+      return false;
     }
+
   }
 
   async function handleToggleCurrentDomainAutoSave() {
@@ -1131,7 +1229,7 @@ function PopupHome({
   }
 
   async function handleCredentialAction(action: CredentialAction, credential: Credential, activeTabOnly = false) {
-    const payload = credentialToFillPayload(credential, session.vault.settings.autoSubmit);
+    const payload = credentialToFillPayload(credential, true);
 
     try {
       if (action === 'goto') {
@@ -1152,7 +1250,9 @@ function PopupHome({
 
         if (!response.ok) throw new Error(response.error ?? 'FILL_FAILED');
 
-        if (response.stage === 'usernameOnly') {
+        if (response.captchaMessage) {
+          onNotice({ kind: 'info', text: response.captchaMessage });
+        } else if (response.stage === 'usernameOnly') {
           onNotice({
             kind: 'info',
             text: response.submitted ? '已填写用户名并进入下一步，密码框出现后会继续填写。' : '已填写用户名。该页面可能是分步登录。'
@@ -1382,11 +1482,12 @@ function PopupHome({
     if (activeView === 'detail' && selectedCredential) {
       return (
         <CredentialDetailPage
+          session={session}
+          onSessionChange={next => void onSessionChange(next, "账号已更新。")}
           credential={selectedCredential}
           settings={session.vault.settings}
           onBack={goBack}
           onAction={handleCredentialAction}
-          onCopy={handleCopy}
           onEdit={() => openEdit(selectedCredential)}
           onDelete={() => requestDelete(selectedCredential)}
           onTogglePin={() => void handleTogglePin(selectedCredential)}
@@ -1403,6 +1504,10 @@ function PopupHome({
           onDelete={editDraft.id && selectedCredential ? () => requestDelete(selectedCredential) : undefined}
         />
       );
+    }
+
+    if (activeView === 'totp') {
+      return <AuthenticatorPanel compact session={session} onChange={next => onSessionChange(next, '身份验证器已更新。')} />;
     }
 
     if (activeView === 'generator') {
@@ -1453,18 +1558,25 @@ function PopupHome({
         onQuery={setQuery}
         currentTab={currentTab}
         diagnostics={diagnostics}
+        inlinePageState={inlinePageState}
         currentMatches={currentMatches}
-        credentials={filteredCredentials}
+        credentials={activeView === 'home' ? session.vault.credentials : filteredCredentials}
         fillProfiles={session.vault.fillProfiles ?? []}
         total={session.vault.credentials.length}
+        showToolbar={session.vault.settings.useCompactPopupToolbar}
         defaultSort={session.vault.settings.defaultHomeSort}
+        onboardingDismissed={Boolean(session.vault.settings.onboardingDismissed)}
         onRefreshCurrentTab={refreshCurrentTab}
         onOpenDetail={openDetail}
         onAdd={() => openEdit()}
         onImport={() => setActiveView('import')}
         onOpenVaultHome={openVaultHomePage}
+        onAuthenticator={() => setActiveView('totp')}
+        remindersEnabled={session.vault.settings.remindersEnabled === true}
         onSettings={openOptionsPage}
         onTogglePageDebug={handleToggleRecognitionDebug}
+        onRestoreInlinePage={() => void handleRestoreInlineForPage()}
+        onMarkPageMode={(pageMode) => void handleMarkCurrentPageMode(pageMode)}
         onAction={handleCredentialAction}
         onFillProfile={(profile, onlyEmpty) => void handleFillProfile(profile, onlyEmpty)}
         onBindFillProfile={(profile) => void handleBindFillProfile(profile)}
@@ -1478,21 +1590,22 @@ function PopupHome({
         autoSaveEnabled={currentDomainAutoSaveEnabled}
         onToggleAutoSave={() => void handleToggleCurrentDomainAutoSave()}
         onLock={onLock}
+        onDismissOnboarding={() => void handleDismissOnboarding()}
       />
     );
   })();
 
   return (
-    <div className={activeView === 'home' ? 'compact-app home-app' : 'compact-app'}>
-      {activeView === 'home' ? null : (
-        <Header
-          searchOpen={searchOpen}
+    <div className={activeView === 'home' ? 'compact-app home-app' : `compact-app secondary-app${['detail', 'edit'].includes(activeView) ? ' secondary-detail' : ''}`}>
+      {['home', 'detail', 'edit'].includes(activeView) ? null : (
+        <SecondaryHeader
+          active={activeView}
           query={query}
           onQuery={setQuery}
-          onSearchToggle={() => setSearchOpen((value) => !value)}
+          onBack={() => setActiveView('home')}
+          onNavigate={go}
           onOpenVaultHome={openVaultHomePage}
           onLock={onLock}
-          onRefresh={refreshCurrentTab}
         />
       )}
       {notice ? <NoticeToast notice={notice} onDismiss={onDismissNotice} /> : null}
@@ -1519,73 +1632,43 @@ function PopupHome({
           onSave={(title) => handleRenameFillProfile(renameFillProfileTarget, title)}
         />
       ) : null}
-      {!['detail', 'edit', 'home'].includes(activeView) ? <BottomNav active={activeView} onChange={go} /> : null}
     </div>
   );
 }
 
-function Header({
-  searchOpen,
+function SecondaryHeader({
+  active,
   query,
   onQuery,
-  onSearchToggle,
+  onBack,
+  onNavigate,
   onOpenVaultHome,
-  onLock,
-  onRefresh
+  onLock
 }: {
-  searchOpen: boolean;
+  active: ViewKey;
   query: string;
   onQuery: (value: string) => void;
-  onSearchToggle: () => void;
+  onBack: () => void;
+  onNavigate: (view: ViewKey) => void;
   onOpenVaultHome: () => void;
   onLock: () => void;
-  onRefresh: () => void;
 }) {
+  const menu = useRef<HTMLDetailsElement>(null);
+  const titles: Partial<Record<ViewKey, string>> = { vault: '全部账号', totp: '身份验证器', generator: '密码生成器', import: '导入账号', settings: '设置' };
   return (
-    <header className="compact-header">
-      <BrandHeader compact />
-      <div className="header-actions">
-        <button type="button" aria-label="打开 KeyPilot 主页" onClick={onOpenVaultHome}>
-          <Home size={21} aria-hidden="true" />
-        </button>
-        <button type="button" aria-label="搜索" onClick={onSearchToggle}>
-          <Search size={21} aria-hidden="true" />
-        </button>
-        <button type="button" aria-label="锁定 Vault" onClick={onLock}>
-          <Lock size={20} aria-hidden="true" />
-        </button>
-        <button type="button" aria-label="刷新当前网站" onClick={onRefresh}>
-          <RefreshCw size={20} aria-hidden="true" />
-        </button>
-      </div>
-      {searchOpen ? (
-        <label className="compact-search">
-          <Search size={16} aria-hidden="true" />
-          <input value={query} onChange={(event) => onQuery(event.target.value)} autoFocus placeholder="搜索账号、网站或备注" />
-        </label>
-      ) : null}
+    <header className="kp-secondary-header">
+      <button type="button" aria-label="返回账号列表" title="返回账号列表" onClick={onBack}><ArrowLeft size={20} /></button>
+      <h2>{titles[active] ?? 'KeyPilot'}</h2>
+      <button type="button" aria-label="打开 KeyPilot 主页" title="打开完整密码库" onClick={onOpenVaultHome}><Home size={20} /></button>
+      <details ref={menu} className="kp-secondary-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }} onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus(); } }}>
+        <summary aria-label="更多功能" title="更多功能"><MoreVertical size={20} /></summary>
+        <nav aria-label="KeyPilot 导航">
+          {(['home', 'vault', 'totp', 'generator', 'import', 'settings'] as ViewKey[]).map(view => <button key={view} type="button" aria-current={view === active ? 'page' : undefined} onClick={() => { if (menu.current) menu.current.open = false; onNavigate(view); }}>{view === 'home' ? '返回账号列表' : titles[view]}</button>)}
+          <button type="button" onClick={onLock}><Lock size={16} />锁定密码库</button>
+        </nav>
+      </details>
+      {active === 'vault' && <label className="kp-secondary-search"><Search size={18} /><input aria-label="搜索账号、网站或备注" value={query} onChange={event => onQuery(event.target.value)} placeholder="搜索账号、网站或备注" /></label>}
     </header>
-  );
-}
-
-function BottomNav({ active, onChange }: { active: ViewKey; onChange: (view: ViewKey) => void }) {
-  const items: Array<{ key: ViewKey; label: string; icon: ReactNode }> = [
-    { key: 'home', label: '首页', icon: <Home size={21} /> },
-    { key: 'vault', label: '密码库', icon: <Lock size={21} /> },
-    { key: 'generator', label: '生成器', icon: <KeyRound size={21} /> },
-    { key: 'import', label: '导入', icon: <Import size={21} /> },
-    { key: 'settings', label: '设置', icon: <Settings size={21} /> }
-  ];
-
-  return (
-    <nav className="bottom-nav" aria-label="KeyPilot 导航">
-      {items.map((item) => (
-        <button key={item.key} type="button" className={active === item.key ? 'active' : ''} onClick={() => onChange(item.key)}>
-          {item.icon}
-          <span>{item.label}</span>
-        </button>
-      ))}
-    </nav>
   );
 }
 
@@ -1604,23 +1687,30 @@ function BrandHeader({ compact }: { compact: boolean }) {
 }
 
 function HomePage({
+  showToolbar,
   view,
   query,
   onQuery,
   currentTab,
   diagnostics,
+  inlinePageState,
   currentMatches,
   credentials,
   fillProfiles,
   total,
   defaultSort,
+  onboardingDismissed,
   onRefreshCurrentTab,
   onOpenDetail,
   onAdd,
   onImport,
   onOpenVaultHome,
   onSettings,
+  onAuthenticator,
+  remindersEnabled,
   onTogglePageDebug,
+  onRestoreInlinePage,
+  onMarkPageMode,
   onAction,
   onFillProfile,
   onBindFillProfile,
@@ -1633,25 +1723,33 @@ function HomePage({
   onEdit,
   autoSaveEnabled,
   onToggleAutoSave,
-  onLock
+  onLock,
+  onDismissOnboarding
 }: {
   view: ViewKey;
   query: string;
   onQuery: (value: string) => void;
   currentTab: CurrentTabInfo | null;
   diagnostics: InlineDiagnosticsResult | null;
+  inlinePageState: InlinePageState | null;
   currentMatches: Credential[];
   credentials: Credential[];
   fillProfiles: FillProfile[];
   total: number;
+  showToolbar: boolean;
   defaultSort: 'favorite' | 'recent' | 'az';
+  onboardingDismissed: boolean;
   onRefreshCurrentTab: () => void;
   onOpenDetail: (credential: Credential) => void;
   onAdd: () => void;
   onImport: () => void;
   onOpenVaultHome: () => void;
   onSettings: () => void;
+  onAuthenticator: () => void;
+  remindersEnabled: boolean;
   onTogglePageDebug: () => void;
+  onRestoreInlinePage: () => void;
+  onMarkPageMode: (pageMode: SiteRulePageMode) => void;
   onAction: (action: CredentialAction, credential: Credential, activeTabOnly?: boolean) => void;
   onFillProfile: (profile: FillProfile, onlyEmpty?: boolean) => void;
   onBindFillProfile: (profile: FillProfile) => void;
@@ -1665,6 +1763,7 @@ function HomePage({
   autoSaveEnabled: boolean;
   onToggleAutoSave: () => void;
   onLock: () => void;
+  onDismissOnboarding: () => void;
 }) {
   const [mode, setMode] = useState<'login' | 'username' | 'identity'>('login');
   const [sortMode, setSortMode] = useState<'favorite' | 'recent' | 'az'>(defaultSort);
@@ -1674,6 +1773,9 @@ function HomePage({
   const [selectedFillProfileId, setSelectedFillProfileId] = useState<string | null>(null);
   const [profilePickerOpen, setProfilePickerOpen] = useState(false);
   const [identityOnlyEmpty, setIdentityOnlyEmpty] = useState(false);
+  const [siteOnly, setSiteOnly] = useState(false);
+
+  useEffect(() => { setSiteOnly(false); }, [currentTab?.url, mode]);
 
   useEffect(() => {
     setSortMode(defaultSort);
@@ -1708,7 +1810,7 @@ function HomePage({
       : loginNameScope === 'domain'
         ? sameDomainLoginNames
         : allLoginNames;
-  const activeCredentials = mode === 'identity' ? [] : mode === 'username' ? loginNameCredentials : filteredCredentials;
+  const activeCredentials = mode === 'identity' ? [] : mode === 'username' ? loginNameCredentials : siteOnly ? matchedLoginNames : filteredCredentials;
   const sortCredentials = (items: Credential[]) =>
     [...items].sort((left, right) => {
       if (sortMode === 'az') return left.title.localeCompare(right.title, 'zh-CN');
@@ -1718,7 +1820,12 @@ function HomePage({
     });
   const loginNameShownCredentials = sortCredentials(loginNameCredentials);
   const loginNameGroups = groupLoginNameCredentials(loginNameShownCredentials);
-  const shownCredentials = view === 'home' ? sortCredentials(activeCredentials).slice(0, 24) : credentials;
+  const shownCredentials = view === 'home' ? sortCredentials(activeCredentials) : credentials;
+  const titleCounts = new Map<string, number>();
+  for (const credential of credentials) {
+    const title = credential.title.trim().toLocaleLowerCase();
+    titleCounts.set(title, (titleCounts.get(title) ?? 0) + 1);
+  }
   const sortFillProfiles = (items: FillProfile[], modeOverride = sortMode) =>
     [...items].sort((left, right) => {
       if (modeOverride === 'az') return left.title.localeCompare(right.title, 'zh-CN');
@@ -1773,78 +1880,84 @@ function HomePage({
         ? `${activeCredentials.length} 条登录名`
         : `${total} 条保存`;
   const primaryMatch = currentMatches[0];
+  const shouldShowFirstUseGuide = !onboardingDismissed && total === 0 && fillProfiles.length === 0;
 
   if (view === 'home') {
     return (
-      <div className={homeClassName}>
+      <div className={homeClassName} onKeyDown={event => { if (mode === "login") navigateAccountList(event, ".kp-search input", ".kp-account-main", () => onQuery("")); }}>
         <header className="kp-topbar">
-          <div className="kp-brand">
-            <img src="icons/icon128.png" alt="" />
-            <div>
-              <strong>KeyPilot</strong>
-              <span>本地密码库</span>
-            </div>
-          </div>
-          <button className="kp-icon-button" type="button" aria-label="打开 KeyPilot 主页" onClick={onOpenVaultHome}>
-            <Home size={18} aria-hidden="true" />
+          <button className="kp-icon-button kp-home-button" type="button" aria-label="打开 KeyPilot 主页" title="打开密码库" onClick={onOpenVaultHome}>
+            <Home size={24} aria-hidden="true" />
           </button>
-          <button className="kp-icon-button" type="button" aria-label="刷新当前网站" onClick={onRefreshCurrentTab}>
-            <RefreshCw size={18} aria-hidden="true" />
-          </button>
-          <button className="kp-icon-button" type="button" aria-label="打开网页识别调试面板" title="打开网页识别调试面板" onClick={onTogglePageDebug}>
-            <Bug size={18} aria-hidden="true" />
-          </button>
-          <button className="kp-icon-button" type="button" aria-label="打开设置" onClick={onSettings}>
-            <SlidersHorizontal size={19} aria-hidden="true" />
-          </button>
+          <label className="kp-search">
+            <Search size={18} aria-hidden="true" />
+            <input aria-describedby={mode === "login" ? "popup-search-help" : undefined} aria-label={mode === 'identity' ? '搜索身份资料' : mode === 'username' ? '搜索登录名' : '搜索账号、网站或备注'} value={query} onChange={(event) => onQuery(event.target.value)} placeholder={mode === 'identity' ? '搜索身份资料' : mode === 'username' ? '搜索登录名' : '搜索 KeyPilot'} />
+            {query ? <button type="button" aria-label="清除搜索" onClick={() => onQuery('')}><X size={14} aria-hidden="true" /></button> : null}
+          </label>
+          <span id="popup-search-help" className="kp-sr-only">上下键选择账号，Enter 登录，Escape 返回搜索或清空搜索。</span>
+          <HomeToolsMenu>
+              <button type="button" onClick={onAuthenticator}><ShieldCheck size={17} />身份验证器</button>
+              {remindersEnabled && <button type="button" onClick={() => void chrome.tabs.create({url:chrome.runtime.getURL('vault.html#reminders')})}><Bell size={17} />提醒中心</button>}
+              {!showToolbar && <><button type="button" onClick={onAdd}>新建账号</button><button type="button" onClick={onImport}>导入账号</button><button type="button" onClick={onToggleAutoSave}>{autoSaveEnabled ? '关闭自动保存' : '开启自动保存'}</button><button type="button" onClick={onLock}>锁定密码库</button></>}
+            <button type="button" onClick={onSettings}><Settings size={16} aria-hidden="true" />设置</button>
+            <button type="button" onClick={onRefreshCurrentTab}><RefreshCw size={16} aria-hidden="true" />刷新当前网站</button>
+            <button type="button" disabled={!currentTab} onClick={onTogglePageDebug}><Bug size={16} aria-hidden="true" />网页识别与修复</button>
+            {currentTab ? <InlinePageTools currentTab={currentTab} state={inlinePageState} diagnostics={diagnostics} onRestore={onRestoreInlinePage} onMarkPageMode={onMarkPageMode} /> : <p>打开普通网页后，可匹配并填写账号。</p>}
+          </HomeToolsMenu>
         </header>
 
-        <label className="kp-search">
-          <Search size={18} aria-hidden="true" />
-          <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="搜索账号、网站或备注" />
-        </label>
-
-        <div className="kp-tool-row">
-          <div className="kp-mode-chips" role="tablist" aria-label="填充模式">
-            <HomeModeButton active={mode === 'login'} icon={<Lock size={15} />} label="登录" onClick={() => setMode('login')} />
-            <HomeModeButton active={mode === 'username'} icon={<UserRound size={15} />} label="登录名" onClick={() => setMode('username')} />
-            <IdentityProfilePicker
-              active={mode === 'identity'}
-              open={profilePickerOpen}
-              selected={selectedFillProfile}
-              profiles={identityPickerProfiles}
-              total={fillProfiles.length}
-              onOpenChange={setProfilePickerOpen}
-              onMode={() => setMode('identity')}
-              onSelect={(profile) => {
-                setSelectedFillProfileId(profile.id);
-                setMode('identity');
-                setProfilePickerOpen(false);
-              }}
-              onFill={(profile) => onFillProfile(profile, identityOnlyEmpty)}
-              onViewEdit={(profile) => {
-                setSelectedFillProfileId(profile.id);
-                setMode('identity');
-                setProfilePickerOpen(false);
-              }}
-              onRename={onRenameFillProfile}
-              onDelete={onDeleteFillProfile}
-              onOpenHome={onOpenVaultHome}
+        <div className="kp-guidance-zone">
+          {shouldShowFirstUseGuide ? (
+            <FirstUseGuide
+              credentialCount={total}
+              fillProfileCount={fillProfiles.length}
+              currentMatchCount={currentMatches.length}
+              onAdd={onAdd}
+              onImport={onImport}
+              onOpenVaultHome={onOpenVaultHome}
+              onSettings={onSettings}
+              onDismiss={onDismissOnboarding}
             />
+          ) : null}
+          <div className="kp-tool-row">
+            <div className="kp-mode-chips" role="tablist" aria-label="填充模式">
+              <HomeModeButton active={mode === 'login'} icon={<Lock size={20} />} label="登录" onClick={() => setMode('login')} />
+              <HomeModeButton active={mode === 'username'} icon={<UserRound size={20} />} label="填写登录名" onClick={() => setMode('username')} />
+              <IdentityProfilePicker
+                active={mode === 'identity'}
+                open={profilePickerOpen}
+                selected={selectedFillProfile}
+                profiles={identityPickerProfiles}
+                total={fillProfiles.length}
+                onOpenChange={setProfilePickerOpen}
+                onMode={() => setMode('identity')}
+                onSelect={(profile) => {
+                  setSelectedFillProfileId(profile.id);
+                  setMode('identity');
+                  setProfilePickerOpen(false);
+                }}
+                onFill={(profile) => onFillProfile(profile, identityOnlyEmpty)}
+                onViewEdit={(profile) => {
+                  setSelectedFillProfileId(profile.id);
+                  setMode('identity');
+                  setProfilePickerOpen(false);
+                }}
+                onRename={onRenameFillProfile}
+                onDelete={onDeleteFillProfile}
+                onOpenHome={onOpenVaultHome}
+              />
+            </div>
           </div>
         </div>
 
-        {mode === 'login' ? (
-          <section className="kp-site-panel">
-            <SiteIcon domain={currentTab?.domain ?? ''} url={currentTab?.url} iconUrl={currentTab?.iconUrl} />
-            <div>
-              <span>当前网站</span>
-              <strong>{currentTab?.domain || '未检测到网站'}</strong>
-              <small>匹配 {currentMatches.length} 条账号</small>
-            </div>
-            <button type="button" disabled={!primaryMatch} onClick={() => primaryMatch && onAction('login', primaryMatch, true)}>
-              登录
-            </button>
+        {mode === 'login' && currentTab ? (
+          <section className="kp-site-context" aria-label="当前网站">
+            <span title={currentTab.url}>当前：{currentTab.domain}</span>
+            {currentMatches.length ? (
+              <button type="button" aria-pressed={siteOnly} onClick={() => setSiteOnly((value) => !value)}>
+                {siteOnly ? '显示全部账号' : `本站 ${currentMatches.length} 条`}<ChevronRight size={13} aria-hidden="true" />
+              </button>
+            ) : <small>暂无匹配</small>}
           </section>
         ) : null}
 
@@ -1852,8 +1965,6 @@ function HomePage({
           <LoginNameSurface
             scope={loginNameScope}
             onScopeChange={setLoginNameScope}
-            query={query}
-            onQuery={onQuery}
             currentTab={currentTab}
             groups={loginNameGroups}
             resultCount={loginNameShownCredentials.length}
@@ -1861,27 +1972,24 @@ function HomePage({
             onOpenDetail={onOpenDetail}
           />
         ) : (
-        <section className="kp-list-shell" aria-label="账号列表">
+        <section className="kp-list-shell" aria-label={mode === 'identity' ? '身份资料列表' : '账号列表'}>
           <div className="kp-list-head">
-            <div>
-              <strong>{sectionTitle}</strong>
-              <span>{sectionCount}</span>
-            </div>
             {mode === 'login' ? (
-              <div className="kp-sort" role="tablist" aria-label="排序">
-                <button className={sortMode === 'favorite' ? 'active' : ''} type="button" onClick={() => setSortMode('favorite')}>
+              <div className="kp-sort" role="group" aria-label="排序">
+                <button className={sortMode === 'favorite' ? 'active' : ''} type="button" aria-pressed={sortMode === 'favorite'} onClick={() => setSortMode('favorite')}>
                   常用
                 </button>
-                <button className={sortMode === 'recent' ? 'active' : ''} type="button" onClick={() => setSortMode('recent')}>
+                <button className={sortMode === 'recent' ? 'active' : ''} type="button" aria-pressed={sortMode === 'recent'} onClick={() => setSortMode('recent')}>
                   最近
                 </button>
-                <button className={sortMode === 'az' ? 'active' : ''} type="button" onClick={() => setSortMode('az')}>
-                  A-Z
+                <button className={sortMode === 'az' ? 'active' : ''} type="button" aria-pressed={sortMode === 'az'} onClick={() => setSortMode('az')}>
+                  名称 A–Z
                 </button>
               </div>
             ) : (
-              <span className="kp-section-badge">资料</span>
+              <strong>{sectionTitle}</strong>
             )}
+            <span className="kp-result-count">{mode === 'login' ? (normalizedQuery || siteOnly ? `${shownCredentials.length} / ${total} 条` : `${total} 条`) : sectionCount}</span>
           </div>
 
           {mode === 'identity' ? (
@@ -1923,6 +2031,7 @@ function HomePage({
                   key={credential.id}
                   credential={credential}
                   mode={mode}
+                  showUsername={(titleCounts.get(credential.title.trim().toLocaleLowerCase()) ?? 0) > 1}
                   onOpen={() => onOpenDetail(credential)}
                   onAction={() => onAction(mode === 'login' ? 'login' : 'fill', credential)}
                 />
@@ -1930,17 +2039,18 @@ function HomePage({
             </div>
           ) : (
             <div className="kp-empty">
-              <strong>还没有账号</strong>
-              <span>新建账号后会在这里显示。</span>
+              <strong>{normalizedQuery || siteOnly ? '没有匹配的账号' : '还没有账号'}</strong>
+              <span>{normalizedQuery ? '试试网站名称、用户名或备注。' : siteOnly ? '当前网站还没有保存的账号。' : '导入已有密码，或新建第一个账号。'}</span>
+              {normalizedQuery || siteOnly ? <button type="button" onClick={() => { onQuery(''); setSiteOnly(false); }}>显示全部账号</button> : <button type="button" onClick={onAdd}>新建账号</button>}
             </div>
           )}
         </section>
         )}
 
-        <footer className="kp-dock">
-          <button className="kp-lock-state" type="button" onClick={onLock} title="点击锁定 Vault" aria-label="锁定 Vault">
-            <UnlockKeyhole size={19} aria-hidden="true" />
-            <span>Vault 已解锁</span>
+        {showToolbar && <footer className="kp-dock">
+          <button className="kp-lock-state" type="button" onClick={onLock} title="点击锁定密码库" aria-label="锁定密码库">
+            <UnlockKeyhole size={15} aria-hidden="true" />
+            <span>已解锁</span>
           </button>
           <button
             className={autoSaveEnabled ? 'kp-save-toggle active' : 'kp-save-toggle'}
@@ -1959,7 +2069,7 @@ function HomePage({
             <Plus size={19} aria-hidden="true" />
             <span>新建</span>
           </button>
-        </footer>
+        </footer>}
       </div>
     );
   }
@@ -2034,6 +2144,173 @@ function HomePage({
         )}
       </section>
     </div>
+  );
+}
+
+function inlineSilentReasonLabel(reason?: InlineSilentRuleSummary['reason']): string {
+  if (reason === 'empty-page') return '页面内容不足';
+  if (reason === 'passive-form') return '营销/留言表单';
+  if (reason === 'manual-hide') return '你手动隐藏了此页';
+  if (reason === 'no-form-context') return '没有可填写表单';
+  if (reason === 'no-inline-anchor') return '没有合适浮标位置';
+  return '自动静默';
+}
+
+function siteRuleModeLabel(mode?: SiteRulePageMode): string {
+  if (mode === 'login') return '登录页';
+  if (mode === 'register') return '注册页';
+  if (mode === 'fill-profile') return '填表页';
+  return '自动识别';
+}
+
+function HomeToolsMenu({ children }: { children: ReactNode }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      const details = detailsRef.current;
+      if (details && !details.contains(event.target as Node)) details.open = false;
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    return () => document.removeEventListener('pointerdown', closeOutside);
+  }, []);
+  return (
+    <details className="kp-tools-menu" ref={detailsRef} onKeyDown={(event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector('summary')?.focus();
+      }
+    }} onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) event.currentTarget.open = false;
+    }}>
+      <summary className="kp-icon-button" aria-label="更多操作" title="更多操作"><MoreVertical size={19} aria-hidden="true" /></summary>
+      <div className="kp-tools-popover" role="group" aria-label="更多操作" onClick={(event) => {
+        if ((event.target as Element).closest('button') && detailsRef.current) detailsRef.current.open = false;
+      }}>{children}</div>
+    </details>
+  );
+}
+
+function FirstUseGuide({
+  credentialCount,
+  fillProfileCount,
+  currentMatchCount,
+  onAdd,
+  onImport,
+  onOpenVaultHome,
+  onSettings,
+  onDismiss
+}: {
+  credentialCount: number;
+  fillProfileCount: number;
+  currentMatchCount: number;
+  onAdd: () => void;
+  onImport: () => void;
+  onOpenVaultHome: () => void;
+  onSettings: () => void;
+  onDismiss: () => void;
+}) {
+  const steps = [
+    {
+      done: credentialCount > 0,
+      title: '保存第一个账号',
+      body: credentialCount > 0 ? `${credentialCount} 条账号已在本地 Vault` : '新建或导入 CSV 账号'
+    },
+    {
+      done: currentMatchCount > 0,
+      title: '在网站上登录',
+      body: currentMatchCount > 0 ? `当前页匹配 ${currentMatchCount} 条账号` : '打开已保存账号的网站'
+    },
+    {
+      done: fillProfileCount > 0,
+      title: '准备身份资料',
+      body: fillProfileCount > 0 ? `${fillProfileCount} 条身份资料可填表` : '导入 Excel / .kpfill'
+    }
+  ];
+  const completed = steps.filter((step) => step.done).length;
+
+  return (
+    <section className="kp-onboarding-card" aria-label="KeyPilot 快速开始">
+      <button className="kp-onboarding-close" type="button" aria-label="关闭快速开始" onClick={onDismiss}>
+        <X size={15} aria-hidden="true" />
+      </button>
+      <div className="kp-onboarding-head">
+        <span className="kp-onboarding-icon"><Wand2 size={17} aria-hidden="true" /></span>
+        <div>
+          <strong>快速开始</strong>
+          <small>{completed} / {steps.length} 已完成</small>
+        </div>
+      </div>
+      <div className="kp-onboarding-steps">
+        {steps.map((step) => (
+          <div className={step.done ? 'done' : ''} key={step.title}>
+            <i aria-hidden="true">{step.done ? <Check size={12} /> : null}</i>
+            <span>{step.title}</span>
+            <small>{step.body}</small>
+          </div>
+        ))}
+      </div>
+      <div className="kp-onboarding-actions">
+        <button type="button" onClick={credentialCount > 0 ? onImport : onAdd}>
+          {credentialCount > 0 ? '导入更多' : '新建账号'}
+        </button>
+        <button type="button" onClick={onOpenVaultHome}>资料库</button>
+        <button type="button" onClick={onSettings}>安全设置</button>
+      </div>
+    </section>
+  );
+}
+
+function InlinePageTools({
+  currentTab,
+  state,
+  diagnostics,
+  onRestore,
+  onMarkPageMode
+}: {
+  currentTab: CurrentTabInfo | null;
+  state: InlinePageState | null;
+  diagnostics: InlineDiagnosticsResult | null;
+  onRestore: () => void;
+  onMarkPageMode: (pageMode: SiteRulePageMode) => void;
+}) {
+  const silentRule = state?.silentRule;
+  const siteMode = state?.siteRule?.pageMode;
+  const hasLoginForm = diagnostics?.hasLoginForm ?? false;
+  const shouldShow = Boolean(currentTab?.domain && (silentRule || siteMode || hasLoginForm));
+
+  if (!shouldShow) return null;
+
+  const tone = silentRule ? 'warning' : siteMode ? 'info' : 'neutral';
+  const title = silentRule
+    ? silentRule.source === 'manual'
+      ? '本页浮标已隐藏'
+      : '本页浮标已自动隐藏'
+    : siteMode
+      ? `已标记为${siteRuleModeLabel(siteMode)}`
+      : '识别不准？';
+  const body = silentRule
+    ? `${inlineSilentReasonLabel(silentRule.reason)}，可恢复或重新标记此页。`
+    : siteMode
+      ? '当前页会优先使用你保存的站点规则。'
+      : '可把当前 URL 固定为登录页或填表页。';
+
+  return (
+    <section className={`kp-inline-tools ${tone}`} aria-label="当前页识别修复">
+      <span className="kp-inline-tools-icon" aria-hidden="true">
+        {silentRule ? <RefreshCw size={17} /> : siteMode ? <ShieldCheck size={17} /> : <Bug size={17} />}
+      </span>
+      <div className="kp-inline-tools-copy">
+        <strong>{title}</strong>
+        <span>{currentTab?.domain ? `${currentTab.domain} · ${body}` : body}</span>
+      </div>
+      <div className="kp-inline-tool-actions">
+        {silentRule ? <button className="primary" type="button" onClick={onRestore}>恢复浮标</button> : null}
+        <button type="button" onClick={() => onMarkPageMode('login')}>标记登录</button>
+        <button type="button" onClick={() => onMarkPageMode('fill-profile')}>标记填表</button>
+        <button type="button" onClick={() => onMarkPageMode('register')}>注册页</button>
+      </div>
+    </section>
   );
 }
 
@@ -2185,8 +2462,8 @@ function IdentityProfilePicker({
           onOpenChange(false);
         }}
       >
-        <span className={`kp-profile-dot ${tone}`}>{selected ? fillProfileBadgeText(selected) : <IdCard size={14} aria-hidden="true" />}</span>
-        <span className="kp-identity-picker-label">{selected ? selected.title : '填写身份ID'}</span>
+        <span className={`kp-profile-dot ${tone}`}>{selected ? fillProfileBadgeText(selected) : <IdCard size={22} aria-hidden="true" />}</span>
+        <span className="kp-identity-picker-label">{selected ? selected.title : '身份资料'}</span>
       </button>
       <button
         className="kp-identity-picker-arrow"
@@ -2260,17 +2537,9 @@ function groupLoginNameCredentials(items: Credential[]): Array<{ folder: string;
     });
 }
 
-function loginNameScopeCopy(scope: 'matched' | 'domain' | 'all', currentTab: CurrentTabInfo | null) {
-  if (scope === 'matched') return currentTab?.domain ? `搜索 ${currentTab.domain} 匹配项` : '搜索匹配登录名';
-  if (scope === 'domain') return currentTab?.domain ? `搜索 ${currentTab.domain} 同域账号` : '搜索同域账号';
-  return '搜索所有登录名';
-}
-
 function LoginNameSurface({
   scope,
   onScopeChange,
-  query,
-  onQuery,
   currentTab,
   groups,
   resultCount,
@@ -2279,8 +2548,6 @@ function LoginNameSurface({
 }: {
   scope: 'matched' | 'domain' | 'all';
   onScopeChange: (scope: 'matched' | 'domain' | 'all') => void;
-  query: string;
-  onQuery: (value: string) => void;
   currentTab: CurrentTabInfo | null;
   groups: Array<{ folder: string; items: Credential[] }>;
   resultCount: number;
@@ -2300,11 +2567,6 @@ function LoginNameSurface({
           所有
         </button>
       </div>
-
-      <label className="kp-loginname-search">
-        <Search size={16} aria-hidden="true" />
-        <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder={loginNameScopeCopy(scope, currentTab)} />
-      </label>
 
       {groups.length ? (
         <div className="kp-loginname-list">
@@ -2345,25 +2607,8 @@ function LoginNameRow({
   onFill: () => void;
   onOpenDetail: () => void;
 }) {
-  const status = !credential.username ? 'warn' : credential.formProfile?.submit ? 'good' : credential.formFields?.length ? 'muted' : 'warn';
-  const statusTitle = status === 'good' ? '已记录登录规则' : status === 'muted' ? '已记录部分字段' : '建议绑定字段';
-
   return (
-    <article className="kp-loginname-row">
-      <button className="kp-loginname-main" type="button" aria-label={`填写 ${credential.title}`} onClick={onFill}>
-        <SiteIcon domain={credential.domain} url={credential.url} iconUrl={credential.iconUrl} />
-        <span>
-          <strong>{credential.title}</strong>
-          <small>{credential.username || '无用户名'}</small>
-        </span>
-      </button>
-      <span className={`kp-loginname-status ${status}`} title={statusTitle}>
-        {status === 'warn' ? <AlertTriangle size={16} aria-hidden="true" /> : <ShieldCheck size={16} aria-hidden="true" />}
-      </span>
-      <button className="kp-loginname-detail" type="button" aria-label={`查看 ${credential.title}`} onClick={onOpenDetail}>
-        <MoreVertical size={17} aria-hidden="true" />
-      </button>
-    </article>
+    <HomeAccountRow credential={credential} mode="username" showUsername onOpen={onOpenDetail} onAction={onFill} />
   );
 }
 
@@ -2477,11 +2722,6 @@ function IdentityProfileListSurface({
         </button>
       </div>
 
-      <label className="kp-identity-list-search">
-        <Search size={16} aria-hidden="true" />
-        <input value={query} onChange={(event) => onQuery(event.target.value)} placeholder={scope === 'matched' ? '搜索匹配身份信息' : '搜索所有身份信息'} />
-      </label>
-
       <div className="kp-identity-list-meta">
         <span>{scopeHint}</span>
         <small>{total ? `${Math.min(profiles.length, total)} / ${total}` : '0'}</small>
@@ -2499,10 +2739,10 @@ function IdentityProfileListSurface({
       ) : (
         <div className="kp-identity-list-empty">
           <IdCard size={28} aria-hidden="true" />
-          <strong>{scope === 'matched' ? '没有匹配身份资料' : '还没有身份资料'}</strong>
-          <span>{scope === 'matched' ? '切换到“所有”查看资料库里的其他身份信息。' : '先导入 Excel/CSV，再回到这里填写注册表单。'}</span>
-          <button type="button" onClick={scope === 'matched' ? () => onScopeChange('all') : onOpenHome}>
-            {scope === 'matched' ? '查看所有身份信息' : '打开主页导入'}
+          <strong>{query.trim() || scope === 'matched' ? '没有匹配身份资料' : '还没有身份资料'}</strong>
+          <span>{query.trim() ? '换个关键词，或清除搜索查看已有资料。' : scope === 'matched' ? '切换到“所有”查看资料库里的其他身份信息。' : '先导入 Excel/CSV，再回到这里填写注册表单。'}</span>
+          <button type="button" onClick={query.trim() ? () => onQuery('') : scope === 'matched' ? () => onScopeChange('all') : onOpenHome}>
+            {query.trim() ? '清除搜索' : scope === 'matched' ? '查看所有身份信息' : '打开主页导入'}
           </button>
         </div>
       )}
@@ -2570,7 +2810,7 @@ function IdentityFillSurface({
           <div className="kp-identity-fill-menu" role="menu" aria-label="身份资料操作">
             <button type="button" role="menuitem" onClick={() => {
               setProfileMenuOpen(false);
-              onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile));
+              onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'));
             }}>
               <Copy size={15} aria-hidden="true" />
               <span>复制全部</span>
@@ -2619,7 +2859,7 @@ function IdentityFillSurface({
                   type="button"
                   aria-label={`复制${fillFieldGroupLabel(group)}`}
                   title={`复制${fillFieldGroupLabel(group)}`}
-                  onClick={() => onCopy(fillFieldGroupLabel(group), fields.map((field) => `${field.label}: ${field.value}`).join('\n'))}
+                  onClick={() => onCopy(fillFieldGroupLabel(group), fields.map((field) => `${field.label}: ${field.value}`).join('\n'), fields.some(field => field.sensitivity !== 'normal'))}
                 >
                   <Copy size={13} aria-hidden="true" />
                 </button>
@@ -2627,9 +2867,9 @@ function IdentityFillSurface({
               {fields.map((field) => (
                 <div className="kp-identity-field" key={`${field.key}-${field.label}`}>
                   <span>{field.label}</span>
-                  <strong title={field.value}>{field.value}</strong>
+                  <SensitiveValue key={`${profile.id}-${field.key}-${field.value}`} field={field} />
                   {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? '敏感' : '私密'}</em> : null}
-                  <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value)}>
+                  <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
                     <Copy size={13} aria-hidden="true" />
                   </button>
                 </div>
@@ -2777,7 +3017,7 @@ function FillProfileDetail({
           <FileInput size={15} aria-hidden="true" />
           填写表单
         </button>
-        <button type="button" onClick={() => onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile))}>
+        <button type="button" onClick={() => onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'))}>
           <Copy size={15} aria-hidden="true" />
           复制全部
         </button>
@@ -2839,10 +3079,10 @@ function FillProfileDetail({
                 <div className="kp-fillprofile-field" key={`${field.key}-${field.label}`}>
                   <span className="kp-fillprofile-field-main">
                     <span>{field.label}</span>
-                    <strong title={field.value}>{field.value}</strong>
+                    <SensitiveValue key={`${profile.id}-${field.key}-${field.value}`} field={field} />
                   </span>
                   {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? '敏感' : '私密'}</em> : null}
-                  <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value)}>
+                  <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
                     <Copy size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -2864,31 +3104,30 @@ function FillProfileDetail({
 function HomeAccountRow({
   credential,
   mode,
+  showUsername,
   onOpen,
   onAction
 }: {
   credential: Credential;
   mode: 'login' | 'username' | 'identity';
+  showUsername: boolean;
   onOpen: () => void;
   onAction: () => void;
 }) {
-  const status = credential.formProfile?.submit ? 'good' : credential.formFields?.length ? 'muted' : 'warn';
-  const actionLabel = mode === 'login' ? `登录 ${credential.title}` : `填写 ${credential.title}`;
+  const title = credential.title.replace(/\s+/g, ' ').trim() || credential.domain || '未命名账号';
+  const label = showUsername && credential.username ? `${title} (${credential.username})` : title;
+  const actionLabel = mode === 'login' ? `登录 ${label}` : `填写 ${label}`;
 
   return (
     <article className="kp-account-row">
-      <button className="kp-account-main" type="button" aria-label={actionLabel} onClick={onAction}>
+      <button className="kp-account-main" type="button" aria-label={actionLabel} title={[title, credential.username, credential.domain].filter(Boolean).join('\n')} onClick={onAction}>
         <SiteIcon domain={credential.domain} url={credential.url} iconUrl={credential.iconUrl} />
         <span className="kp-account-copy">
-          <strong>{credential.title}</strong>
-          {credential.username ? <small>{credential.username}</small> : null}
+          {label}
         </span>
       </button>
-      <span className={`kp-account-health ${status}`} title={status === 'good' ? '已记录登录规则' : status === 'muted' ? '已记录部分字段' : '建议绑定字段'}>
-        {status === 'warn' ? <AlertTriangle size={16} aria-hidden="true" /> : <ShieldCheck size={17} aria-hidden="true" />}
-      </span>
-      <button className="kp-account-open" type="button" aria-label={`查看 ${credential.title}`} onClick={onOpen}>
-        <ChevronRight size={20} aria-hidden="true" />
+      <button className="kp-account-open" type="button" aria-label={`查看 ${label}`} title="查看账号详情" onClick={onOpen}>
+        <ChevronRight size={16} aria-hidden="true" />
       </button>
     </article>
   );
@@ -2964,7 +3203,7 @@ function InlineDiagnosticsPanel({
 
 function DefaultSiteIcon() {
   return (
-    <img className="default-site-image" src="icons/default-site-128.png" alt="" />
+    <KeyRound className="default-site-symbol" size={18} aria-hidden="true" />
   );
 }
 
@@ -2980,12 +3219,15 @@ function SiteIcon({
   size?: 'normal' | 'large';
 }) {
   const className = size === 'large' ? 'site-icon large' : 'site-icon';
-  const candidates = useMemo(() => getIconCandidates(iconUrl, url || domain), [domain, iconUrl, url]);
+  // Use the saved icon and root favicon only; don't probe dozens of paths per row.
+  const candidates = useMemo(() => Array.from(new Set([toHttpIconUrl(iconUrl), getRootFaviconUrl(url || domain)].filter((value): value is string => Boolean(value)))), [domain, iconUrl, url]);
   const [candidateIndex, setCandidateIndex] = useState(0);
+  const [loadedIconUrl, setLoadedIconUrl] = useState<string>();
   const resolvedIconUrl = candidates[candidateIndex];
 
   useEffect(() => {
     setCandidateIndex(0);
+    setLoadedIconUrl(undefined);
   }, [domain, iconUrl, url]);
 
   return (
@@ -2995,12 +3237,17 @@ function SiteIcon({
         <img
           className="site-favicon"
           src={resolvedIconUrl}
+          loading="lazy"
+          decoding="async"
+          style={{ opacity: loadedIconUrl === resolvedIconUrl ? 1 : 0 }}
           alt=""
           referrerPolicy="no-referrer"
           onLoad={(event) => {
             const image = event.currentTarget;
             if (image.naturalWidth <= 1 && image.naturalHeight <= 1) {
               setCandidateIndex((index) => index + 1);
+            } else {
+              setLoadedIconUrl(resolvedIconUrl);
             }
           }}
           onError={() => setCandidateIndex((index) => index + 1)}
@@ -3054,7 +3301,7 @@ function CredentialRow({
             <MenuItem icon={<CircleCheck size={15} />} label="登录" onClick={() => onAction('login', credential)} />
             <MenuItem icon={<ExternalLink size={15} />} label="浏览并填写" onClick={() => onAction('fill', credential)} />
             <MenuItem icon={<ExternalLink size={15} />} label="转到" onClick={() => onAction('goto', credential)} />
-            <MenuItem icon={<Copy size={15} />} label="复制用户名" onClick={() => onCopy('已复制用户名。', credential.username)} />
+            <MenuItem icon={<Copy size={15} />} label="复制用户名" onClick={() => onCopy('已复制用户名。', credential.username, false)} />
             <MenuItem icon={<KeyRound size={15} />} label="复制密码" onClick={() => onCopy('已复制密码，稍后会清空剪贴板。', credential.password, true)} />
             <MenuItem icon={<Edit3 size={15} />} label="编辑" onClick={() => onEdit(credential)} />
             <MenuItem danger icon={<Trash2 size={15} />} label="删除" onClick={() => onDelete(credential)} />
@@ -3085,25 +3332,26 @@ function MenuItem({
 }
 
 function CredentialDetailPage({
+  session, onSessionChange,
   credential,
   settings,
   onBack,
   onAction,
-  onCopy,
   onEdit,
   onDelete,
   onTogglePin
 }: {
+  session: UnlockedVaultSession;
+  onSessionChange: (session: UnlockedVaultSession) => void;
   credential: Credential;
   settings: UnlockedVaultSession['vault']['settings'];
   onBack: () => void;
   onAction: (action: CredentialAction, credential: Credential) => void;
-  onCopy: (label: string, value: string, clearLater?: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
   onTogglePin: () => void;
 }) {
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useSecretVisibility();
   const strength = measurePasswordStrength(credential.password);
   const formStructureLabel = credential.formProfile?.submit
     ? `已记录 ${credential.formProfile.fieldCount ?? credential.formFields?.length ?? 0} 个字段和登录按钮`
@@ -3134,7 +3382,7 @@ function CredentialDetailPage({
         </div>
       </section>
       <section className="detail-card">
-        <DetailRow label="用户名" value={credential.username} onAction={() => onCopy('已复制用户名。', credential.username)} />
+        <div className="detail-field"><span>用户名</span><div><p>{credential.username}</p><CopyButton label="复制用户名" value={credential.username} sensitive={false} /></div></div>
         <div className="detail-field">
           <span>密码</span>
           <div>
@@ -3142,9 +3390,7 @@ function CredentialDetailPage({
             <button type="button" aria-label={revealed ? '隐藏密码' : '显示密码'} onClick={handleReveal}>
               {revealed ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
-            <button type="button" aria-label="复制密码" onClick={() => onCopy('已复制密码，稍后会清空剪贴板。', credential.password, true)}>
-              <Copy size={17} />
-            </button>
+            <CopyButton label="复制密码" value={credential.password} />
           </div>
           <StrengthMeter value={strength.score} label={strength.label} />
         </div>
@@ -3155,12 +3401,13 @@ function CredentialDetailPage({
           <p>{credential.notes || '无备注'}</p>
         </div>
         <div className="tag-row">
-          {(credential.tags?.length ? credential.tags : ['开发', '工具']).map((tag) => (
+          {(credential.tags ?? []).map((tag) => (
             <span key={tag}>{tag}</span>
           ))}
           {credential.folder ? <span>{credential.folder}</span> : null}
         </div>
       </section>
+      <CredentialSecurityPanel key={credential.id} credential={credential} session={session} onChange={onSessionChange} />
       <dl className="meta-list">
         <div><dt>创建时间</dt><dd>{formatDateTime(credential.createdAt)}</dd></div>
         <div><dt>更新时间</dt><dd>{formatDateTime(credential.updatedAt)}</dd></div>
@@ -3209,7 +3456,7 @@ function CredentialEditPage({
   onDelete?: () => void;
 }) {
   const [localDraft, setLocalDraft] = useState(draft);
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useSecretVisibility();
   const strength = measurePasswordStrength(localDraft.password);
 
   function update<K extends keyof EditDraft>(key: K, value: EditDraft[K]) {
@@ -3300,7 +3547,7 @@ function GeneratorPage({ onUsePassword, onCopy }: { onUsePassword: (password: st
   return (
     <section className="page-view">
       <div className="section-title simple">
-        <div><h2>密码生成器</h2><p>生成强密码后可复制或用于新增账号</p></div>
+        <div><p>生成强密码后可复制或用于新增账号</p></div>
       </div>
       <div className="generated-password">
         <code>{password}</code>
@@ -3437,7 +3684,7 @@ function ImportPage({
   return (
     <section className="page-view">
       <div className="section-title simple">
-        <div><h2>导入账号</h2><p>CSV 只会在本机解析</p></div>
+        <div><p>CSV 只会在本机解析</p></div>
       </div>
       <div className="source-list">
         {(['roboform', 'chrome', 'edge', 'generic'] as ImportSource[]).map((item) => (
@@ -3567,7 +3814,6 @@ function SettingsPage({
   onPersist: (vault: UnlockedVaultSession['vault'], message: string) => Promise<UnlockedVaultSession>;
   onShowRecoveryCode: (code: string) => void;
 }) {
-  const [backupPassword, setBackupPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [nextPassword, setNextPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -3634,25 +3880,8 @@ function SettingsPage({
     }
   }
 
-  function exportBackup() {
-    const blob = new Blob([JSON.stringify(session.encryptedVault, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    const timestamp = new Intl.DateTimeFormat('sv-SE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date()).replace(/[-: ]/g, '').slice(0, 12);
-    anchor.href = url;
-    anchor.download = `keypilot-vault-backup-${timestamp}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    onNotice({ kind: 'success', text: '已导出加密备份 JSON。' });
-  }
-
-  function exportRoboFormFormatCsv() {
+  async function exportRoboFormFormatCsv() {
+    if (!await authorizeSensitiveAction()) return;
     const blob = new Blob([`\uFEFF${exportRoboFormCsv(session.vault.credentials)}`], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -3670,22 +3899,6 @@ function SettingsPage({
     onNotice({ kind: 'info', text: '已导出 RoboForm 格式 CSV。此文件包含明文密码，请用完立即删除。' });
   }
 
-  async function importBackup(file: File | undefined) {
-    if (!file || !backupPassword) {
-      onNotice({ kind: 'error', text: '请选择备份文件并输入对应主密码。' });
-      return;
-    }
-
-    try {
-      const encryptedVault = JSON.parse(await file.text());
-      const nextSession = await unlockVaultSession(backupPassword, encryptedVault);
-      await saveEncryptedVault(encryptedVault);
-      await onSessionChange(nextSession, '已导入并解锁加密备份。');
-      setBackupPassword('');
-    } catch (error) {
-      onNotice({ kind: 'error', text: getErrorMessage(error) });
-    }
-  }
 
   return (
     <section className="page-view settings-view">
@@ -3763,17 +3976,14 @@ function SettingsPage({
       <Field label="网站黑名单" hint="每行一个域名。">
         <textarea value={session.vault.settings.blacklist.join('\n')} onChange={(event) => void updateSetting({ blacklist: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean) })} rows={4} />
       </Field>
-      <Field label="网页内图标隐藏域名" hint="每行一个域名。用于恢复或管理“不在此域中显示”。">
+      <Field label="网页内图标隐藏域名" hint="每行一个域名。这里是整站隐藏；单页隐藏请在设置中心的自动静默规则里恢复。">
         <textarea value={(session.vault.settings.inlineBlacklist ?? []).join('\n')} onChange={(event) => void updateSetting({ inlineBlacklist: event.target.value.split('\n').map((line) => line.trim()).filter(Boolean) })} rows={3} />
       </Field>
       <div className="backup-actions">
-        <button className="button secondary" type="button" onClick={exportBackup}><Download size={16} />导出加密备份</button>
         <button className="button secondary" type="button" onClick={exportRoboFormFormatCsv}><Download size={16} />导出 RoboForm CSV</button>
-        <label className="backup-import"><Upload size={16} />导入加密备份<input type="file" accept="application/json,.json" onChange={(event) => void importBackup(event.target.files?.[0])} /></label>
       </div>
-      <Field label="备份主密码" hint="导入加密备份前，输入该备份对应的主密码。">
-        <input type="password" value={backupPassword} onChange={(event) => setBackupPassword(event.target.value)} placeholder="备份对应主密码" />
-      </Field>
+      <BackupStatus session={session} onChange={next => { void onSessionChange(next, '备份状态已更新。'); }} />
+      <BackupRestorePanel session={session} onRestored={next => {void onSessionChange(next, "备份恢复完成。");}} />
       <button className="danger-text" type="button" onClick={onReset}><Trash2 size={15} />重置 Vault</button>
     </section>
   );
@@ -3814,13 +4024,14 @@ function SetupPage({ onCreated, onError }: { onCreated: (session: UnlockedVaultS
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
+    <><form className="auth-form" onSubmit={handleSubmit}>
       <div className="security-panel"><ShieldCheck size={20} /><div><h2>创建本地密码库</h2><p>主密码不会被保存，也无法找回。</p></div></div>
       <Field label="主密码"><input autoFocus value={password} type="password" autoComplete="new-password" onChange={(event) => setPassword(event.target.value)} placeholder="输入主密码" /></Field>
       <Field label="确认主密码"><input value={confirmPassword} type="password" autoComplete="new-password" onChange={(event) => setConfirmPassword(event.target.value)} placeholder="再次输入主密码" /></Field>
       <StrengthMeter value={strength.score} label={strength.label} />
       <button className="button primary full" type="submit" disabled={submitting}>{submitting ? '正在创建...' : '创建 Vault'}</button>
     </form>
+    <InitialBackupRestore onRestored={onCreated} /></>
   );
 }
 

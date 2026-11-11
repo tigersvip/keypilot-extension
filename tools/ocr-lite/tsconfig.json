@@ -1,0 +1,4 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["*.ts", "*.mts", "../../src/ocr-lite/*.ts"]
+}

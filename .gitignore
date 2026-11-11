@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 .vite/
+ocr-lab-dist/
 
 # Logs
 *.log
@@ -40,3 +41,12 @@ Thumbs.db
 .idea/
 .vscode/
 
+
+# Automated browser test artifacts
+output/playwright/
+playwright-report/
+test-results/
+
+# Local Python build caches
+__pycache__/
+*.py[cod]

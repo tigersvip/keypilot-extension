@@ -78,6 +78,7 @@ function attachSaveCapture() {
     event.preventDefault();
     const values = readForm(form);
     setStatus(`已模拟登录成功：${values.username || '空用户名'}。现在打开 KeyPilot，应看到保存提示。`, 'success');
+    form.classList.add('hidden');
   });
 }
 

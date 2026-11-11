@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "name": "钥航 KeyPilot",
   "description": "本地优先的浏览器自动登录和密码管理插件。",
-  "version": "1.1.0",
-  "version_name": "1.1",
+  "version": "1.13.0",
+  "version_name": "1.13.0",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
@@ -27,8 +30,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true,
       "match_about_blank": true
@@ -36,11 +43,54 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/default-site-32.png", "icons/icon32.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icons/default-site-32.png",
+        "icons/icon32.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
-  "permissions": ["activeTab", "clipboardWrite", "scripting", "storage", "tabs", "webNavigation"],
-  "host_permissions": ["<all_urls>"],
-  "minimum_chrome_version": "109"
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "clipboardWrite",
+    "scripting",
+    "storage",
+    "tabs",
+    "webNavigation",
+    "alarms",
+    "offscreen",
+    "clipboardRead"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "minimum_chrome_version": "109",
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y"
+      }
+    },
+    "fill-current": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L"
+      },
+      "description": "填写账号或个人资料（自动识别表单）"
+    },
+    "lock-vault": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K"
+      },
+      "description": "锁定所有 KeyPilot 页面"
+    },
+    "search-vault": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F"
+      },
+      "description": "打开密码库并搜索"
+    }
+  }
 }

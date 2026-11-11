@@ -1,4 +1,5 @@
 import { unzipSync } from 'fflate';
+import { migrateFillProfilePrivacy } from './fillPrivacy';
 import type { FillField, FillFieldGroup, FillFieldSensitivity, FillProfile, FillProfileCategory } from './types';
 
 export interface FillProfileImportPreview {
@@ -47,10 +48,10 @@ export const FILL_FIELD_MAPPING_PRESETS: FillFieldMappingPreset[] = [
   mappingPreset('middleName', 'Middle name', 'personal', ['middle name', 'middle initial', 'mi']),
   mappingPreset('namePrefix', '称谓', 'personal', ['prefix', 'salutation', 'honorific']),
   mappingPreset('nameSuffix', '姓名后缀', 'personal', ['suffix', 'generation']),
-  mappingPreset('dob', '出生日期', 'personal', ['dob', 'date of birth', 'birth date', 'birthday'], 'private'),
-  mappingPreset('dobMonth', '出生月份', 'personal', ['birth month', 'dob month'], 'private'),
-  mappingPreset('dobDay', '出生日期日', 'personal', ['birth day', 'dob day'], 'private'),
-  mappingPreset('dobYear', '出生年份', 'personal', ['birth year', 'dob year'], 'private'),
+  mappingPreset('dob', '出生日期', 'personal', ['dob', 'date of birth', 'birth date', 'birthday']),
+  mappingPreset('dobMonth', '出生月份', 'personal', ['birth month', 'dob month']),
+  mappingPreset('dobDay', '出生日期日', 'personal', ['birth day', 'dob day']),
+  mappingPreset('dobYear', '出生年份', 'personal', ['birth year', 'dob year']),
   mappingPreset('gender', '性别', 'personal', ['gender', 'sex']),
   mappingPreset('maritalStatus', '婚姻状态', 'personal', ['marital status', 'marital']),
   mappingPreset('education', '教育程度', 'personal', ['education']),
@@ -67,20 +68,20 @@ export const FILL_FIELD_MAPPING_PRESETS: FillFieldMappingPreset[] = [
   mappingPreset('state', '州/省', 'address', ['state', 'province', 'region']),
   mappingPreset('postalCode', '邮编', 'address', ['zip', 'postal code', 'postcode']),
   mappingPreset('country', '国家', 'address', ['country', 'country code', 'nation']),
-  mappingPreset('ssn', 'SSN', 'sensitive', ['ssn', 'social security number'], 'secret'),
-  mappingPreset('ssnLast4', 'SSN 后四位', 'sensitive', ['ssn last 4', 'last four ssn'], 'secret'),
-  mappingPreset('itin', 'ITIN', 'sensitive', ['itin', 'individual taxpayer id'], 'secret'),
-  mappingPreset('idNumber', '证件号码', 'sensitive', ['id number', 'national id', 'government id'], 'secret'),
-  mappingPreset('passportNumber', '护照号码', 'sensitive', ['passport', 'passport number'], 'secret'),
-  mappingPreset('passportExpiry', '护照到期日', 'sensitive', ['passport expiry', 'passport expiration'], 'private'),
-  mappingPreset('driverLicenseNumber', '驾照号码', 'driver', ['driver license number', 'license number', 'dl number'], 'secret'),
+  mappingPreset('ssn', 'SSN', 'sensitive', ['ssn', 'social security number']),
+  mappingPreset('ssnLast4', 'SSN 后四位', 'sensitive', ['ssn last 4', 'last four ssn']),
+  mappingPreset('itin', 'ITIN', 'sensitive', ['itin', 'individual taxpayer id']),
+  mappingPreset('idNumber', '证件号码', 'sensitive', ['id number', 'national id', 'government id']),
+  mappingPreset('passportNumber', '护照号码', 'sensitive', ['passport', 'passport number']),
+  mappingPreset('passportExpiry', '护照到期日', 'sensitive', ['passport expiry', 'passport expiration']),
+  mappingPreset('driverLicenseNumber', '驾照号码', 'driver', ['driver license number', 'license number', 'dl number']),
   mappingPreset('driverLicenseState', '驾照州', 'driver', ['driver license state', 'licensed state', 'dl state']),
-  mappingPreset('driverLicenseExpiry', '驾照到期日', 'driver', ['driver license expiry', 'license expiration'], 'private'),
+  mappingPreset('driverLicenseExpiry', '驾照到期日', 'driver', ['driver license expiry', 'license expiration']),
   mappingPreset('vehicleYear', '车辆年份', 'vehicle', ['vehicle year', 'year']),
   mappingPreset('vehicleMake', '车辆品牌', 'vehicle', ['vehicle make', 'make']),
   mappingPreset('vehicleModel', '车辆型号', 'vehicle', ['vehicle model', 'model']),
-  mappingPreset('vin', 'VIN', 'vehicle', ['vin', 'vehicle identification number'], 'secret'),
-  mappingPreset('policyNumber', '保单号', 'insurance', ['policy number', 'policy'], 'secret'),
+  mappingPreset('vin', 'VIN', 'vehicle', ['vin', 'vehicle identification number']),
+  mappingPreset('policyNumber', '保单号', 'insurance', ['policy number', 'policy']),
   mappingPreset('coverageType', '保险类型', 'insurance', ['coverage type', 'coverage']),
   mappingPreset('cardHolderName', '持卡人', 'payment', ['card holder', 'name on card']),
   mappingPreset('cardNumber', '卡号', 'payment', ['card number', 'credit card'], 'secret'),
@@ -91,7 +92,7 @@ export const FILL_FIELD_MAPPING_PRESETS: FillFieldMappingPreset[] = [
   mappingPreset('businessName', '公司名称', 'business', ['company', 'company name', 'business name']),
   mappingPreset('dbaName', 'DBA/经营名称', 'business', ['dba', 'doing business as', 'trade name']),
   mappingPreset('entityType', '企业类型', 'business', ['entity type', 'business type', 'legal structure']),
-  mappingPreset('ein', 'EIN/税号', 'business', ['ein', 'fein', 'tax id'], 'secret'),
+  mappingPreset('ein', 'EIN/税号', 'business', ['ein', 'fein', 'tax id']),
   mappingPreset('businessPhone', '公司电话', 'business', ['business phone', 'company phone']),
   mappingPreset('businessEmail', '公司邮箱', 'business', ['business email', 'company email']),
   mappingPreset('businessAddress1', '公司地址1', 'business', ['business address', 'company address']),
@@ -142,7 +143,7 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(work\s*phone|office\s*phone)$/i, rule('businessPhone', 'Business phone', 'business', ['work phone', 'office phone', 'business phone'])],
   [/^(mailing\s*address|residential\s*address|home\s*address|current\s*address)$/i, rule('address1', 'Address', 'address', ['mailing address', 'residential address', 'home address', 'current address'])],
   [/^(merchant\s*name|vendor\s*name|seller\s*name|agency\s*name|affiliate\s*company|business\s*legal\s*name|company\s*legal\s*name)$/i, rule('businessName', 'Business name', 'business', ['merchant name', 'vendor name', 'seller name', 'agency name', 'business legal name'])],
-  [/^(business\s*tax\s*id|company\s*tax\s*id|irs\s*tax\s*id|federal\s*employer\s*id|employer\s*id\s*number)$/i, rule('ein', 'EIN', 'business', ['business tax id', 'company tax id', 'irs tax id', 'federal employer id'], 'secret')],
+  [/^(business\s*tax\s*id|company\s*tax\s*id|irs\s*tax\s*id|federal\s*employer\s*id|employer\s*id\s*number)$/i, rule('ein', 'EIN', 'business', ['business tax id', 'company tax id', 'irs tax id', 'federal employer id'])],
   [/^(average\s*monthly\s*deposits|monthly\s*bank\s*deposits|monthly\s*gross\s*sales)$/i, rule('monthlyRevenue', 'Monthly revenue', 'finance', ['average monthly deposits', 'monthly bank deposits', 'monthly gross sales'])],
   [/^(annual\s*gross\s*receipts|gross\s*yearly\s*sales|gross\s*annual\s*sales)$/i, rule('annualRevenue', 'Annual revenue', 'finance', ['annual gross receipts', 'gross yearly sales', 'gross annual sales'])],
   [/^(requested\s*capital|requested\s*funding\s*amount|cash\s*advance\s*amount|advance\s*amount|capital\s*requested)$/i, rule('loanAmount', 'Loan amount', 'loan', ['requested capital', 'requested funding amount', 'cash advance amount', 'advance amount'])],
@@ -151,10 +152,10 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(first\s*name|firstname|fname|given[-_\s]*name|名)$/i, rule('firstName', '名', 'personal', ['first name', 'firstname', 'fname', 'given name', '名'])],
   [/^(last\s*name|lastname|lname|family[-_\s]*name|surname|姓)$/i, rule('lastName', '姓', 'personal', ['last name', 'lastname', 'lname', 'family name', 'surname', '姓'])],
   [/^(full\s*name|fullname|name|姓名)$/i, rule('fullName', '姓名', 'personal', ['full name', 'fullname', 'name', '姓名', '联系人'])],
-  [/^(dob|date\s*of\s*birth|birth\s*date|birthday|出生|生日)$/i, rule('dob', '出生日期', 'personal', ['dob', 'date of birth', 'birthdate', 'birthday', '出生日期', '生日'], 'private')],
-  [/^(birth\s*month|dob\s*month|birthday\s*month|month\s*of\s*birth|出生月)$/i, rule('dobMonth', '出生月份', 'personal', ['birth month', 'dob month', 'month of birth', '出生月'], 'private')],
-  [/^(birth\s*day|dob\s*day|birthday\s*day|day\s*of\s*birth|出生日)$/i, rule('dobDay', '出生日', 'personal', ['birth day', 'dob day', 'day of birth', '出生日'], 'private')],
-  [/^(birth\s*year|dob\s*year|birthday\s*year|year\s*of\s*birth|出生年)$/i, rule('dobYear', '出生年份', 'personal', ['birth year', 'dob year', 'year of birth', '出生年'], 'private')],
+  [/^(dob|date\s*of\s*birth|birth\s*date|birthday|出生|生日)$/i, rule('dob', '出生日期', 'personal', ['dob', 'date of birth', 'birthdate', 'birthday', '出生日期', '生日'])],
+  [/^(birth\s*month|dob\s*month|birthday\s*month|month\s*of\s*birth|出生月)$/i, rule('dobMonth', '出生月份', 'personal', ['birth month', 'dob month', 'month of birth', '出生月'])],
+  [/^(birth\s*day|dob\s*day|birthday\s*day|day\s*of\s*birth|出生日)$/i, rule('dobDay', '出生日', 'personal', ['birth day', 'dob day', 'day of birth', '出生日'])],
+  [/^(birth\s*year|dob\s*year|birthday\s*year|year\s*of\s*birth|出生年)$/i, rule('dobYear', '出生年份', 'personal', ['birth year', 'dob year', 'year of birth', '出生年'])],
   [/^(prefix|name\s*prefix|salutation|honorific|称谓|称呼)$/i, rule('namePrefix', '称谓', 'personal', ['prefix', 'name prefix', 'salutation', 'honorific', '称谓'])],
   [/^(suffix|name\s*suffix|generation|后缀)$/i, rule('nameSuffix', '姓名后缀', 'personal', ['suffix', 'name suffix', 'generation', '后缀'])],
   [/^(gender|sex|性别)$/i, rule('gender', '性别', 'personal', ['gender', 'sex', '性别'])],
@@ -175,15 +176,15 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(state|province|region|州|省)$/i, rule('state', '州/省', 'address', ['state', 'province', 'region', '州', '省'])],
   [/^(zip|zipcode|zip\s*code|postal|postal\s*code|postcode|邮编)$/i, rule('postalCode', '邮编', 'address', ['zip', 'zip code', 'postal code', 'postcode', '邮编'])],
   [/^(country|country\s*code|country\s*\/\s*region|country\s*region|nation|nationality|国家|国家\/地区|所在国家|地区国家)$/i, rule('country', '国家', 'address', ['country', 'country code', 'country/region', 'country region', 'nation', 'nationality', '国家', '国家/地区', '所在国家'])],
-  [/^(ssn|social\s*security|social\s*security\s*number|身份证|证件号)$/i, rule('ssn', 'SSN', 'sensitive', ['ssn', 'social security', 'social security number', '身份证', '证件号'], 'secret')],
-  [/^(ssn\s*last\s*4|last\s*4\s*ssn|last\s*four\s*ssn|social\s*last\s*4|ssn4)$/i, rule('ssnLast4', 'SSN 后四位', 'sensitive', ['ssn last 4', 'last 4 ssn', 'last four ssn'], 'secret')],
-  [/^(itin|individual\s*taxpayer\s*id|individual\s*taxpayer\s*identification\s*number)$/i, rule('itin', 'ITIN', 'sensitive', ['itin', 'individual taxpayer id', 'individual taxpayer identification number'], 'secret')],
-  [/^(id\s*number|identity\s*number|national\s*id|government\s*id|证件号码|身份证号)$/i, rule('idNumber', '证件号码', 'sensitive', ['id number', 'identity number', 'national id', 'government id', '证件号码'], 'secret')],
-  [/^(passport|passport\s*number|护照|护照号)$/i, rule('passportNumber', '护照号', 'sensitive', ['passport', 'passport number', '护照号'], 'secret')],
-  [/^(passport\s*country|passport\s*issuing\s*country|passport\s*nationality)$/i, rule('passportCountry', '护照签发国家', 'sensitive', ['passport country', 'passport issuing country', 'passport nationality'], 'private')],
-  [/^(passport\s*expiry|passport\s*expiration|passport\s*expire\s*date)$/i, rule('passportExpiry', '护照到期日', 'sensitive', ['passport expiry', 'passport expiration', 'passport expire date'], 'private')],
-  [/^(driver'?s?\s*license|drivers?\s*license\s*number|driving\s*license|license\s*number|dl\s*number|驾照号|驾驶证号)$/i, rule('driverLicenseNumber', '驾照号', 'driver', ['driver license number', 'drivers license number', 'dl number', 'license number', '驾照号'], 'secret')],
-  [/^(driver'?s?\s*license\s*expiry|license\s*expiration|license\s*expiry|dl\s*expiration)$/i, rule('driverLicenseExpiry', '驾照到期日', 'driver', ['driver license expiry', 'license expiration', 'license expiry'], 'private')],
+  [/^(ssn|social\s*security|social\s*security\s*number|身份证|证件号)$/i, rule('ssn', 'SSN', 'sensitive', ['ssn', 'social security', 'social security number', '身份证', '证件号'])],
+  [/^(ssn\s*last\s*4|last\s*4\s*ssn|last\s*four\s*ssn|social\s*last\s*4|ssn4)$/i, rule('ssnLast4', 'SSN 后四位', 'sensitive', ['ssn last 4', 'last 4 ssn', 'last four ssn'])],
+  [/^(itin|individual\s*taxpayer\s*id|individual\s*taxpayer\s*identification\s*number)$/i, rule('itin', 'ITIN', 'sensitive', ['itin', 'individual taxpayer id', 'individual taxpayer identification number'])],
+  [/^(id\s*number|identity\s*number|national\s*id|government\s*id|证件号码|身份证号)$/i, rule('idNumber', '证件号码', 'sensitive', ['id number', 'identity number', 'national id', 'government id', '证件号码'])],
+  [/^(passport|passport\s*number|护照|护照号)$/i, rule('passportNumber', '护照号', 'sensitive', ['passport', 'passport number', '护照号'])],
+  [/^(passport\s*country|passport\s*issuing\s*country|passport\s*nationality)$/i, rule('passportCountry', '护照签发国家', 'sensitive', ['passport country', 'passport issuing country', 'passport nationality'])],
+  [/^(passport\s*expiry|passport\s*expiration|passport\s*expire\s*date)$/i, rule('passportExpiry', '护照到期日', 'sensitive', ['passport expiry', 'passport expiration', 'passport expire date'])],
+  [/^(driver'?s?\s*license|drivers?\s*license\s*number|driving\s*license|license\s*number|dl\s*number|驾照号|驾驶证号)$/i, rule('driverLicenseNumber', '驾照号', 'driver', ['driver license number', 'drivers license number', 'dl number', 'license number', '驾照号'])],
+  [/^(driver'?s?\s*license\s*expiry|license\s*expiration|license\s*expiry|dl\s*expiration)$/i, rule('driverLicenseExpiry', '驾照到期日', 'driver', ['driver license expiry', 'license expiration', 'license expiry'])],
   [/^(card|card\s*number|cc|credit\s*card|信用卡|卡号)$/i, rule('cardNumber', '卡号', 'payment', ['card number', 'credit card', 'cc', '信用卡', '卡号'], 'secret')],
   [/^(card\s*holder|cardholder|name\s*on\s*card|card\s*name|持卡人)$/i, rule('cardHolderName', '持卡人姓名', 'payment', ['card holder', 'cardholder', 'name on card', 'card name', '持卡人'])],
   [/^(cvv|cvc|security\s*code|card\s*code|安全码)$/i, rule('cvv', 'CVV', 'payment', ['cvv', 'cvc', 'security code', '安全码'], 'secret')],
@@ -193,7 +194,7 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(company|company\s*name|business|business\s*name|legal\s*business\s*name|legal\s*name|organization|organisation|公司|公司名称|企业名称)$/i, rule('businessName', '公司名称', 'business', ['company', 'company name', 'business name', 'legal business name', 'organization', '公司名称'])],
   [/^(dba|doing\s*business\s*as|trade\s*name|assumed\s*name|品牌名|经营名称)$/i, rule('dbaName', 'DBA/经营名称', 'business', ['dba', 'doing business as', 'trade name', 'assumed name'])],
   [/^(entity|entity\s*type|business\s*type|company\s*type|legal\s*structure|公司类型|企业类型)$/i, rule('entityType', '企业类型', 'business', ['entity type', 'business type', 'company type', 'legal structure'])],
-  [/^(ein|fein|federal\s*tax\s*id|tax\s*id|taxpayer\s*id|irs\s*number|联邦税号|税号)$/i, rule('ein', 'EIN/税号', 'business', ['ein', 'fein', 'federal tax id', 'tax id', 'employer identification number', '税号'], 'secret')],
+  [/^(ein|fein|federal\s*tax\s*id|tax\s*id|taxpayer\s*id|irs\s*number|联邦税号|税号)$/i, rule('ein', 'EIN/税号', 'business', ['ein', 'fein', 'federal tax id', 'tax id', 'employer identification number', '税号'])],
   [/^(business\s*phone|company\s*phone|office\s*phone|公司电话|企业电话)$/i, rule('businessPhone', '公司电话', 'business', ['business phone', 'company phone', 'office phone', '公司电话'])],
   [/^(business\s*fax|company\s*fax|office\s*fax|公司传真)$/i, rule('businessFax', '公司传真', 'business', ['business fax', 'company fax', 'office fax', '公司传真'])],
   [/^(business\s*email|company\s*email|work\s*email|公司邮箱|企业邮箱)$/i, rule('businessEmail', '公司邮箱', 'business', ['business email', 'company email', 'work email', '公司邮箱'])],
@@ -206,8 +207,8 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(industry|business\s*industry|sector|行业)$/i, rule('industry', '行业', 'business', ['industry', 'business industry', 'sector', '行业'])],
   [/^(naics|naics\s*code|sic|sic\s*code|行业代码)$/i, rule('industryCode', '行业代码', 'business', ['naics', 'naics code', 'sic', 'sic code'])],
   [/^(mcc|merchant\s*category\s*code)$/i, rule('mcc', 'MCC', 'business', ['mcc', 'merchant category code'])],
-  [/^(duns|duns\s*number|dun\s*&\s*bradstreet|d&b)$/i, rule('dunsNumber', 'DUNS', 'business', ['duns', 'duns number', 'dun and bradstreet'], 'private')],
-  [/^(business\s*license|business\s*license\s*number|license\s*permit\s*number|营业执照|营业执照号)$/i, rule('businessLicenseNumber', '营业执照号', 'business', ['business license', 'business license number', 'license permit number', '营业执照号'], 'private')],
+  [/^(duns|duns\s*number|dun\s*&\s*bradstreet|d&b)$/i, rule('dunsNumber', 'DUNS', 'business', ['duns', 'duns number', 'dun and bradstreet'])],
+  [/^(business\s*license|business\s*license\s*number|license\s*permit\s*number|营业执照|营业执照号)$/i, rule('businessLicenseNumber', '营业执照号', 'business', ['business license', 'business license number', 'license permit number', '营业执照号'])],
   [/^(business\s*start\s*date|start\s*date|date\s*established|established|founded|incorporation\s*date|成立日期|开业日期)$/i, rule('businessStartDate', '成立日期', 'business', ['business start date', 'date established', 'founded', 'incorporation date'])],
   [/^(business\s*start\s*month|start\s*month|established\s*month|incorporation\s*month)$/i, rule('businessStartMonth', '成立月份', 'business', ['business start month', 'established month', 'incorporation month'])],
   [/^(business\s*start\s*year|start\s*year|established\s*year|incorporation\s*year)$/i, rule('businessStartYear', '成立年份', 'business', ['business start year', 'established year', 'incorporation year'])],
@@ -235,11 +236,11 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(employer|employer\s*name|company\s*employer|工作单位|雇主)$/i, rule('employerName', '雇主名称', 'employment', ['employer', 'employer name', 'company employer'])],
   [/^(job\s*title|occupation\s*title|职位名称)$/i, rule('jobTitle', '职位名称', 'employment', ['job title', 'occupation title', 'position'])],
   [/^(years\s*employed|time\s*employed|employment\s*length|工作年限)$/i, rule('yearsEmployed', '工作年限', 'employment', ['years employed', 'time employed', 'employment length'])],
-  [/^(bank|bank\s*name|financial\s*institution|银行|银行名称)$/i, rule('bankName', '银行名称', 'finance', ['bank', 'bank name', 'financial institution'], 'private')],
-  [/^(account\s*holder|bank\s*account\s*holder|name\s*on\s*account|账户持有人)$/i, rule('bankAccountHolder', '账户持有人', 'finance', ['account holder', 'bank account holder', 'name on account', '账户持有人'], 'private')],
+  [/^(bank|bank\s*name|financial\s*institution|银行|银行名称)$/i, rule('bankName', '银行名称', 'finance', ['bank', 'bank name', 'financial institution'])],
+  [/^(account\s*holder|bank\s*account\s*holder|name\s*on\s*account|账户持有人)$/i, rule('bankAccountHolder', '账户持有人', 'finance', ['account holder', 'bank account holder', 'name on account', '账户持有人'])],
   [/^(routing|routing\s*number|aba|aba\s*number|路由号)$/i, rule('routingNumber', 'Routing Number', 'finance', ['routing number', 'aba number'], 'secret')],
   [/^(account\s*number|bank\s*account|checking\s*account|账户号|银行账号)$/i, rule('bankAccountNumber', '银行账号', 'finance', ['account number', 'bank account', 'checking account'], 'secret')],
-  [/^(account\s*type|bank\s*account\s*type|账户类型)$/i, rule('bankAccountType', '账户类型', 'finance', ['account type', 'bank account type'], 'private')],
+  [/^(account\s*type|bank\s*account\s*type|账户类型)$/i, rule('bankAccountType', '账户类型', 'finance', ['account type', 'bank account type'])],
   [/^(currentcoverage|currentcoveragetype|current\s*coverage\s*type)$/i, rule('currentCoverageType', '当前保险类型', 'insurance', ['current coverage type', 'coverage type'])],
   [/^(currentinsurancecompany|current\s*insurance\s*company|insurance\s*company)$/i, rule('currentInsuranceCompany', '当前保险公司', 'insurance', ['insurance company', 'current insurance company'])],
   [/^(expirationdate|expiration\s*date)$/i, rule('insuranceExpirationDate', '保险到期日', 'insurance', ['expiration date', 'insurance expiration'])],
@@ -259,12 +260,12 @@ const HEADER_RULES: Array<[RegExp, HeaderRule]> = [
   [/^(make|vehicle\s*make|品牌|车辆品牌)$/i, rule('vehicleMake', '车辆品牌', 'vehicle', ['make', 'vehicle make', '车辆品牌'])],
   [/^(model|vehicle\s*model|车型)$/i, rule('vehicleModel', '车型', 'vehicle', ['model', 'vehicle model', '车型'])],
   [/^(year|vehicle\s*year|年份)$/i, rule('vehicleYear', '年份', 'vehicle', ['year', 'vehicle year', '年份'])],
-  [/^(vin|vehicle\s*vin|vehicle\s*identification\s*number|车架号)$/i, rule('vin', 'VIN', 'vehicle', ['vin', 'vehicle vin', 'vehicle identification number', '车架号'], 'private')],
+  [/^(vin|vehicle\s*vin|vehicle\s*identification\s*number|车架号)$/i, rule('vin', 'VIN', 'vehicle', ['vin', 'vehicle vin', 'vehicle identification number', '车架号'])],
   [/^(trim|vehicle\s*trim|submodel|series|配置)$/i, rule('vehicleTrim', '车辆配置', 'vehicle', ['trim', 'vehicle trim', 'submodel', 'series', '配置'])],
   [/^(mileage|odometer|current\s*mileage|里程)$/i, rule('vehicleMileage', '里程', 'vehicle', ['mileage', 'odometer', 'current mileage', '里程'])],
   [/^(vehicle\s*use|usage|primary\s*use|车辆用途)$/i, rule('vehicleUse', '车辆用途', 'vehicle', ['vehicle use', 'usage', 'primary use', '车辆用途'])],
   [/^(vehicle\s*ownership|owned\s*or\s*leased|lease\s*or\s*own|车辆所有权)$/i, rule('vehicleOwnership', '车辆所有权', 'vehicle', ['vehicle ownership', 'owned or leased', 'lease or own', '车辆所有权'])],
-  [/^(policy\s*number|current\s*policy\s*number|insurance\s*policy|保单号)$/i, rule('policyNumber', '保单号', 'insurance', ['policy number', 'current policy number', 'insurance policy', '保单号'], 'private')],
+  [/^(policy\s*number|current\s*policy\s*number|insurance\s*policy|保单号)$/i, rule('policyNumber', '保单号', 'insurance', ['policy number', 'current policy number', 'insurance policy', '保单号'])],
   [/^(accidents|accident\s*count|claims|claim\s*count|violations|tickets)$/i, rule('drivingIncidents', '事故/违章记录', 'driver', ['accidents', 'claims', 'violations', 'tickets'])],
   [/^(date|created\s*date|日期)$/i, rule('sourceDate', '日期', 'custom', ['date', '日期'])]
 ];
@@ -294,7 +295,7 @@ export function exportFillProfilesKpFill(profiles: FillProfile[]): string {
     format: 'keypilot-fill-profiles',
     version: 1,
     exportedAt: new Date().toISOString(),
-    profiles: profiles.map((profile) => ({
+    profiles: profiles.map(migrateFillProfilePrivacy).map((profile) => ({
       ...profile,
       fields: appendInferredCountryField(profile.fields, profile.countryCode, shouldAddInferredCountryFromFields(profile.fields, profile.countryCode)),
       source: 'kpfill',
@@ -329,7 +330,7 @@ function mappingPreset(
 async function parseKpFill(file: File): Promise<FillProfileImportPreview> {
   const parsed = JSON.parse(await file.text()) as { profiles?: FillProfile[] } | FillProfile[];
   const profiles = Array.isArray(parsed) ? parsed : parsed.profiles ?? [];
-  const normalizedProfiles = profiles.map((profile) => ({
+  const normalizedProfiles = profiles.map(migrateFillProfilePrivacy).map((profile) => ({
     ...profile,
     id: crypto.randomUUID(),
     fields: appendInferredCountryField(profile.fields, profile.countryCode, shouldAddInferredCountryFromFields(profile.fields, profile.countryCode)),
@@ -525,6 +526,7 @@ function buildPreview(sourceName: string, sourceType: 'xlsx' | 'csv', rows: stri
 
     profiles.push({
       id: crypto.randomUUID(),
+      privacyVersion: 1,
       title: buildProfileTitle(category, countryCode, index + 1, fields),
       countryCode,
       category,
@@ -689,7 +691,7 @@ function toCamelKey(value: string): string {
 }
 
 function inferSensitivity(header: string): FillFieldSensitivity {
-  return /(ssn|social|itin|passport|driver'?s?\s*license|license\s*number|id\s*number|identity\s*number|national\s*id|government\s*id|cvv|cvc|card|credit|routing|aba|account\s*number|bank\s*account|ein|fein|tax\s*id|password|身份证|证件|护照|驾照|驾驶证|信用卡|卡号|安全码)/i.test(header) ? 'secret' : 'normal';
+  return /(?:cvv|cvc|(?:credit|debit)\s*card|card\s*(?:number|expiry|expiration|code)|routing|\baba\b|account\s*number|bank\s*account|password|信用卡|银行卡|卡号|安全码|银行账号)/i.test(header) ? 'secret' : 'normal';
 }
 
 function countryDetectionText(headers: string[], sampleRows: string[][] = []): string {

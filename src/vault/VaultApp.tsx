@@ -1,7 +1,21 @@
+import { CopyButton } from '../shared/CopyButton';
+import { navigateAccountList } from '../shared/listNavigation';
+import { CredentialSecurityPanel } from '../shared/CredentialSecurityPanel';
+import { AuthenticatorPanel } from '../shared/AuthenticatorPanel';
+import { RemindersPanel } from '../shared/RemindersPanel';
+import { reminderIsPending } from '../shared/reminders';
+import { BackupStatus } from '../shared/BackupStatusPanel';
+import { InitialBackupRestore } from '../shared/BackupRestorePanel';
+import { SensitiveValue } from '../shared/SensitiveValue';
+import { copyProtectedText } from '../shared/clipboard';
+import { useSessionGuard } from '../shared/sessionGuard';
+import { authorizeSensitiveAction, useSecretVisibility } from '../shared/sensitiveActions';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, MouseEvent, ReactNode } from 'react';
 import {
   AlertTriangle,
+  ArrowLeft,
+  Bell,
   ArrowUpRight,
   Check,
   CirclePlay,
@@ -44,7 +58,7 @@ import {
   Wand2,
   X
 } from 'lucide-react';
-import { exportRoboFormCsv } from '../shared/csvExport';
+import { exportCredentialsByFormat, type CredentialExportFormat } from '../shared/csvExport';
 import {
   FILL_FIELD_MAPPING_PRESETS,
   applyFillProfileHeaderMappingOverrides,
@@ -112,6 +126,7 @@ type DashboardSection =
   | 'identities'
   | 'generator'
   | 'authenticator'
+  | 'reminders'
   | 'security'
   | 'sharing'
   | 'emergency'
@@ -173,6 +188,7 @@ const DASHBOARD_SECTIONS: DashboardSection[] = [
   'identities',
   'generator',
   'authenticator',
+  'reminders',
   'security',
   'sharing',
   'emergency',
@@ -230,6 +246,7 @@ const SECTION_LABELS: Record<DashboardSection, string> = {
   identities: '个人信息',
   generator: '密码生成器',
   authenticator: '身份验证器',
+  reminders: '提醒中心',
   security: '安全中心',
   sharing: '共享中心',
   emergency: '紧急访问',
@@ -481,12 +498,13 @@ function vaultItemClipboardText(item: VaultItem): string {
 }
 
 function fillProfileSummary(profile: FillProfile): string {
-  const name = fillFieldValue(profile.fields, 'fullName') || [fillFieldValue(profile.fields, 'firstName'), fillFieldValue(profile.fields, 'lastName')].filter(Boolean).join(' ');
-  const email = fillFieldValue(profile.fields, 'email');
-  const phone = fillFieldValue(profile.fields, 'phone');
-  const business = fillFieldValue(profile.fields, 'businessName') || fillFieldValue(profile.fields, 'dbaName');
-  const loanAmount = fillFieldValue(profile.fields, 'loanAmount');
-  const vehicle = [fillFieldValue(profile.fields, 'vehicleYear'), fillFieldValue(profile.fields, 'vehicleMake'), fillFieldValue(profile.fields, 'vehicleModel')].filter(Boolean).join(' ');
+  const publicFields = profile.fields.filter(field => field.sensitivity === 'normal');
+  const name = fillFieldValue(publicFields, 'fullName') || [fillFieldValue(publicFields, 'firstName'), fillFieldValue(publicFields, 'lastName')].filter(Boolean).join(' ');
+  const email = fillFieldValue(publicFields, 'email');
+  const phone = fillFieldValue(publicFields, 'phone');
+  const business = fillFieldValue(publicFields, 'businessName') || fillFieldValue(publicFields, 'dbaName');
+  const loanAmount = fillFieldValue(publicFields, 'loanAmount');
+  const vehicle = [fillFieldValue(publicFields, 'vehicleYear'), fillFieldValue(publicFields, 'vehicleMake'), fillFieldValue(publicFields, 'vehicleModel')].filter(Boolean).join(' ');
   return business || loanAmount || name || email || phone || vehicle || `${profile.fields.length} 个字段`;
 }
 
@@ -567,7 +585,7 @@ function fillFieldGroupLabel(group: FillField['group']): string {
     loan: '贷款',
     employment: '工作',
     finance: '财务',
-    sensitive: '敏感资料',
+    sensitive: '证件资料',
     custom: '其他'
   };
 
@@ -793,6 +811,8 @@ function sortItems(items: VaultItem[], sort: SortMode): VaultItem[] {
 }
 
 function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message === 'MASTER_PASSWORD_TOO_SHORT') return '主密码至少需要 8 位。';
+  if (error instanceof Error && error.message === 'VAULT_WRITE_CONFLICT') return '记录已在其他页面修改，请重新打开记录后再保存。';
   if (error instanceof Error) {
     if (error.message === 'The operation failed for an operation-specific reason') return '主密码错误，请重新输入。';
     if (error.message === 'VAULT_NOT_FOUND') return '没有找到本地 Vault。';
@@ -856,14 +876,16 @@ function credentialToFillPayload(credential: Credential, autoSubmit: boolean): F
   };
 }
 
-async function copyText(value: string, label: string, setNotice: (value: string) => void) {
-  if (!value) {
-    setNotice(`${label}为空。`);
-    return;
+async function copyText(value: string, label: string, setNotice: (value: string) => void, sensitive = !/用户名|网址|链接/.test(label)): Promise<boolean> {
+  if (!value) { setNotice(`${label}为空。`); return false; }
+  try {
+    if (!await copyProtectedText(value, sensitive)) return false;
+    setNotice(`已复制${label}。`);
+    return true;
+  } catch {
+    setNotice('复制失败，请确认密码库已解锁后重试。');
+    return false;
   }
-
-  await navigator.clipboard.writeText(value);
-  setNotice(`已复制${label}。`);
 }
 
 function timestampForFile(): string {
@@ -1045,9 +1067,11 @@ export function VaultApp() {
   const initialUiState = useMemo(readVaultUiState, []);
   const [status, setStatus] = useState<VaultStatus>('checking');
   const [session, setSession] = useState<UnlockedVaultSession | null>(null);
+  useSessionGuard(session, () => { setSession(null);setStatus('locked');setNotice('密码库已锁定，请重新解锁。');setModal(null);setDetailCredentialId(null);setDetailFillProfileId(null); });
   const [masterPassword, setMasterPassword] = useState('');
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
+  useEffect(() => {if(status==='unlocked' && new URLSearchParams(location.search).get('focus')==='search')document.querySelector<HTMLInputElement>('input[type="search"],input[placeholder*="搜索"]')?.focus();},[status]);
   const [section, setSection] = useState<DashboardSection>(initialUiState.section);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(initialUiState.selectedFolder);
   const [sortMode, setSortMode] = useState<SortMode>(initialUiState.sortMode);
@@ -1058,6 +1082,20 @@ export function VaultApp() {
   const [itemContextMenu, setItemContextMenu] = useState<ItemContextMenuState>(null);
   const [detailCredentialId, setDetailCredentialId] = useState<string | null>(null);
   const [detailMode, setDetailMode] = useState<DetailMode>('view');
+  const focusLoginSettings=useRef(false);
+  useEffect(()=>{
+    if(status!=='unlocked')return;
+    const id=new URLSearchParams(location.search).get('loginFor');
+    if(id && session?.vault.credentials.some(item=>item.id===id)){
+      focusLoginSettings.current=true;
+      setDetailCredentialId(id);const url=new URL(location.href);url.searchParams.delete('loginFor');history.replaceState(null,'',url);
+    }
+  },[status,session?.sessionId]);
+  useEffect(()=>{
+    if(!detailCredentialId || !focusLoginSettings.current)return;
+    const target=document.querySelector('.kp-credential-security');
+    if(target){target.scrollIntoView({block:'start'});focusLoginSettings.current=false;}
+  },[detailCredentialId]);
   const [detailFillProfileId, setDetailFillProfileId] = useState<string | null>(null);
   const [detailFillProfileMode, setDetailFillProfileMode] = useState<DetailMode>('view');
   const [detailMoreOpen, setDetailMoreOpen] = useState(false);
@@ -1102,6 +1140,7 @@ export function VaultApp() {
       setItemContextMenu(null);
       setDetailMoreOpen(false);
       setSection(hashState.section);
+      closeDetailPane();
       setSelectedFolder(hashState.section === 'folder' ? hashState.selectedFolder ?? ROOT_FOLDER_NAME : null);
     }
 
@@ -1150,6 +1189,18 @@ export function VaultApp() {
   const detailCredential = credentials.find((credential) => credential.id === detailCredentialId) ?? null;
   const detailFillProfile = fillProfiles.find((profile) => profile.id === detailFillProfileId) ?? null;
   const detailOpen = Boolean(detailCredential || detailFillProfile);
+
+  useEffect(() => {
+    if (!detailOpen) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const pane = document.querySelector<HTMLElement>('.vault-detail-pane');
+    pane?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true });
+    return () => {
+      if (previousFocus?.isConnected && (pane?.contains(document.activeElement) || document.activeElement === document.body)) {
+        previousFocus.focus({ preventScroll: true });
+      }
+    };
+  }, [detailOpen]);
 
   useEffect(() => {
     if (detailCredentialId && !credentials.some((credential) => credential.id === detailCredentialId)) {
@@ -1329,6 +1380,7 @@ export function VaultApp() {
   function openSection(nextSection: DashboardSection) {
     setFolderContextMenu(null);
     setItemContextMenu(null);
+    closeDetailPane();
     setSection(nextSection);
     if (nextSection !== 'folder') {
       setSelectedFolder(null);
@@ -1338,6 +1390,7 @@ export function VaultApp() {
   function openFolder(folderName: string) {
     setFolderContextMenu(null);
     setItemContextMenu(null);
+    closeDetailPane();
     setSelectedFolder(normalizeFolderLabel(folderName));
     setSection('folder');
   }
@@ -1379,13 +1432,16 @@ export function VaultApp() {
     event.preventDefault();
     event.stopPropagation();
 
+    const anchor = event.currentTarget.getBoundingClientRect();
+    const x = event.type === "click" ? anchor.right : event.clientX;
+    const y = event.type === "click" ? anchor.bottom : event.clientY;
     const width = 224;
-    const height = item.kind === 'login' ? 424 : 390;
+    const height = item.kind === 'login' ? 600 : 500;
     setFolderContextMenu(null);
     setItemContextMenu({
       item,
-      x: Math.max(8, Math.min(window.innerWidth - width - 8, event.clientX)),
-      y: Math.max(8, Math.min(window.innerHeight - height - 8, event.clientY))
+      x: Math.max(8, Math.min(window.innerWidth - width - 8, x)),
+      y: Math.max(8, Math.min(window.innerHeight - height - 8, y))
     });
   }
 
@@ -1614,7 +1670,10 @@ export function VaultApp() {
 
   function copyAllVaultItemFields(item: VaultItem) {
     setItemContextMenu(null);
-    void copyText(vaultItemClipboardText(item), itemName(item), setNotice);
+    const sensitive = item.kind === 'fillProfile'
+      ? item.fillProfile.fields.some(field => field.sensitivity !== 'normal')
+      : item.kind !== 'identity';
+    void copyText(vaultItemClipboardText(item), itemName(item), setNotice, sensitive);
   }
 
   async function cloneVaultItem(item: VaultItem) {
@@ -1712,7 +1771,11 @@ export function VaultApp() {
     setDetailMoreOpen(false);
   }
 
-  function openFillProfileDetail(profile: FillProfile, mode: DetailMode = 'view') {
+  async function openFillProfileDetail(profile: FillProfile, mode: DetailMode = 'view') {
+    if (mode === 'edit' && profile.fields.some(field => field.sensitivity !== 'normal')) {
+      try { if (!await authorizeSensitiveAction()) return; }
+      catch { setNotice('密码库已锁定，请重新解锁。'); return; }
+    }
     setDetailFillProfileId(profile.id);
     setDetailFillProfileMode(mode);
     setDetailCredentialId(null);
@@ -1947,22 +2010,24 @@ export function VaultApp() {
     setCredentialExportOpen(true);
   }
 
-  function exportCredentialsCsv(selectedCredentials: Credential[]) {
+  async function exportCredentialsFile(selectedCredentials: Credential[], format: CredentialExportFormat) {
+    if (!await authorizeSensitiveAction()) return;
     if (!selectedCredentials.length) {
       setNotice('请选择至少 1 条账号再导出。');
       return;
     }
 
+    const exportResult = exportCredentialsByFormat(selectedCredentials, format);
     const confirmed = window.confirm(
-      `即将导出 ${selectedCredentials.length} 条账号为 RoboForm CSV。\n\n这个 CSV 会包含明文账号和密码，请只保存在可信位置，用完后及时删除。是否继续？`
+      `即将导出 ${selectedCredentials.length} 条账号为 ${exportResult.label}。\n\n导出文件会包含明文账号和密码，请只保存在可信位置，用完后及时删除。是否继续？`
     );
 
     if (!confirmed) return;
 
-    const blob = new Blob([`\uFEFF${exportRoboFormCsv(selectedCredentials)}`], { type: 'text/csv;charset=utf-8' });
-    downloadBlob(blob, `keypilot-roboform-export-${timestampForFile()}.csv`);
+    const blob = new Blob([`${exportResult.addBom ? '\uFEFF' : ''}${exportResult.body}`], { type: exportResult.mimeType });
+    downloadBlob(blob, `${exportResult.filenamePrefix}-${timestampForFile()}.${exportResult.extension}`);
     setCredentialExportOpen(false);
-    setNotice(`已导出 ${selectedCredentials.length} 条账号。CSV 包含明文密码，请妥善处理。`);
+    setNotice(`已导出 ${selectedCredentials.length} 条账号为 ${exportResult.label}。文件包含明文密码，请妥善处理。`);
   }
 
   function openFillProfileExportDialog() {
@@ -1974,7 +2039,8 @@ export function VaultApp() {
     setFillExportOpen(true);
   }
 
-  function exportFillProfilesFile(selectedProfiles: FillProfile[]) {
+  async function exportFillProfilesFile(selectedProfiles: FillProfile[]) {
+    if (!await authorizeSensitiveAction()) return;
     if (!selectedProfiles.length) {
       setNotice('请选择至少 1 条资料再导出。');
       return;
@@ -1995,10 +2061,11 @@ export function VaultApp() {
   if (status !== 'unlocked' || !session) {
     return (
       <main className="vault-auth">
+        <div className="vault-auth-content">
         <form onSubmit={handleAuth}>
           <img src="icons/icon128.png" alt="" />
           <h1>{status === 'setup' ? '创建 KeyPilot Vault' : status === 'locked' ? '解锁 KeyPilot Vault' : '正在检查 Vault'}</h1>
-          <p>本地加密保存账号、笔记和身份资料。</p>
+          <p>本地加密保存账号、2FA、笔记和身份资料。</p>
           {status !== 'checking' ? (
             <>
               <label>
@@ -2017,6 +2084,8 @@ export function VaultApp() {
           ) : null}
           {notice ? <strong>{notice}</strong> : null}
         </form>
+        {status === 'setup' && <InitialBackupRestore onRestored={next => {setSession(next);setStatus('unlocked');setNotice('完整备份已恢复，包含 2FA 和插件设置。');}} />}
+        </div>
       </main>
     );
   }
@@ -2028,17 +2097,11 @@ export function VaultApp() {
           <img src="icons/icon128.png" alt="" />
           <strong>KeyPilot</strong>
         </div>
-        <SidebarButton
-          icon={<Home size={18} />}
-          label="主目录"
-          count={folderItemCount(ROOT_FOLDER_NAME, allItems)}
-          active={section === 'folder' && selectedFolder === ROOT_FOLDER_NAME}
-          onClick={() => openFolder(ROOT_FOLDER_NAME)}
-        />
         <div className="sidebar-group">
           <SidebarButton icon={<List size={18} />} label="所有" count={allItems.length} active={section === 'all'} onClick={() => openSection('all')} />
           <SidebarButton icon={<Lock size={18} />} label="登录" count={credentials.length} active={section === 'logins'} onClick={() => openSection('logins')} />
           <SidebarButton icon={<NotebookText size={18} />} label="保密笔记本" count={notes.length} active={section === 'notes'} onClick={() => openSection('notes')} />
+          <SidebarButton icon={<IdCard size={18} />} label="个人信息" count={identities.length + fillProfiles.length} active={section === 'identities'} onClick={() => openSection('identities')} />
         </div>
         <div className="sidebar-folder-group">
           <header>
@@ -2048,6 +2111,13 @@ export function VaultApp() {
             </button>
           </header>
           <div>
+        <SidebarButton
+          icon={<Home size={18} />}
+          label="主目录"
+          count={folderItemCount(ROOT_FOLDER_NAME, allItems)}
+          active={section === 'folder' && selectedFolder === ROOT_FOLDER_NAME}
+          onClick={() => openFolder(ROOT_FOLDER_NAME)}
+        />
             {folderOptions
               .filter((folderName) => folderName !== ROOT_FOLDER_NAME)
               .map((folderName) => (
@@ -2064,15 +2134,13 @@ export function VaultApp() {
           </div>
         </div>
         <div className="sidebar-group">
-          <SidebarButton icon={<IdCard size={18} />} label="个人信息" count={identities.length + fillProfiles.length} active={section === 'identities'} onClick={() => openSection('identities')} />
+          <SidebarButton icon={<ShieldCheck size={18} />} label="身份验证器" count={session.vault.totpAccounts?.filter(item => !item.deletedAt).length ?? 0} active={section === 'authenticator'} onClick={() => openSection('authenticator')} />
+          {session.vault.settings.remindersEnabled && <SidebarButton icon={<Bell size={18} />} label="提醒中心" count={session.vault.reminders?.filter(item => reminderIsPending(item)).length ?? 0} active={section === 'reminders'} onClick={() => openSection('reminders')} />}
           <SidebarButton icon={<Wand2 size={18} />} label="密码生成器" active={section === 'generator'} onClick={() => openSection('generator')} />
-          <SidebarButton icon={<ShieldCheck size={18} />} label="身份验证器" active={section === 'authenticator'} onClick={() => openSection('authenticator')} />
           <SidebarButton icon={<Shield size={18} />} label="安全中心" active={section === 'security'} onClick={() => openSection('security')} />
-          <SidebarButton icon={<Users size={18} />} label="共享中心" active={section === 'sharing'} onClick={() => openSection('sharing')} />
-          <SidebarButton icon={<ShieldAlert size={18} />} label="紧急访问" active={section === 'emergency'} onClick={() => openSection('emergency')} />
           <SidebarButton icon={<Trash2 size={18} />} label="回收站" count={deletedItems.length} active={section === 'trash'} onClick={() => openSection('trash')} />
         </div>
-        <button className="sidebar-help" type="button" onClick={() => openExtensionUrl('options.html')}>
+        <button className="sidebar-help" type="button" aria-label="设置与帮助" title="设置与帮助" onClick={() => openExtensionUrl('options.html')}>
           <HelpCircle size={18} />
           <span>设置与帮助</span>
         </button>
@@ -2107,6 +2175,7 @@ export function VaultApp() {
           onMove={(item) => openQuickModal({ type: 'move', item })}
           onClone={(item) => void cloneVaultItem(item)}
           onCopyAll={copyAllVaultItemFields}
+          onCopy={(label, value, sensitive) => void copyText(value, label, setNotice, sensitive)}
           onTogglePinned={(item) => void togglePinnedVaultItem(item)}
           onDelete={(item) => void deleteItem(item)}
           onCredentialAction={(action, credential) => void runCredentialAction(action, credential)}
@@ -2116,15 +2185,19 @@ export function VaultApp() {
         />
       ) : null}
 
-      <section className="vault-workspace">
+      <section className="vault-workspace" onKeyDown={event => navigateAccountList(event, ".vault-search input", ".vault-row .item-name", () => setQuery(""))}>
         <header className="vault-topbar">
           <label className="vault-search">
             <Search size={18} />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="在 KeyPilot 中搜索" />
+            <input aria-label="在 KeyPilot 中搜索" aria-describedby="vault-search-help" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="在 KeyPilot 中搜索" />
+            <span id="vault-search-help" className="kp-sr-only">上下键选择记录，Enter 查看，Escape 返回搜索或清空搜索。</span>
             <SlidersHorizontal size={18} />
           </label>
           <button type="button" aria-label="选择导出账号 CSV" title="选择导出账号 CSV" onClick={openCredentialExportDialog}>
             <Download size={19} />
+          </button>
+          <button className="vault-backup-link" type="button" aria-label="完整备份" title="完整备份" onClick={() => openExtensionUrl('options.html#account')}>
+            <ShieldCheck size={18} /><span>完整备份</span>
           </button>
           <button type="button" aria-label="刷新" onClick={() => void boot()}>
             <RefreshCw size={19} />
@@ -2134,7 +2207,7 @@ export function VaultApp() {
           </button>
           <div className="vault-user">
             <UserCircle size={21} />
-            <span>leon@local</span>
+            <span>本地密码库</span>
           </div>
           <input
             ref={fillImportInputRef}
@@ -2145,13 +2218,26 @@ export function VaultApp() {
           />
         </header>
 
+        <BackupStatus session={session} onChange={setSession} reminderOnly />
+
         {section === 'generator' ? (
-          <GeneratorPanel onCopy={(password) => void copyText(password, '密码', setNotice)} />
+          <GeneratorPanel onCopy={(password) => copyText(password, '密码', setNotice)} />
         ) : section === 'security' ? (
-          <SecurityPanel security={security} />
+          <SecurityPanel
+            security={security}
+            onView={(credential) => openCredentialDetail(credential)}
+            onEdit={(credential) => openCredentialDetail(credential, 'edit')}
+            onBind={(credential) => void startCredentialBinding(credential)}
+            onOpen={(credential) => void runCredentialAction('goto', credential)}
+            onCopyPassword={(credential) => void copyText(credential.password, '密码', setNotice)}
+          />
         ) : section === 'trash' ? (
           <TrashPanel items={scopedDeletedItems} onRestore={(item) => void restoreDeletedItem(item)} onPurge={(item) => void purgeDeletedItem(item)} />
-        ) : section === 'authenticator' || section === 'sharing' || section === 'emergency' ? (
+        ) : section === 'authenticator' ? (
+          <AuthenticatorPanel session={session} onChange={setSession} />
+        ) : section === 'reminders' ? (
+          <RemindersPanel session={session} onChange={setSession} />
+        ) : section === 'sharing' || section === 'emergency' ? (
           <PlaceholderPanel section={section} />
         ) : (
           <VaultList
@@ -2170,10 +2256,6 @@ export function VaultApp() {
             importingFillProfiles={fillImportBusy}
             activeContextItemId={itemContextMenu ? `${itemContextMenu.item.kind}-${itemContextMenu.item.id}` : null}
             onItemContextMenu={openItemContextMenu}
-            onEdit={editVaultItem}
-            onDelete={(item) => void deleteItem(item)}
-            onMove={(item) => openQuickModal({ type: 'move', item })}
-            onCopy={(label, value) => void copyText(value, label, setNotice)}
             onCredentialAction={(action, credential) => void runCredentialAction(action, credential)}
             onOpenDetail={viewVaultItem}
           />
@@ -2204,6 +2286,8 @@ export function VaultApp() {
         />
       ) : detailCredential ? (
         <CredentialDetailPane
+          session={session}
+          onSessionChange={setSession}
           credential={detailCredential}
           moreOpen={detailMoreOpen}
           onClose={() => {
@@ -2215,7 +2299,6 @@ export function VaultApp() {
           onToggleMore={() => setDetailMoreOpen((open) => !open)}
           onAction={(action, credential) => void runCredentialAction(action, credential)}
           onSaveNotes={(credential, notesText) => void saveCredentialNotes(credential, notesText)}
-          onCopy={(label, value) => void copyText(value, label, setNotice)}
           onClone={(credential) => void cloneCredential(credential)}
           onTogglePinned={(credential) => void togglePinnedCredential(credential)}
           onDelete={(credential) => void deleteCredentialFromDetail(credential)}
@@ -2243,7 +2326,7 @@ export function VaultApp() {
           profile={detailFillProfile}
           onClose={closeDetailPane}
           onEdit={(profile) => openFillProfileDetail(profile, 'edit')}
-          onCopy={(label, value) => void copyText(value, label, setNotice)}
+          onCopy={(label, value, sensitive) => void copyText(value, label, setNotice, sensitive)}
           onDelete={(profile) => void deleteFillProfileFromDetail(profile)}
         />
       ) : null}
@@ -2263,7 +2346,7 @@ export function VaultApp() {
         <CredentialExportDialog
           credentials={credentials}
           onClose={() => setCredentialExportOpen(false)}
-          onConfirm={exportCredentialsCsv}
+          onConfirm={exportCredentialsFile}
         />
       ) : null}
 
@@ -2275,7 +2358,7 @@ export function VaultApp() {
         />
       ) : null}
 
-      {section !== 'trash' ? (
+      {section !== 'trash' && section !== 'authenticator' && section !== 'reminders' && section !== 'security' ? (
         <QuickCreateMenu
           open={quickCreateOpen}
           onToggle={() => setQuickCreateOpen((open) => !open)}
@@ -2379,7 +2462,7 @@ function SidebarButton({
   onContextMenu?: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   return (
-    <button className={active ? 'active' : ''} type="button" onClick={onClick} onContextMenu={onContextMenu}>
+    <button className={active ? 'active' : ''} type="button" aria-label={typeof count === 'number' ? `${label} ${count}` : label} title={label} aria-current={active ? 'page' : undefined} onClick={onClick} onContextMenu={onContextMenu}>
       {icon}
       <span>{label}</span>
       {typeof count === 'number' ? <small>{count}</small> : null}
@@ -2413,7 +2496,7 @@ function FolderContextMenu({
   return (
     <div className="folder-context-layer" role="presentation">
       <button className="folder-context-scrim" type="button" aria-label="关闭文件夹菜单" onClick={onClose} />
-      <div className="folder-context-menu" role="menu" aria-label={`${menu.folderName} 文件夹操作`} style={{ left: menu.x, top: menu.y }}>
+      <div className="folder-context-menu" role="menu" aria-label={`${menu.folderName} 文件夹操作`} style={{ left: menu.x, top: menu.y, maxHeight: `calc(100dvh - ${menu.y + 8}px)` }}>
         <button type="button" role="menuitem" onClick={() => run(onNewFolder)}>
           <FolderPlus size={18} />
           <span>新建文件夹</span>
@@ -2431,10 +2514,7 @@ function FolderContextMenu({
           <span>{count ? '删除并移回主目录' : '删除'}</span>
         </button>
         <hr />
-        <button type="button" role="menuitem" onClick={() => run(onShare)}>
-          <Share2 size={18} />
-          <span>共享文件夹</span>
-        </button>
+
       </div>
     </div>
   );
@@ -2448,6 +2528,7 @@ function VaultItemContextMenu({
   onMove,
   onClone,
   onCopyAll,
+  onCopy,
   onTogglePinned,
   onDelete,
   onCredentialAction,
@@ -2462,6 +2543,7 @@ function VaultItemContextMenu({
   onMove: (item: VaultItem) => void;
   onClone: (item: VaultItem) => void | Promise<void>;
   onCopyAll: (item: VaultItem) => void;
+  onCopy: (label: string, value: string, sensitive: boolean) => void;
   onTogglePinned: (item: VaultItem) => void | Promise<void>;
   onDelete: (item: VaultItem) => void | Promise<void>;
   onCredentialAction: (action: CredentialAction, credential: Credential) => void;
@@ -2470,6 +2552,13 @@ function VaultItemContextMenu({
   onSend: (item: VaultItem) => void;
 }) {
   const item = menu.item;
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const element = menuRef.current;
+    element?.querySelector<HTMLButtonElement>('button')?.focus();
+    return () => { if (opener?.isConnected && (element?.contains(document.activeElement) || document.activeElement === document.body)) opener.focus({ preventScroll: true }); };
+  }, []);
 
   function run(action: () => void | Promise<void>) {
     onClose();
@@ -2479,7 +2568,13 @@ function VaultItemContextMenu({
   return (
     <div className="folder-context-layer" role="presentation">
       <button className="folder-context-scrim" type="button" aria-label="关闭项目菜单" onClick={onClose} />
-      <div className="vault-item-context-menu" role="menu" aria-label={`${itemName(item)} 操作菜单`} style={{ left: menu.x, top: menu.y }}>
+      <div ref={menuRef} onKeyDown={event => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        event.preventDefault();
+        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button'));
+        const index = buttons.indexOf(event.target as HTMLButtonElement);
+        buttons[(index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+      }} className="vault-item-context-menu" role="menu" aria-label={`${itemName(item)} 操作菜单`} style={{ left: menu.x, top: menu.y }}>
         {item.kind === 'login' ? (
           <>
             <button className="primary" type="button" role="menuitem" onClick={() => run(() => onCredentialAction('login', item.credential))}>
@@ -2494,6 +2589,8 @@ function VaultItemContextMenu({
               <ArrowUpRight size={18} />
               <span>转到</span>
             </button>
+            <button type="button" role="menuitem" onClick={() => run(() => onCopy('用户名', item.credential.username, false))}><Copy size={18} /><span>复制用户名</span></button>
+            <button type="button" role="menuitem" onClick={() => run(() => onCopy('密码', item.credential.password, true))}><KeyRound size={18} /><span>复制密码</span></button>
             <hr />
           </>
         ) : null}
@@ -2513,6 +2610,11 @@ function VaultItemContextMenu({
           <Copy size={18} />
           <span>克隆</span>
         </button>
+        {item.kind !== 'login' && <button type="button" role="menuitem" onClick={() => run(() => {
+          if (item.kind === 'note') onCopy('笔记', item.note.note, true);
+          else if (item.kind === 'fillProfile') onCopy('资料摘要', fillProfileSummary(item.fillProfile), false);
+          else onCopy('邮箱', item.identity.email ?? '', false);
+        })}><Copy size={18} /><span>{item.kind === 'note' ? '复制笔记' : item.kind === 'fillProfile' ? '复制资料摘要' : '复制邮箱'}</span></button>}
         <button type="button" role="menuitem" onClick={() => run(() => onCopyAll(item))}>
           <Copy size={18} />
           <span>复制所有字段</span>
@@ -2526,14 +2628,8 @@ function VaultItemContextMenu({
           <span>删除</span>
         </button>
         <hr />
-        <button type="button" role="menuitem" onClick={() => run(() => onShare(item))}>
-          <Share2 size={18} />
-          <span>分享</span>
-        </button>
-        <button type="button" role="menuitem" onClick={() => run(() => onSend(item))}>
-          <Send size={18} />
-          <span>发送</span>
-        </button>
+
+
         <button type="button" role="menuitem" onClick={() => run(onOpenTrash)}>
           <Undo2 size={18} />
           <span>打开回收站</span>
@@ -2559,10 +2655,6 @@ function VaultList({
   importingFillProfiles,
   activeContextItemId,
   onItemContextMenu,
-  onEdit,
-  onDelete,
-  onMove,
-  onCopy,
   onCredentialAction,
   onOpenDetail
 }: {
@@ -2581,10 +2673,6 @@ function VaultList({
   importingFillProfiles?: boolean;
   activeContextItemId?: string | null;
   onItemContextMenu: (event: MouseEvent<HTMLElement>, item: VaultItem) => void;
-  onEdit: (item: VaultItem) => void;
-  onDelete: (item: VaultItem) => void;
-  onMove: (item: VaultItem) => void;
-  onCopy: (label: string, value: string) => void;
   onCredentialAction: (action: CredentialAction, credential: Credential) => void;
   onOpenDetail: (item: VaultItem) => void;
 }) {
@@ -2596,10 +2684,10 @@ function VaultList({
     <div className="vault-list-area">
       <div className="vault-tabs">
         <button className={sortMode === 'popular' ? 'active' : ''} type="button" onClick={() => onSort('popular')}>
-          热门
+          常用
         </button>
         <button className={sortMode === 'recent' ? 'active' : ''} type="button" onClick={() => onSort('recent')}>
-          最近使用
+          最近
         </button>
         <button className={sortMode === 'az' ? 'active' : ''} type="button" onClick={() => onSort('az')}>
           A-Z
@@ -2648,10 +2736,6 @@ function VaultList({
               viewMode={viewMode}
               active={activeContextItemId === `${item.kind}-${item.id}`}
               onContextMenu={onItemContextMenu}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMove={onMove}
-              onCopy={onCopy}
               onCredentialAction={onCredentialAction}
               onView={onOpenDetail}
             />
@@ -2678,10 +2762,6 @@ function VaultItemRow({
   viewMode,
   active,
   onContextMenu,
-  onEdit,
-  onDelete,
-  onMove,
-  onCopy,
   onCredentialAction,
   onView
 }: {
@@ -2690,10 +2770,6 @@ function VaultItemRow({
   viewMode: ViewMode;
   active: boolean;
   onContextMenu: (event: MouseEvent<HTMLElement>, item: VaultItem) => void;
-  onEdit: (item: VaultItem) => void;
-  onDelete: (item: VaultItem) => void;
-  onMove: (item: VaultItem) => void;
-  onCopy: (label: string, value: string) => void;
   onCredentialAction: (action: CredentialAction, credential: Credential) => void;
   onView: (item: VaultItem) => void;
 }) {
@@ -2711,17 +2787,14 @@ function VaultItemRow({
         if ((event.target as HTMLElement).closest('button,a')) return;
         onView(item);
       }}
-      onDoubleClick={() => {
-        onView(item);
-      }}
     >
-      <span className="item-name">
+      <button className="item-name" type="button" aria-label={`查看 ${itemName(item)}`} onClick={() => onView(item)}>
         <ItemIcon item={item} />
         <span>
           <strong>{itemName(item)}</strong>
-          {viewMode !== 'table' ? <small>{itemSubtitle(item)}</small> : null}
+          <small>{itemSubtitle(item)}</small>
         </span>
-      </span>
+      </button>
       <span>{itemFolder(item)}</span>
       <span title={primaryData}>{primaryData || (item.kind === 'login' ? '无用户名' : '未填写')}</span>
       <span>
@@ -2738,54 +2811,11 @@ function VaultItemRow({
       </span>
       <span className="website">{endpoint}</span>
       <span className="row-actions">
-        {item.kind === 'login' ? (
-          <>
-            <button className="login-action" type="button" title="一键登录" onClick={() => onCredentialAction('login', item.credential)}>
-              <CirclePlay size={16} />
-            </button>
-            <button className="view-action" type="button" title="查看" onClick={() => onView(item)}>
-              <Eye size={16} />
-            </button>
-            <button type="button" title="浏览并填写" onClick={() => onCredentialAction('fill', item.credential)}>
-              <FileText size={15} />
-            </button>
-            <button type="button" title="复制用户名" onClick={() => onCopy('用户名', item.credential.username)}>
-              <Copy size={15} />
-            </button>
-            <button type="button" title="复制密码" onClick={() => onCopy('密码', item.credential.password)}>
-              <KeyRound size={15} />
-            </button>
-            <button type="button" title="仅打开网站" onClick={() => onCredentialAction('goto', item.credential)}>
-              <ArrowUpRight size={15} />
-            </button>
-          </>
-        ) : item.kind === 'note' ? (
-          <button type="button" title="复制笔记" onClick={() => onCopy('笔记', item.note.note)}>
-            <Copy size={15} />
-          </button>
-        ) : item.kind === 'fillProfile' ? (
-          <>
-            <button className="view-action" type="button" title="查看" onClick={() => onView(item)}>
-              <Eye size={16} />
-            </button>
-            <button type="button" title="复制资料摘要" onClick={() => onCopy('资料摘要', fillProfileSummary(item.fillProfile))}>
-              <Copy size={15} />
-            </button>
-          </>
-        ) : (
-          <button type="button" title="复制邮箱" onClick={() => onCopy('邮箱', item.identity.email ?? '')}>
-            <Copy size={15} />
-          </button>
-        )}
-        <button type="button" title="移动到文件夹" onClick={() => onMove(item)}>
-          <FolderOpen size={15} />
-        </button>
-        <button type="button" title="编辑" onClick={() => onEdit(item)}>
-          <Settings2 size={15} />
-        </button>
-        <button type="button" title="删除" onClick={() => onDelete(item)}>
-          <Trash2 size={15} />
-        </button>
+        {item.kind === 'login' ? <>
+          <button className="login-action" type="button" title="登录" aria-label={`登录 ${itemName(item)}`} onClick={() => onCredentialAction('login', item.credential)}><CirclePlay size={17} /></button>
+          <CopyButton label="复制密码" value={item.credential.password} />
+        </> : <button type="button" title="查看" aria-label={`打开 ${itemName(item)}`} onClick={() => onView(item)}><Eye size={17} /></button>}
+        <button type="button" title="更多操作" aria-label={`更多操作 ${itemName(item)}`} aria-haspopup="menu" aria-expanded={active} onClick={event => onContextMenu(event, item)}><MoreVertical size={17} /></button>
       </span>
     </article>
   );
@@ -3391,6 +3421,34 @@ function credentialExportSearchText(credential: Credential): string {
     .toLowerCase();
 }
 
+const CREDENTIAL_EXPORT_FORMATS: Array<{ value: CredentialExportFormat; label: string; description: string }> = [
+  {
+    value: 'roboform-csv',
+    label: 'RoboForm CSV',
+    description: '兼容 RoboForm 导入字段'
+  },
+  {
+    value: 'chrome-csv',
+    label: 'Chrome CSV',
+    description: 'Chrome 密码管理器格式'
+  },
+  {
+    value: 'edge-csv',
+    label: 'Edge CSV',
+    description: 'Edge 密码管理器格式'
+  },
+  {
+    value: 'generic-csv',
+    label: '通用 CSV',
+    description: '包含备注、文件夹和标签'
+  },
+  {
+    value: 'keypilot-json',
+    label: 'KeyPilot JSON',
+    description: '保留 KeyPilot 字段结构'
+  }
+];
+
 function CredentialExportDialog({
   credentials,
   onClose,
@@ -3398,9 +3456,10 @@ function CredentialExportDialog({
 }: {
   credentials: Credential[];
   onClose: () => void;
-  onConfirm: (credentials: Credential[]) => void;
+  onConfirm: (credentials: Credential[], format: CredentialExportFormat) => void;
 }) {
   const [query, setQuery] = useState('');
+  const [format, setFormat] = useState<CredentialExportFormat>('roboform-csv');
   const [selectedIds, setSelectedIds] = useState<string[]>(() => credentials.map((credential) => credential.id));
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const normalizedQuery = query.trim().toLowerCase();
@@ -3449,12 +3508,27 @@ function CredentialExportDialog({
           </span>
           <div>
             <h2>选择导出账号</h2>
-            <p>导出为 RoboForm CSV，只包含你勾选的账号和密码。</p>
+            <p>只导出你勾选的账号。可选择 RoboForm、Chrome/Edge、通用 CSV 或 KeyPilot JSON。</p>
           </div>
           <button type="button" aria-label="关闭" onClick={onClose}>
             <X size={20} />
           </button>
         </header>
+
+        <div className="credential-export-format" aria-label="导出格式">
+          {CREDENTIAL_EXPORT_FORMATS.map((item) => (
+            <button
+              key={item.value}
+              className={format === item.value ? 'active' : ''}
+              type="button"
+              aria-pressed={format === item.value}
+              onClick={() => setFormat(item.value)}
+            >
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </button>
+          ))}
+        </div>
 
         <div className="fill-export-toolbar">
           <label>
@@ -3528,14 +3602,14 @@ function CredentialExportDialog({
 
         <footer>
           <p>
-            CSV 会包含明文账号和密码。{selectedWeakCount ? `当前选择里有 ${selectedWeakCount} 条弱密码，` : ''}
+            导出文件会包含明文账号和密码。{selectedWeakCount ? `当前选择里有 ${selectedWeakCount} 条弱密码，` : ''}
             请只保存在可信位置，用完后及时删除。
           </p>
           <div>
             <button type="button" onClick={onClose}>
               取消
             </button>
-            <button className="primary" type="button" onClick={() => onConfirm(selectedCredentials)} disabled={!selectedCredentials.length}>
+            <button className="primary" type="button" onClick={() => onConfirm(selectedCredentials, format)} disabled={!selectedCredentials.length}>
               <Download size={17} />
               导出 {selectedCredentials.length} 条
             </button>
@@ -3752,6 +3826,7 @@ function TrashPanel({
 }
 
 function CredentialDetailPane({
+  session, onSessionChange,
   credential,
   moreOpen,
   onClose,
@@ -3759,7 +3834,6 @@ function CredentialDetailPane({
   onToggleMore,
   onAction,
   onSaveNotes,
-  onCopy,
   onClone,
   onTogglePinned,
   onDelete,
@@ -3768,6 +3842,8 @@ function CredentialDetailPane({
   onMoveToFolder,
   onOpenTrash
 }: {
+  session: UnlockedVaultSession;
+  onSessionChange: (session: UnlockedVaultSession) => void;
   credential: Credential;
   moreOpen: boolean;
   onClose: () => void;
@@ -3775,7 +3851,6 @@ function CredentialDetailPane({
   onToggleMore: () => void;
   onAction: (action: CredentialAction, credential: Credential) => void;
   onSaveNotes: (credential: Credential, notesText: string) => void;
-  onCopy: (label: string, value: string) => void;
   onClone: (credential: Credential) => void;
   onTogglePinned: (credential: Credential) => void;
   onDelete: (credential: Credential) => void;
@@ -3788,7 +3863,7 @@ function CredentialDetailPane({
   const maskedPassword = credential.password ? '•'.repeat(Math.min(12, Math.max(8, credential.password.length))) : '未保存密码';
   const updatedAt = new Date(credential.updatedAt).toLocaleString('zh-CN');
   const createdAt = new Date(credential.createdAt).toLocaleString('zh-CN');
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useSecretVisibility();
   const [editingNotes, setEditingNotes] = useState(false);
   const [noteDraft, setNoteDraft] = useState(credential.notes ?? '');
   const boundFieldCount = credential.formFields?.length ?? 0;
@@ -3821,8 +3896,9 @@ function CredentialDetailPane({
   }
 
   return (
-    <aside className="vault-detail-pane" aria-label={`查看 ${credential.title}`}>
+    <aside className="vault-detail-pane credential-detail-pane" aria-label={`查看 ${credential.title}`}>
       <header className="detail-toolbar">
+        <button className="detail-return" type="button" aria-label="返回列表" onClick={onClose}><ArrowLeft size={18} /><span>返回列表</span></button>
         <button type="button" aria-label="编辑" title="编辑" onClick={() => onEdit(credential)}>
           <Settings2 size={20} />
         </button>
@@ -3836,14 +3912,8 @@ function CredentialDetailPane({
                 <ArrowUpRight size={18} />
                 在新标签页中查看
               </button>
-              <button type="button" role="menuitem" disabled title="本地版暂未接入共享账户权限">
-                <Share2 size={18} />
-                共享
-              </button>
-              <button type="button" role="menuitem" disabled title="本地版暂未接入发送通道">
-                <Send size={18} />
-                发送
-              </button>
+
+
               <button type="button" role="menuitem" onClick={() => window.print()}>
                 <Printer size={18} />
                 打印
@@ -3923,11 +3993,86 @@ function CredentialDetailPane({
         </button>
       </div>
 
-      <section className={`detail-binding is-${bindingTone}`} aria-label="自动登录绑定状态">
+      <dl className="detail-fields">
+        <div>
+          <dt>URL 地址</dt>
+          <dd>
+            <a href={credential.url} target="_blank" rel="noreferrer">{credential.domain || credential.url}</a>
+          </dd>
+        </div>
+        <div>
+          <dt>登录名</dt>
+          <dd>
+            <span>{credential.username || '无用户名'}</span>
+            <CopyButton label="复制登录名" value={credential.username} sensitive={false} />
+          </dd>
+        </div>
+        <div>
+          <dt>密码</dt>
+          <dd>
+            <span>{passwordVisible ? credential.password || '未保存密码' : maskedPassword}</span>
+            <button
+              type="button"
+              aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
+              title={passwordVisible ? '隐藏密码' : '显示密码'}
+              onClick={() => setPasswordVisible((visible) => !visible)}
+            >
+              {passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
+            <CopyButton label="复制密码" value={credential.password} />
+            <span className={`strength s${strength.score}`}>
+              <Shield size={16} />
+              {strength.label}
+            </span>
+          </dd>
+        </div>
+      </dl>
+
+      <CredentialSecurityPanel key={credential.id} credential={credential} session={session} onChange={onSessionChange} />
+      {session.vault.settings.remindersEnabled && (
+        <section className="detail-reminder" aria-label="账号到期提醒">
+          <div>
+            <h3><Bell size={18} aria-hidden="true" />到期提醒</h3>
+            <p>为这个账号设置续费或到期提醒。</p>
+          </div>
+          <button type="button" onClick={() => { window.location.href = `vault.html?reminderFor=${encodeURIComponent(credential.id)}#reminders`; }}>
+            <Plus size={17} aria-hidden="true" />添加到期提醒
+          </button>
+        </section>
+      )}
+      <section className="detail-notes">
+        <div className="detail-notes-label">
+          <span>备注</span>
+          {editingNotes ? (
+            <span className="detail-note-actions">
+              <button type="button" onClick={() => {
+                setNoteDraft(credential.notes ?? '');
+                setEditingNotes(false);
+              }}>
+                取消
+              </button>
+              <button className="primary" type="button" onClick={saveNoteDraft}>
+                保存
+              </button>
+            </span>
+          ) : (
+            <button type="button" onClick={() => setEditingNotes(true)}>
+              编辑
+            </button>
+          )}
+        </div>
+        {editingNotes ? (
+          <textarea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} rows={5} placeholder="添加这个账号的备注" />
+        ) : (
+          <p>{credential.notes?.trim() || '无备注'}</p>
+        )}
+      </section>
+
+      <details className={`detail-binding is-${bindingTone}`} aria-label="自动登录绑定状态">
+        <summary>自动登录绑定 <span>{bindingLabel}</span></summary>
         <div className="binding-summary">
-          <span>自动登录绑定</span>
-          <strong>{bindingLabel}</strong>
           <p>{bindingHint}</p>
+          <p>匹配 URL：{credential.matchUrl || "自动使用网站域名"}</p>
         </div>
         <div className="binding-metrics" aria-label="绑定记录">
           <span className={boundUsername ? 'ok' : ''}>
@@ -3957,80 +4102,7 @@ function CredentialDetailPane({
             重新绑定
           </button>
         </div>
-      </section>
-
-      <dl className="detail-fields">
-        <div>
-          <dt>URL 地址</dt>
-          <dd>
-            <a href={credential.url} target="_blank" rel="noreferrer">{credential.domain || credential.url}</a>
-          </dd>
-        </div>
-        <div>
-          <dt>匹配 URL</dt>
-          <dd>
-            <span>{credential.matchUrl || '自动使用网站域名'}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>登录名</dt>
-          <dd>
-            <span>{credential.username || '无用户名'}</span>
-            <button type="button" aria-label="复制登录名" onClick={() => onCopy('登录名', credential.username)}>
-              <Copy size={17} />
-            </button>
-          </dd>
-        </div>
-        <div>
-          <dt>密码</dt>
-          <dd>
-            <span>{passwordVisible ? credential.password || '未保存密码' : maskedPassword}</span>
-            <button
-              type="button"
-              aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
-              title={passwordVisible ? '隐藏密码' : '显示密码'}
-              onClick={() => setPasswordVisible((visible) => !visible)}
-            >
-              {passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}
-            </button>
-            <button type="button" aria-label="复制密码" onClick={() => onCopy('密码', credential.password)}>
-              <Copy size={17} />
-            </button>
-            <span className={`strength s${strength.score}`}>
-              <Shield size={16} />
-              {strength.label}
-            </span>
-          </dd>
-        </div>
-      </dl>
-
-      <section className="detail-notes">
-        <div className="detail-notes-label">
-          <span>备注</span>
-          {editingNotes ? (
-            <span className="detail-note-actions">
-              <button type="button" onClick={() => {
-                setNoteDraft(credential.notes ?? '');
-                setEditingNotes(false);
-              }}>
-                取消
-              </button>
-              <button className="primary" type="button" onClick={saveNoteDraft}>
-                保存
-              </button>
-            </span>
-          ) : (
-            <button type="button" onClick={() => setEditingNotes(true)}>
-              编辑
-            </button>
-          )}
-        </div>
-        {editingNotes ? (
-          <textarea value={noteDraft} onChange={(event) => setNoteDraft(event.target.value)} rows={5} placeholder="添加这个账号的备注" />
-        ) : (
-          <p>{credential.notes?.trim() || '无备注'}</p>
-        )}
-      </section>
+      </details>
 
       <section className="detail-meta">
         <div>
@@ -4060,7 +4132,7 @@ function FillProfileDetailPane({
   profile: FillProfile;
   onClose: () => void;
   onEdit: (profile: FillProfile) => void;
-  onCopy: (label: string, value: string) => void;
+  onCopy: (label: string, value: string, sensitive: boolean) => void;
   onDelete: (profile: FillProfile) => void;
 }) {
   const groups = fillProfileFieldsByGroup(profile);
@@ -4078,7 +4150,7 @@ function FillProfileDetailPane({
         <span className={`fill-profile-avatar ${fillProfileTone(profile)}`}>{fillProfileBadgeText(profile)}</span>
         <strong>{profile.title}</strong>
         <span className="fill-profile-toolbar">
-          <button type="button" aria-label="复制全部资料" title="复制全部资料" onClick={() => onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile))}>
+          <button type="button" aria-label="复制全部资料" title="复制全部资料" onClick={() => onCopy(`${profile.title} 全部资料`, formatFillProfileForClipboard(profile), profile.fields.some(field => field.sensitivity !== 'normal'))}>
             <Copy size={20} />
           </button>
           <button type="button" aria-label="编辑" title="编辑" onClick={() => onEdit(profile)}>
@@ -4127,7 +4199,7 @@ function FillProfileDetailPane({
             <header>
               <span>{fillFieldGroupIcon(activeGroup)}</span>
               <strong>{activeGroupLabel}</strong>
-              <button type="button" aria-label={`复制${activeGroupLabel}`} title={`复制${activeGroupLabel}`} onClick={() => onCopy(activeGroupLabel, activeFields.map((field) => `${field.label}: ${field.value}`).join('\n'))}>
+              <button type="button" aria-label={`复制${activeGroupLabel}`} title={`复制${activeGroupLabel}`} onClick={() => onCopy(activeGroupLabel, activeFields.map((field) => `${field.label}: ${field.value}`).join('\n'), activeFields.some(field => field.sensitivity !== 'normal'))}>
                 <Copy size={17} />
               </button>
             </header>
@@ -4137,9 +4209,9 @@ function FillProfileDetailPane({
                   <div key={`${field.key}-${field.label}`}>
                     <dt>{field.label}</dt>
                     <dd>
-                      <span>{field.value || '空'}</span>
+                      <SensitiveValue key={`${profile.id}-${field.key}-${field.value}`} field={field} />
                       {field.sensitivity !== 'normal' ? <em>{field.sensitivity === 'secret' ? '敏感' : '私密'}</em> : null}
-                      <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value)}>
+                      <button type="button" aria-label={`复制 ${field.label}`} title={`复制 ${field.label}`} onClick={() => onCopy(field.label, field.value, field.sensitivity !== 'normal')}>
                         <Copy size={16} />
                       </button>
                     </dd>
@@ -4247,6 +4319,7 @@ function FillProfileEditPane({
       countryCode: countryCode.trim().toUpperCase() || 'US',
       category,
       fields: normalizedFields,
+      privacyVersion: 1,
       updatedAt: Date.now()
     });
   }
@@ -4395,7 +4468,7 @@ function CredentialEditPane({
   onBindFromWeb: (credential: Credential) => void;
 }) {
   const [draft, setDraft] = useState(() => credentialToDraft(credential));
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useSecretVisibility();
 
   useEffect(() => {
     setDraft(credentialToDraft(credential));
@@ -4555,7 +4628,7 @@ function CustomFieldEditor({
   onChange: (patch: Partial<CredentialFormField>) => void;
   onRemove: () => void;
 }) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useSecretVisibility();
   const fieldKind = field.kind || 'text';
 
   function changeKind(kind: CredentialFormFieldKind) {
@@ -4691,7 +4764,7 @@ function SiteIcon({ domain, url, iconUrl }: { domain: string; url?: string; icon
   );
 }
 
-function GeneratorPanel({ onCopy }: { onCopy: (password: string) => void }) {
+function GeneratorPanel({ onCopy }: { onCopy: (password: string) => Promise<boolean> }) {
   const [options, setOptions] = useState<PasswordGeneratorOptions>(defaultGeneratorOptions);
   const [password, setPassword] = useState(() => generatePassword(defaultGeneratorOptions));
   const [copied, setCopied] = useState(false);
@@ -4737,11 +4810,13 @@ function GeneratorPanel({ onCopy }: { onCopy: (password: string) => void }) {
     refresh(nextOptions);
   }
 
-  function copyPassword() {
+  async function copyPassword() {
     if (!password) return;
-    onCopy(password);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    setCopied(false);
+    if (await onCopy(password)) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    }
   }
 
   return (
@@ -4756,7 +4831,7 @@ function GeneratorPanel({ onCopy }: { onCopy: (password: string) => void }) {
 
       <div className="generator-output">
         <div className="generator-password" aria-live="polite">
-          <code>{password || '请选择至少一种字符类型，或填写必须包含字符。'}</code>
+          {password ? <code>{password}</code> : <span className="generator-password-hint">请选择至少一种字符类型，或填写必须包含字符。</span>}
           <span className={`strength s${strength.score}`}>
             <Shield size={15} />
             {password ? strength.label : '待生成'}
@@ -4872,7 +4947,21 @@ function GeneratorSwitch({ label, hint, checked, onChange }: { label: string; hi
   );
 }
 
-function SecurityPanel({ security }: { security: ReturnType<typeof analyzeSecurity> }) {
+function SecurityPanel({
+  security,
+  onView,
+  onEdit,
+  onBind,
+  onOpen,
+  onCopyPassword
+}: {
+  security: ReturnType<typeof analyzeSecurity>;
+  onView: (credential: Credential) => void;
+  onEdit: (credential: Credential) => void;
+  onBind: (credential: Credential) => void;
+  onOpen: (credential: Credential) => void;
+  onCopyPassword: (credential: Credential) => void;
+}) {
   const [tab, setTab] = useState<'overview' | 'breach'>('overview');
   const [filter, setFilter] = useState<SecurityFilter>('risk');
   const rows =
@@ -4893,13 +4982,13 @@ function SecurityPanel({ security }: { security: ReturnType<typeof analyzeSecuri
                   : security.items;
 
   return (
-    <section className="security-panel">
+    <section className="security-panel" aria-label="密码安全中心">
       <nav className="security-tabs" aria-label="安全中心">
         <button className={tab === 'overview' ? 'active' : ''} type="button" onClick={() => setTab('overview')}>
-          Security Overview
+          安全概览
         </button>
         <button className={tab === 'breach' ? 'active' : ''} type="button" onClick={() => setTab('breach')}>
-          Data Breach Monitoring
+          泄露检测规划
         </button>
       </nav>
 
@@ -4942,7 +5031,15 @@ function SecurityPanel({ security }: { security: ReturnType<typeof analyzeSecuri
             <SecurityFilterButton label="排除" count={0} active={filter === 'excluded'} onClick={() => setFilter('excluded')} />
           </div>
 
-          <SecurityTable rows={rows} emptyLabel={filter === 'excluded' ? '还没有排除项' : '没有匹配的安全风险'} />
+          <SecurityTable
+            rows={rows}
+            emptyLabel={filter === 'excluded' ? '还没有排除项' : '没有匹配的安全风险'}
+            onView={onView}
+            onEdit={onEdit}
+            onBind={onBind}
+            onOpen={onOpen}
+            onCopyPassword={onCopyPassword}
+          />
         </>
       ) : (
         <section className="breach-monitor-panel">
@@ -5041,7 +5138,23 @@ function SecurityFilterButton({ label, count, active, onClick }: { label: string
   );
 }
 
-function SecurityTable({ rows, emptyLabel }: { rows: SecurityItem[]; emptyLabel: string }) {
+function SecurityTable({
+  rows,
+  emptyLabel,
+  onView,
+  onEdit,
+  onBind,
+  onOpen,
+  onCopyPassword
+}: {
+  rows: SecurityItem[];
+  emptyLabel: string;
+  onView: (credential: Credential) => void;
+  onEdit: (credential: Credential) => void;
+  onBind: (credential: Credential) => void;
+  onOpen: (credential: Credential) => void;
+  onCopyPassword: (credential: Credential) => void;
+}) {
   return (
     <section className="security-table" aria-label="安全风险账号">
       <header>
@@ -5050,9 +5163,21 @@ function SecurityTable({ rows, emptyLabel }: { rows: SecurityItem[]; emptyLabel:
         <span>密码强度</span>
         <span>网页地址</span>
         <span>建议</span>
+        <span>操作</span>
       </header>
       {rows.length ? (
-        rows.map((item, index) => <SecurityTableRow key={item.credential.id} item={item} index={index} />)
+        rows.map((item, index) => (
+          <SecurityTableRow
+            key={item.credential.id}
+            item={item}
+            index={index}
+            onView={onView}
+            onEdit={onEdit}
+            onBind={onBind}
+            onOpen={onOpen}
+            onCopyPassword={onCopyPassword}
+          />
+        ))
       ) : (
         <div className="security-empty">
           <ShieldCheck size={24} />
@@ -5064,8 +5189,25 @@ function SecurityTable({ rows, emptyLabel }: { rows: SecurityItem[]; emptyLabel:
   );
 }
 
-function SecurityTableRow({ item, index }: { item: SecurityItem; index: number }) {
+function SecurityTableRow({
+  item,
+  index,
+  onView,
+  onEdit,
+  onBind,
+  onOpen,
+  onCopyPassword
+}: {
+  item: SecurityItem;
+  index: number;
+  onView: (credential: Credential) => void;
+  onEdit: (credential: Credential) => void;
+  onBind: (credential: Credential) => void;
+  onOpen: (credential: Credential) => void;
+  onCopyPassword: (credential: Credential) => void;
+}) {
   const { credential, strength } = item;
+  const [passwordVisible, setPasswordVisible] = useSecretVisibility();
   const suggestion = item.isWeak
     ? '换成更强密码'
     : item.isReused
@@ -5088,19 +5230,62 @@ function SecurityTableRow({ item, index }: { item: SecurityItem; index: number }
         </span>
       </span>
       <span className="security-password">
-        <code>••••••••</code>
-        <Eye size={15} aria-hidden="true" />
+        <code>{passwordVisible ? credential.password : credential.password ? '••••••••' : '未保存密码'}</code>
+        <button
+          type="button"
+          aria-label={`${passwordVisible ? '隐藏' : '查看'} ${credential.title} 的密码`}
+          aria-pressed={passwordVisible}
+          title={passwordVisible ? '隐藏密码' : '查看密码'}
+          disabled={!credential.password}
+          onClick={() => setPasswordVisible(visible => !visible)}
+        >
+          {passwordVisible ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}
+        </button>
       </span>
-      <span>
+      <span className="security-strength-cell">
         <em className={`security-strength s${strength.score}`}>
           <Shield size={15} />
           {strength.label}
         </em>
       </span>
       <span className="security-url">{credential.domain || extractDomain(credential.url)}</span>
-      <span className={item.isWeak || item.isReused || item.isUnbound || item.missingUsername || item.isStale ? 'security-suggestion warn' : 'security-suggestion'}>{suggestion}</span>
+      <span className={item.isWeak || item.isReused || item.isUnbound || item.missingUsername || item.isStale ? 'security-suggestion warn' : 'security-suggestion'}>
+        {suggestion}
+        <small>{securityRiskLabels(item).join(' · ') || '本地检查通过'}</small>
+      </span>
+      <span className="security-actions">
+        <button type="button" title="查看账号" aria-label={`查看账号 ${credential.title}`} onClick={() => onView(credential)}>
+          <Eye size={16} />
+        </button>
+        <button type="button" title="复制密码" aria-label={`复制 ${credential.title} 的密码`} onClick={() => onCopyPassword(credential)} disabled={!credential.password}>
+          <Copy size={16} />
+        </button>
+        <button type="button" title="打开网站" aria-label={`打开网站 ${credential.title}`} onClick={() => onOpen(credential)} disabled={!credential.url}>
+          <ArrowUpRight size={16} />
+        </button>
+        {item.isUnbound ? (
+          <button type="button" title="绑定登录字段" aria-label={`绑定登录字段 ${credential.title}`} onClick={() => onBind(credential)}>
+            <SlidersHorizontal size={16} />
+          </button>
+        ) : (
+          <button type="button" title="编辑账号" aria-label={`编辑账号 ${credential.title}`} onClick={() => onEdit(credential)}>
+            <Pencil size={16} />
+          </button>
+        )}
+      </span>
     </article>
   );
+}
+
+function securityRiskLabels(item: SecurityItem): string[] {
+  const labels: string[] = [];
+  if (item.isWeak) labels.push('弱密码');
+  if (item.isReused) labels.push(`重复使用 ${item.passwordUseCount} 次`);
+  if (item.isExactDuplicate) labels.push('账号重复');
+  if (item.isUnbound) labels.push('未绑定登录按钮');
+  if (item.missingUsername) labels.push('缺少用户名');
+  if (item.isStale) labels.push('久未更新');
+  return labels;
 }
 
 const SECURITY_STALE_AGE = 365 * 24 * 60 * 60 * 1000;
@@ -5273,7 +5458,7 @@ function ItemModal({
   const [credentialDraft, setCredentialDraft] = useState(() =>
     modal.type === 'login' ? (modal.credential ? credentialToDraft(modal.credential) : emptyCredentialDraft(modal.folder ?? ROOT_FOLDER_NAME)) : emptyCredentialDraft()
   );
-  const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
+  const [loginPasswordVisible, setLoginPasswordVisible] = useSecretVisibility();
   const [siteLookup, setSiteLookup] = useState<{ status: 'idle' | 'loading' | 'done' | 'error'; message: string }>({
     status: 'idle',
     message: '输入网址后自动识别站点标题和图标。'

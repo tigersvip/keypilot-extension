@@ -81,6 +81,40 @@ export interface SiteRuleSummary {
   updatedAt: number;
 }
 
+export type InlineSilentRuleReason = 'empty-page' | 'no-form-context' | 'no-inline-anchor' | 'passive-form' | 'manual-hide';
+export type InlineSilentRuleSource = 'auto' | 'manual';
+
+export interface InlineSilentRule {
+  id: string;
+  domain: string;
+  pathPattern?: string;
+  reason: InlineSilentRuleReason;
+  source?: InlineSilentRuleSource;
+  title?: string;
+  lastUrl?: string;
+  confidence: number;
+  matchCount: number;
+  createdAt: number;
+  updatedAt: number;
+  lastMatchedAt?: number;
+  expiresAt?: number;
+}
+
+export interface InlineSilentRuleSummary {
+  id: string;
+  domain: string;
+  pathPattern?: string;
+  reason: InlineSilentRuleReason;
+  source?: InlineSilentRuleSource;
+  title?: string;
+  lastUrl?: string;
+  confidence: number;
+  matchCount: number;
+  updatedAt: number;
+  lastMatchedAt?: number;
+  expiresAt?: number;
+}
+
 export interface Credential {
   id: string;
   title: string;
@@ -92,6 +126,8 @@ export interface Credential {
   iconType?: CredentialIconType;
   username: string;
   password: string;
+  passwordHistory?: { id: string; password: string; changedAt: number }[];
+  recoveryCodes?: { id: string; code: string; createdAt: number; usedAt?: number }[];
   notes?: string;
   tags?: string[];
   folder?: string;
@@ -191,6 +227,7 @@ export interface FillProfileSiteBinding {
 
 export interface FillProfile {
   id: string;
+  privacyVersion?: 1;
   title: string;
   countryCode: string;
   locale?: string;
@@ -320,6 +357,13 @@ export type DeletedVaultItem =
     };
 
 export interface VaultSettings {
+  captchaAssistEnabled?: boolean;
+  captchaSiteRules?: Record<string,import('./captcha').CaptchaSiteRule>;
+  remindersEnabled?: boolean;
+  reminderSound?: 'chime' | 'bell' | 'triple' | 'digital';
+  reminderVolume?: number;
+  backupReminderEnabled?: boolean;
+  backupExport?: { requestedAt: number; recordIds: string[]; settingsSnapshot?: string };
   language: 'zh-CN' | 'en-US';
   defaultHomeSort: 'favorite' | 'recent' | 'az';
   openStartPageOnLogin: boolean;
@@ -335,10 +379,21 @@ export interface VaultSettings {
   autoPromptSave: boolean;
   autoFill: boolean;
   autoSubmit: boolean;
+  /** Exact HTTPS origins allowed to fill linked TOTP after explicit login. */
+  autoTotpOrigins?: string[];
+  siteLoginSettings?: Record<string, {
+    fillEnabled?: boolean;
+    autoSubmit?: boolean;
+    defaultCredentialId?: string;
+    totpAccountByCredential?: Record<string, string>;
+  }>;
   clearClipboardSeconds: number;
   requireMasterPasswordForReveal: boolean;
   blacklist: string[];
   inlineBlacklist?: string[];
+  autoSilentInline?: boolean;
+  inlineSilentRules?: InlineSilentRule[];
+  onboardingDismissed?: boolean;
   siteRules?: SiteRule[];
   fillImportBatches?: FillImportBatchRecord[];
   fillImportMappingTemplates?: FillImportMappingTemplate[];
@@ -390,9 +445,38 @@ export interface FillImportBatchRecord {
   updatedAt: number;
 }
 
+export interface TotpAccount {
+  id: string;
+  issuer: string;
+  account: string;
+  credentialId?: string;
+  secret: string;
+  algorithm: 'SHA1' | 'SHA256' | 'SHA512';
+  digits: 6 | 8;
+  period: number;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt?: number;
+}
+
+export interface Reminder {
+  id: string;
+  revision: string;
+  title: string;
+  dueAt: number;
+  leadDays: number;
+  credentialId?: string;
+  acknowledged: number[];
+  completedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface VaultPlain {
   version: 1;
   credentials: Credential[];
+  totpAccounts?: TotpAccount[];
+  reminders?: Reminder[];
   secureNotes?: SecureNote[];
   identities?: IdentityProfile[];
   fillProfiles?: FillProfile[];
@@ -404,10 +488,11 @@ export interface VaultPlain {
 
 export interface VaultEncrypted {
   version: 1;
+  revision?: number;
   kdf: {
     name: 'PBKDF2';
     hash: 'SHA-256';
-    iterations: 310000;
+    iterations: number;
     salt: string;
   };
   cipher: {
@@ -422,7 +507,7 @@ export interface VaultEncrypted {
     kdf: {
       name: 'PBKDF2';
       hash: 'SHA-256';
-      iterations: 310000;
+      iterations: number;
       salt: string;
     };
     cipher: {
@@ -445,6 +530,7 @@ export interface LicenseInfo {
 }
 
 export interface UnlockedVaultSession {
+  sessionId?: string;
   key: CryptoKey;
   vault: VaultPlain;
   encryptedVault: VaultEncrypted;
@@ -457,6 +543,9 @@ export type VaultStatus = 'checking' | 'setup' | 'locked' | 'unlocked';
 export type CredentialAction = 'login' | 'fill' | 'goto';
 
 export interface FillCredentialPayload {
+  loginRequested?: boolean;
+  /** Managed login continuations dispatch at most one submit action per form step. */
+  singleSubmit?: boolean;
   id: string;
   url: string;
   domain: string;
@@ -470,7 +559,7 @@ export interface FillCredentialPayload {
 }
 
 export type FillStage = 'complete' | 'usernameOnly' | 'passwordOnly';
-export type SubmitOutcomeStatus = 'checking' | 'navigated' | 'successLikely' | 'stillOnLogin' | 'errorVisible' | 'blocked' | 'unknown';
+export type SubmitOutcomeStatus = 'checking' | 'waitingVerification' | 'navigated' | 'successLikely' | 'stillOnLogin' | 'errorVisible' | 'blocked' | 'unknown';
 
 export interface SubmitOutcome {
   status: SubmitOutcomeStatus;
@@ -490,6 +579,7 @@ export interface FillCredentialResult {
   filledPassword?: boolean;
   submitted?: boolean;
   skippedSubmit?: boolean;
+  captchaMessage?: string;
   submitButtonMissing?: boolean;
   unsafeReason?: string;
   submitOutcome?: SubmitOutcome;
@@ -538,6 +628,7 @@ export interface InlineCredentialMatchesResult {
   autoSubmit?: boolean;
   matches?: InlineCredentialSummary[];
   fillProfiles?: InlineFillProfileSummary[];
+  silentRule?: InlineSilentRuleSummary;
   siteRule?: SiteRuleSummary;
 }
 

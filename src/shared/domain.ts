@@ -1,218 +1,68 @@
+import { getDomain } from 'tldts';
 export function normalizeUrl(url: string): string {
-  const trimmed = url.trim();
-
-  if (!trimmed) {
-    return '';
-  }
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-
-  return `https://${trimmed}`;
+  const value = url.trim();
+  if (!value) return '';
+  if (value.startsWith('//')) return 'https:' + value;
+  // A bare hostname may include a port; explicit schemes must never become hostnames.
+  const hasPort = /^[^/?#:\s]+:\d+(?:[/?#]|$)/.test(value);
+  return !hasPort && /^[a-z][a-z\d+.-]*:/i.test(value) ? value : 'https://' + value;
 }
-
 export function extractDomain(url: string): string {
-  const normalized = normalizeUrl(url);
-
-  if (!normalized) {
-    return '';
-  }
-
   try {
-    const parsed = new URL(normalized);
-    return parsed.hostname.replace(/^www\./i, '').toLowerCase();
-  } catch {
-    return '';
+    const parsed = new URL(normalizeUrl(url));
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.hostname.toLowerCase().replace(/\.$/, '') : '';
   }
+  catch { return ''; }
 }
-
-const KNOWN_PUBLIC_SUFFIXES = new Set([
-  'com.cn',
-  'net.cn',
-  'org.cn',
-  'gov.cn',
-  'edu.cn',
-  'co.uk',
-  'org.uk',
-  'ac.uk',
-  'com.au',
-  'net.au',
-  'org.au',
-  'co.jp',
-  'ne.jp',
-  'or.jp',
-  'com.hk',
-  'com.tw',
-  'com.br',
-  'com.sg',
-  'co.kr',
-  'github.io',
-  'vercel.app',
-  'netlify.app',
-  'pages.dev',
-  'web.app',
-  'firebaseapp.com',
-  'herokuapp.com',
-  'workers.dev',
-  'fly.dev',
-  'glitch.me',
-  'replit.app',
-  'repl.co',
-  'surge.sh',
-  'ngrok.io',
-  'ngrok-free.app',
-  'trycloudflare.com',
-  'myshopify.com'
-]);
-
-function normalizeDomain(value: string): string {
-  const trimmed = value.trim().toLowerCase().replace(/\.$/, '');
-
-  if (!trimmed) return '';
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return extractDomain(trimmed);
-  }
-
-  return trimmed.replace(/^www\./i, '');
-}
-
-function isIpv4(domain: string): boolean {
-  return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(domain);
-}
-
-function isLocalDomain(domain: string): boolean {
-  return domain === 'localhost' || isIpv4(domain) || domain.includes(':');
-}
-
-function isSafeDomainScope(domain: string): boolean {
-  const normalized = normalizeDomain(domain);
-  return Boolean(
-    normalized &&
-      !isLocalDomain(normalized) &&
-      normalized.includes('.') &&
-      !KNOWN_PUBLIC_SUFFIXES.has(normalized)
-  );
-}
-
 export function getRegistrableDomain(value: string): string {
-  const domain = normalizeDomain(value);
-
-  if (!domain || isLocalDomain(domain)) {
-    return domain;
-  }
-
-  const labels = domain.split('.').filter(Boolean);
-
-  if (labels.length <= 2) {
-    return domain;
-  }
-
-  for (const suffix of KNOWN_PUBLIC_SUFFIXES) {
-    if (domain === suffix || domain.endsWith(`.${suffix}`)) {
-      const suffixLabels = suffix.split('.').length;
-      const start = labels.length - suffixLabels - 1;
-      return start >= 0 ? labels.slice(start).join('.') : domain;
-    }
-  }
-
-  return labels.slice(-2).join('.');
+  const domain = extractDomain(value);
+  return getDomain(domain, { allowPrivateDomains: true }) ?? domain;
 }
-
+// Credentials and learned site rules are exact-host by default.
 export function domainsMatch(savedDomain: string, currentDomain: string): boolean {
-  const saved = normalizeDomain(savedDomain);
-  const current = normalizeDomain(currentDomain);
-
-  if (!saved || !current) return false;
-  if (saved === current) return true;
-  if (isLocalDomain(saved) || isLocalDomain(current)) return false;
-
-  if (isSafeDomainScope(saved) && current.endsWith(`.${saved}`)) return true;
-  if (isSafeDomainScope(current) && saved.endsWith(`.${current}`)) return true;
-
-  const savedRoot = getRegistrableDomain(saved);
-  const currentRoot = getRegistrableDomain(current);
-
-  return Boolean(savedRoot && currentRoot && savedRoot === currentRoot && isSafeDomainScope(savedRoot));
+  const saved = extractDomain(savedDomain);
+  return Boolean(saved && saved === extractDomain(currentDomain));
 }
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function trimTrailingSlash(value: string): string {
-  return value.replace(/\/+$/, '');
-}
-
-function hasExplicitPath(value: string): boolean {
-  try {
-    const parsed = new URL(normalizeUrl(value));
-    return parsed.pathname !== '/' || Boolean(parsed.search || parsed.hash);
-  } catch {
-    return false;
-  }
-}
-
-function wildcardUrlMatches(pattern: string, currentUrl: string): boolean {
-  const normalizedPattern = normalizeUrl(pattern);
-  const normalizedCurrent = normalizeUrl(currentUrl);
-
-  if (!normalizedPattern || !normalizedCurrent) return false;
-
-  const escaped = escapeRegExp(normalizedPattern).replace(/\\\*/g, '.*');
-  const source = escaped.replace(/^https:\\\/\\\//i, 'https?:\\/\\/');
-  return new RegExp(`^${source}$`, 'i').test(normalizedCurrent);
-}
-
-export interface CredentialMatchTarget {
-  domain: string;
-  matchUrl?: string;
-  matchDomain?: string;
-}
-
+export interface CredentialMatchTarget { domain: string; url?: string; matchUrl?: string; matchDomain?: string }
 export function normalizeMatchUrl(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  return normalizeUrl(trimmed);
+  return value?.trim() ? normalizeUrl(value) : undefined;
 }
-
 export function extractMatchDomain(matchUrl?: string): string {
-  if (!matchUrl?.trim()) return '';
-
-  const wildcardDomain = matchUrl
-    .trim()
-    .replace(/^https?:\/\//i, '')
-    .split(/[/?#]/)[0]
-    ?.replace(/^\*\./, '');
-
-  return normalizeDomain(wildcardDomain || matchUrl);
+  return matchUrl ? extractDomain(matchUrl.replace('://*.', '://').replace(/^\*\./, '')) : '';
 }
-
+function pathMatches(pattern: URL, target: URL): boolean {
+  if (pattern.pathname.includes('*')) {
+    const escaped = pattern.pathname.split('*').map(part => part.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&')).join('.*');
+    if (!new RegExp('^' + escaped + '$').test(target.pathname)) return false;
+  } else {
+    const path = pattern.pathname.replace(/\/+$/, '');
+    if (path && target.pathname !== path && !target.pathname.startsWith(path + '/')) return false;
+  }
+  return (!pattern.search || pattern.search === target.search) && (!pattern.hash || pattern.hash === target.hash);
+}
 export function credentialMatchesUrl(credential: CredentialMatchTarget, currentUrl?: string): boolean {
-  const normalizedCurrentUrl = normalizeUrl(currentUrl ?? '');
-  const currentDomain = extractDomain(normalizedCurrentUrl);
-
-  if (!currentDomain) return false;
-
-  const matchUrl = credential.matchUrl?.trim();
-  if (!matchUrl) {
-    return domainsMatch(credential.matchDomain || credential.domain, currentDomain);
-  }
-
-  if (matchUrl.includes('*')) {
-    return wildcardUrlMatches(matchUrl, normalizedCurrentUrl);
-  }
-
-  const matchDomain = credential.matchDomain || extractMatchDomain(matchUrl);
-  if (!matchDomain || !domainsMatch(matchDomain, currentDomain)) {
-    return false;
-  }
-
-  if (!hasExplicitPath(matchUrl)) {
-    return true;
-  }
-
-  const normalizedMatchUrl = normalizeUrl(matchUrl);
-  return trimTrailingSlash(normalizedCurrentUrl).startsWith(trimTrailingSlash(normalizedMatchUrl));
+  try {
+    const target = new URL(normalizeUrl(currentUrl ?? ''));
+    if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) return false;
+    const source = credential.matchUrl || credential.url;
+    if (!credential.matchUrl) {
+      if (!domainsMatch(credential.matchDomain || (source ? extractDomain(source) : credential.domain), target.hostname)) return false;
+      if (source) {
+        const saved = new URL(normalizeUrl(source));
+        if (saved.protocol === 'https:' && target.protocol !== 'https:') return false;
+        if (saved.port !== target.port) return false;
+      }
+      return true;
+    }
+    const raw = normalizeUrl(credential.matchUrl);
+    const subdomains = /^https?:\/\/\*\./i.test(raw);
+    const pattern = new URL(raw.replace('://*.', '://'));
+    if (pattern.hostname.includes('*') || pattern.username || pattern.password) return false;
+    if (pattern.protocol !== target.protocol || pattern.port !== target.port) return false;
+    if (subdomains) {
+      if (!getDomain(pattern.hostname, { allowPrivateDomains: true })) return false;
+      if (target.hostname !== pattern.hostname && !target.hostname.endsWith('.' + pattern.hostname)) return false;
+    } else if (pattern.hostname !== target.hostname) return false;
+    return pathMatches(pattern, target);
+  } catch { return false; }
 }

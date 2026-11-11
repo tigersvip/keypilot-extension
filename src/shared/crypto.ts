@@ -36,7 +36,8 @@ function base64ToBytes(value: string): Uint8Array {
   return bytes;
 }
 
-async function deriveVaultKey(masterPassword: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveVaultKey(masterPassword: string, salt: Uint8Array, iterations = KDF_ITERATIONS): Promise<CryptoKey> {
+  if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 5000000) throw new Error('UNSUPPORTED_VAULT');
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     textEncoder.encode(masterPassword),
@@ -50,7 +51,7 @@ async function deriveVaultKey(masterPassword: string, salt: Uint8Array): Promise
       name: 'PBKDF2',
       hash: 'SHA-256',
       salt: toArrayBuffer(salt),
-      iterations: KDF_ITERATIONS
+      iterations
     },
     keyMaterial,
     {
@@ -62,7 +63,8 @@ async function deriveVaultKey(masterPassword: string, salt: Uint8Array): Promise
   );
 }
 
-async function deriveRecoveryKey(recoveryCode: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveRecoveryKey(recoveryCode: string, salt: Uint8Array, iterations = KDF_ITERATIONS): Promise<CryptoKey> {
+  if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 5000000) throw new Error('UNSUPPORTED_RECOVERY');
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
     textEncoder.encode(normalizeRecoveryCode(recoveryCode)),
@@ -76,7 +78,7 @@ async function deriveRecoveryKey(recoveryCode: string, salt: Uint8Array): Promis
       name: 'PBKDF2',
       hash: 'SHA-256',
       salt: toArrayBuffer(salt),
-      iterations: KDF_ITERATIONS
+      iterations
     },
     keyMaterial,
     {
@@ -226,7 +228,7 @@ export async function unlockEncryptedVault(
     throw new Error('UNSUPPORTED_VAULT');
   }
 
-  const key = await deriveVaultKey(masterPassword, base64ToBytes(encryptedVault.kdf.salt));
+  const key = await deriveVaultKey(masterPassword, base64ToBytes(encryptedVault.kdf.salt), encryptedVault.kdf.iterations);
   const verifier = parseVerifier(encryptedVault.verifier);
   const verifierText = await decryptStringWithKey(key, verifier.iv, verifier.data);
 
@@ -289,7 +291,7 @@ export async function unlockEncryptedVaultWithRecoveryCode(
     throw new Error('UNSUPPORTED_RECOVERY');
   }
 
-  const recoveryKey = await deriveRecoveryKey(recoveryCode, base64ToBytes(encryptedVault.recovery.kdf.salt));
+  const recoveryKey = await deriveRecoveryKey(recoveryCode, base64ToBytes(encryptedVault.recovery.kdf.salt), encryptedVault.recovery.kdf.iterations);
   let exportedVaultKey: string;
 
   try {
@@ -335,10 +337,18 @@ export async function encryptVaultWithExistingKey(
 
   return withSaveInboxPublicKey({
     ...previousEncryptedVault,
+    revision: (previousEncryptedVault.revision ?? 0) + 1,
     cipher: {
       name: 'AES-GCM',
       iv: encryptedVaultData.iv
     },
     encryptedData: encryptedVaultData.data
   }, vault);
+}
+
+export async function decryptVaultWithKey(key: CryptoKey, encryptedVault: VaultEncrypted): Promise<VaultPlain> {
+  const json = await decryptStringWithKey(key, encryptedVault.cipher.iv, encryptedVault.encryptedData);
+  const vault = JSON.parse(json) as VaultPlain;
+  if (vault.version !== 1 || !Array.isArray(vault.credentials) || !vault.settings) throw new Error('CORRUPTED_VAULT');
+  return vault;
 }
